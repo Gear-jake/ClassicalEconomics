@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
@@ -268,8 +268,12 @@ namespace EconomyMod.UI
             boxEl.preferredHeight = boxH;
             _lines.Add(box);
 
-            // 图表纹理（左侧留数值尺空白）；缓存复用：数据条数与面板宽度未变则跳过重建
+            // 图表纹理（左侧留数值尺空白）；缓存复用：
+            // 键 = 条数×10000 + 宽度 + 内容指纹。原实现不含指纹，
+            // 历史条数达上限（GetRecent 固定 50）后快照数量不再增长，
+            // 王国变更（新王国入榜/旧王国灭亡）时图例已更新但纹理未重建 → 图表卡住错乱。
             int cacheKey = snaps.Count * 10000 + (int)chartW;
+            cacheKey = cacheKey * 31 + ComputeSeriesSignature(snaps, seriesList);
             if (_chartCacheKey != cacheKey)
             {
                 _chartCacheKey = cacheKey;
@@ -377,8 +381,9 @@ namespace EconomyMod.UI
             boxEl.preferredHeight = boxH;
             _lines.Add(box);
 
-            // 贫富差距图纹理；缓存复用：数据条数与面板宽度未变则跳过重建
+            // 贫富差距图纹理；缓存复用：键含基尼/阶段内容指纹，数据变化即重建
             int cacheKey = snaps.Count * 10000 + (int)chartW;
+            cacheKey = cacheKey * 31 + ComputeGiniSignature(snaps);
             if (_giniCacheKey != cacheKey)
             {
                 _giniCacheKey = cacheKey;
@@ -558,6 +563,34 @@ namespace EconomyMod.UI
 
         // ChartSeries 对象池（与 _seriesPool 配合，Values 列表也复用）
         private static readonly List<ChartSeries> _chartSeriesEntryPool = new List<ChartSeries>(4);
+
+        /// <summary>
+        /// 计算 GDP 图表内容指纹：全球 GDP 序列 + 各系列（Top3 王国）名称与数值序列。
+        /// 数据变化（含王国变更）→ 指纹变化 → 纹理重建；数据未变 → 复用缓存纹理。
+        /// </summary>
+        private static int ComputeSeriesSignature(List<EconomySnapshot> snaps, List<ChartSeries> seriesList)
+        {
+            int h = snaps.Count;
+            for (int i = 0; i < snaps.Count; i++)
+                h = h * 31 + (int)snaps[i].GlobalGDP;
+            for (int s = 0; s < seriesList.Count; s++)
+            {
+                var ser = seriesList[s];
+                h = h * 31 + (ser.Name != null ? ser.Name.GetHashCode() : 0);
+                for (int i = 0; i < ser.Values.Count; i++)
+                    h = h * 31 + (int)ser.Values[i];
+            }
+            return h;
+        }
+
+        /// <summary>计算贫富差距图表内容指纹：基尼系数序列 + 经济阶段序列。</summary>
+        private static int ComputeGiniSignature(List<EconomySnapshot> snaps)
+        {
+            int h = snaps.Count;
+            for (int i = 0; i < snaps.Count; i++)
+                h = h * 31 + (int)(snaps[i].GiniCoefficient * 1000f) + snaps[i].Phase;
+            return h;
+        }
 
         /// <summary>
         /// 图例行：色条 + 名称，HorizontalLayoutGroup 自动排布。
