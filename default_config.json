@@ -1,0 +1,238 @@
+﻿{
+  "economy_general": [
+    {
+      "Id": "use_chinese_ui",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnLanguageChanged"
+    },
+    {
+      "Id": "unrest_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnEnabledChanged"
+    },
+    {
+      "Id": "log_worldlog",
+      "Type": "SWITCH",
+      "BoolVal": false,
+      "Callback": "EconomyConfigCallbacks:OnLogChanged"
+    },
+    {
+      "Id": "gini_threshold",
+      "Type": "TEXT",
+      "TextVal": "0.9",
+      "Callback": "EconomyConfigCallbacks:OnGiniChanged"
+    },
+    {
+      "Id": "unrest_grace_years",
+      "Type": "TEXT",
+      "TextVal": "5",
+      "Callback": "EconomyConfigCallbacks:OnGraceChanged"
+    },
+    {
+      "Id": "unrest_max_cities",
+      "Type": "TEXT",
+      "TextVal": "3",
+      "Callback": "EconomyConfigCallbacks:OnMaxAffectedChanged"
+    },
+    {
+      "Id": "policy_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnPolicyEnabledChanged"
+    },
+    {
+      "Id": "cycle_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnCycleEnabledChanged"
+    },
+    {
+      "Id": "cycle_gini_high",
+      "Type": "TEXT",
+      "TextVal": "0.6",
+      "Callback": "EconomyConfigCallbacks:OnGiniHighChanged"
+    },
+    {
+      "Id": "cycle_gini_low",
+      "Type": "TEXT",
+      "TextVal": "0.4",
+      "Callback": "EconomyConfigCallbacks:OnGiniLowChanged"
+    },
+    {
+      "Id": "cycle_gini_periods",
+      "Type": "TEXT",
+      "TextVal": "2",
+      "Callback": "EconomyConfigCallbacks:OnGiniPeriodsChanged"
+    },
+    {
+      "Id": "boom_stimulus_ratio",
+      "Type": "TEXT",
+      "TextVal": "0.03",
+      "Callback": "EconomyConfigCallbacks:OnBoomStimulusChanged"
+    },
+    {
+      "Id": "boom_bubble_factor",
+      "Type": "TEXT",
+      "TextVal": "0.15",
+      "Callback": "EconomyConfigCallbacks:OnBubbleFactorChanged"
+    },
+    {
+      "Id": "bubble_threshold",
+      "Type": "TEXT",
+      "TextVal": "5000",
+      "Callback": "EconomyConfigCallbacks:OnBubbleThresholdChanged"
+    },
+    {
+      "Id": "boom_max_duration",
+      "Type": "TEXT",
+      "TextVal": "8",
+      "Callback": "EconomyConfigCallbacks:OnBoomMaxDurationChanged"
+    },
+    {
+      "Id": "recession_max_duration",
+      "Type": "TEXT",
+      "TextVal": "5",
+      "Callback": "EconomyConfigCallbacks:OnRecessionMaxDurationChanged"
+    },
+    {
+      "Id": "depression_max_duration",
+      "Type": "TEXT",
+      "TextVal": "6",
+      "Callback": "EconomyConfigCallbacks:OnDepressionMaxDurationChanged"
+    },
+    {
+      "Id": "recovery_max_duration",
+      "Type": "TEXT",
+      "TextVal": "4",
+      "Callback": "EconomyConfigCallbacks:OnRecoveryMaxDurationChanged"
+    },
+    {
+      "Id": "survival_line",
+      "Type": "TEXT",
+      "TextVal": "3.0",
+      "Callback": "EconomyConfigCallbacks:OnSurvivalLineChanged"
+    },
+    {
+      "Id": "war_plunder_ratio",
+      "Type": "TEXT",
+      "TextVal": "0.2",
+      "Callback": "EconomyConfigCallbacks:OnWarPlunderRatioChanged"
+    },
+    {
+      "Id": "revolution_delay_years",
+      "Type": "TEXT",
+      "TextVal": "3",
+      "Callback": "EconomyConfigCallbacks:OnRevolutionDelayChanged"
+    },
+    {
+      "Id": "revolution_kill_ratio",
+      "Type": "TEXT",
+      "TextVal": "0.3",
+      "Callback": "EconomyConfigCallbacks:OnRevolutionKillRatioChanged"
+    },
+    {
+      "Id": "wealth_tax_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnWealthTaxEnabledChanged"
+    },
+    {
+      "Id": "wealth_tax_ratio",
+      "Type": "TEXT",
+      "TextVal": "0.3",
+      "Callback": "EconomyConfigCallbacks:OnWealthTaxRatioChanged"
+    },
+    {
+      "Id": "wealth_tax_line",
+      "Type": "TEXT",
+      "TextVal": "1.5",
+      "Callback": "EconomyConfigCallbacks:OnWealthTaxLineChanged"
+    },
+    {
+      "Id": "trade_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnTradeEnabledChanged"
+    },
+    {
+      "Id": "trade_flow_ratio",
+      "Type": "TEXT",
+      "TextVal": "0.05",
+      "Callback": "EconomyConfigCallbacks:OnTradeFlowRatioChanged"
+    },
+    {
+      "Id": "population_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnPopulationEnabledChanged"
+    },
+    {
+      "Id": "population_overcrowd",
+      "Type": "TEXT",
+      "TextVal": "0.9",
+      "Callback": "EconomyConfigCallbacks:OnOvercrowdChanged"
+    },
+    {
+      "Id": "era_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnEraEnabledChanged"
+    },
+    {
+      "Id": "era_duration_years",
+      "Type": "TEXT",
+      "TextVal": "15",
+      "Callback": "EconomyConfigCallbacks:OnEraDurationYearsChanged"
+    },
+    {
+      "Id": "collapse_drop_ratio",
+      "Type": "TEXT",
+      "TextVal": "0.2",
+      "Callback": "EconomyConfigCallbacks:OnCollapseDropRatioChanged"
+    },
+    {
+      "Id": "collapse_duration_years",
+      "Type": "TEXT",
+      "TextVal": "5",
+      "Callback": "EconomyConfigCallbacks:OnCollapseDurationYearsChanged"
+    },
+    {
+      "Id": "flourish_military_ratio",
+      "Type": "TEXT",
+      "TextVal": "0.3",
+      "Callback": "EconomyConfigCallbacks:OnFlourishMilitaryRatioChanged"
+    },
+    {
+      "Id": "flourish_periods",
+      "Type": "TEXT",
+      "TextVal": "2",
+      "Callback": "EconomyConfigCallbacks:OnFlourishPeriodsChanged"
+    },
+    {
+      "Id": "labor_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnLaborEnabledChanged"
+    },
+    {
+      "Id": "labor_wage_base",
+      "Type": "TEXT",
+      "TextVal": "1.0",
+      "Callback": "EconomyConfigCallbacks:OnWageBaseChanged"
+    },
+    {
+      "Id": "real_time_refresh",
+      "Type": "SWITCH",
+      "BoolVal": false,
+      "Callback": "EconomyConfigCallbacks:OnRealTimeRefreshChanged"
+    },
+    {
+      "Id": "real_time_interval",
+      "Type": "TEXT",
+      "TextVal": "5",
+      "Callback": "EconomyConfigCallbacks:OnRealTimeIntervalChanged"
+    }
+  ]
+}

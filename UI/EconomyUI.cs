@@ -1,0 +1,284 @@
+﻿using NeoModLoader.General;
+using NeoModLoader.General.UI.Tab;
+using UnityEngine;
+using EconomyMod.Core;
+using EconomyMod.Models;
+using EconomyMod.Services;
+
+namespace EconomyMod.UI
+{
+    /// <summary>
+    /// 经济 Mod UI 入口：在底部工具栏创建 Tab + 切换按钮，
+    /// 点击按钮切换悬浮 HUD 面板的显示/隐藏（不暂停游戏）。
+    /// </summary>
+    public static class EconomyUI
+    {
+        private static PowersTab _tab;
+
+        /// <summary>
+        /// 判断当前界面语言是否为中文。
+        /// 跟随模组设置"使用中文界面"(use_chinese_ui) 开关，与游戏语言解耦：
+        /// WorldBox 语言码 cz=简体、ch=繁体，但游戏语言与设置开关不一致时以设置为准。
+        /// </summary>
+        private static bool IsChinese()
+        {
+            var cfg = UnrestConfig.Instance;
+            return cfg == null || cfg.Language == "zh";
+        }
+
+        /// <summary>已注册的按钮 tooltip 定义（用于语言切换时重新注入）。</summary>
+        private class TooltipInfo
+        {
+            public PowerButton Btn;
+            public string Id;
+            public string ZhTitle, ZhDesc, EnTitle, EnDesc;
+        }
+
+        private static readonly System.Collections.Generic.List<TooltipInfo> _tooltips =
+            new System.Collections.Generic.List<TooltipInfo>();
+
+        /// <summary>
+        /// 注册并注入按钮 tooltip；记录文案，供 <see cref="ReapplyTooltips"/> 在语言切换后重新注入。
+        /// </summary>
+        private static void RegisterTooltip(PowerButton btn, string id,
+            string zhTitle, string zhDesc, string enTitle, string enDesc)
+        {
+            if (btn == null) return;
+            _tooltips.Add(new TooltipInfo
+            {
+                Btn = btn, Id = id,
+                ZhTitle = zhTitle, ZhDesc = zhDesc, EnTitle = enTitle, EnDesc = enDesc
+            });
+            SetTooltip(btn, id, zhTitle, zhDesc, enTitle, enDesc);
+        }
+
+        /// <summary>
+        /// 按当前设置语言重新注入全部按钮 tooltip 与 Tab 名称（设置"使用中文界面"切换时调用）。
+        /// LM.AddToCurrentLocale 覆盖同名 key，重复注入即可切换语言。
+        /// </summary>
+        public static void ReapplyTooltips()
+        {
+            RegisterTabLocale();
+            foreach (var t in _tooltips)
+            {
+                if (t.Btn == null) continue;
+                SetTooltip(t.Btn, t.Id, t.ZhTitle, t.ZhDesc, t.EnTitle, t.EnDesc);
+            }
+        }
+
+        // ===== Tab 名称/描述本地化 =====
+        // 工具栏 Tab 的名称/描述是 vanilla LocalizedTextManager 按 key 直接查找的
+        // （getText → _localized_text.ContainsKey），缺失时打印 "missing text" 日志，
+        // 并可能在工具提示路径引发空键异常。故必须在运行时用 LM.AddToCurrentLocale 注入。
+        private const string TabNameKey = "Classical Economics";
+        private const string TabDescKey = "Classical Economics Tab";
+
+        private static void RegisterTabLocale()
+        {
+            bool isZh = IsChinese();
+            LM.AddToCurrentLocale(TabNameKey, isZh ? "古典经济学" : "Classical Economics");
+            LM.AddToCurrentLocale(TabDescKey, isZh ? "古典经济学工具栏" : "Classical Economics Toolbar");
+            LM.ApplyLocale(false);
+        }
+
+        /// <summary>
+        /// 设置 PowerButton 的提示信息。
+        /// 双保险：
+        /// 1) 通过 LM.AddToCurrentLocale 直接注入本地化文本，确保 key 一定存在
+        ///    （不依赖 locale 文件语言代码是否匹配，如 zh.json vs ch.json）；
+        /// 2) 设置 TipButton.textOnClick/textOnClickDescription，
+        ///    CreateSimpleButton 创建的 Library 类型按钮 godPower 为 null，
+        ///    反射修改 GodPower.name 无效，必须走 TipButton。
+        /// </summary>
+        private static void SetTooltip(PowerButton btn, string id,
+            string zhTitle, string zhDesc, string enTitle, string enDesc)
+        {
+            if (btn == null) return;
+            bool isZh = IsChinese();
+            // 直接写入当前语言的本地化字典（同时注册到 locales[language]，
+            // 语言切换后 NML 的 ApplyLocale 会重新应用，保持持久）
+            LM.AddToCurrentLocale(id, isZh ? zhTitle : enTitle);
+            LM.AddToCurrentLocale(id + "_description", isZh ? zhDesc : enDesc);
+            // 设置 TipButton（若 prefab 未自带则运行时添加）
+            var tip = btn.GetComponent<TipButton>();
+            if (tip == null)
+            {
+                tip = btn.gameObject.AddComponent<TipButton>();
+            }
+            tip.textOnClick = id;
+            tip.textOnClickDescription = id + "_description";
+            tip.text_description_2 = "";
+        }
+
+        public static void Initialize()
+        {
+            // 诊断日志：输出当前语言 id 与 IsChinese 判定结果，
+            // 便于部署后从 Player.log 定位 tooltip 语言注入问题
+            var cl = LocalizedTextManager.current_language;
+            UnityEngine.Debug.Log($"[ClassicalEconomics] 当前语言 id='{cl?.id ?? "null"}' IsChinese={IsChinese()}");
+
+            // 创建悬浮 HUD（Canvas 上的非模态面板）
+            EconomyHUD.Create();
+            // 创建富豪榜"工具框"（点击皇冠按钮弹出的轻量弹窗）
+            RichListWindow.Create();
+            // 创建事件流悬浮窗（独立于经济窗口，点击铃铛按钮切换显隐）
+            EventWindow.Create();
+
+            // 创建底部工具栏 Tab（带金币图标）；
+            // 先注入 Tab 名称/描述本地化键（vanilla LTM 按 key 查找，缺失会打印 missing text 日志）
+            RegisterTabLocale();
+            _tab = TabManager.CreateTab("economy", TabNameKey, TabDescKey,
+                IconLoader.Get("coin"), "");
+
+            // 创建切换 HUD 显示的按钮（带账本图标），挂到 Tab 上
+            var btn = PowerButtonCreator.CreateSimpleButton(
+                "economy_toggle",
+                () => EconomyHUD.Instance?.Toggle(),
+                IconLoader.Get("ledger"),
+                _tab.transform, Vector2.zero);
+            RegisterTooltip(btn, "economy_toggle",
+                "经济概览", "切换经济主面板显隐",
+                "Economy Overview", "Toggle the main economy panel");
+            PowerButtonCreator.AddButtonToTab(btn, _tab, null);
+
+            // 创建"煽动动荡"工具按钮（带火焰图标，与悬浮窗工具并列），
+            // 点击打开国家选择列表，可对任意国家触发原版叛乱
+            var btnUnrest = PowerButtonCreator.CreateSimpleButton(
+                "economy_unrest",
+                () => EconomyHUD.Instance?.ShowKingdomPicker(),
+                IconLoader.Get("flame"),
+                _tab.transform, Vector2.zero);
+            RegisterTooltip(btnUnrest, "economy_unrest",
+                "煽动动荡", "选择国家触发原版叛乱",
+                "Incite Unrest", "Select a kingdom to trigger rebellion");
+            PowerButtonCreator.AddButtonToTab(btnUnrest, _tab, null);
+
+            // 创建"镇压动乱"工具按钮（带盾牌图标）：打开同一国家选择列表，
+            // 对任意国家移除动荡特质、平息叛乱
+            var btnSuppress = PowerButtonCreator.CreateSimpleButton(
+                "economy_suppress",
+                () => EconomyHUD.Instance?.ShowKingdomPicker(),
+                IconLoader.Get("suppress"),
+                _tab.transform, Vector2.zero);
+            RegisterTooltip(btnSuppress, "economy_suppress",
+                "镇压动乱", "选择国家平息叛乱与动荡",
+                "Suppress Unrest", "Select a kingdom to quell rebellion");
+            PowerButtonCreator.AddButtonToTab(btnSuppress, _tab, null);
+
+            // 创建"立即采集"工具按钮（带刷新图标）：手动执行一次数据采集与重算
+            var btnCollect = PowerButtonCreator.CreateSimpleButton(
+                "economy_collect",
+                () =>
+                {
+                    EconomyModMain.ManualCollect(); // 采集 + 同步计算发布 + 富豪税 + 刷新
+                },
+                IconLoader.Get("collect"),
+                _tab.transform, Vector2.zero);
+            RegisterTooltip(btnCollect, "economy_collect",
+                "立即采集", "手动执行一次数据采集与经济重算",
+                "Collect Now", "Manually run data collection and recalculation");
+            PowerButtonCreator.AddButtonToTab(btnCollect, _tab, null);
+
+            // 创建"清除历史"工具按钮（带垃圾桶图标）：清空历史快照（内存 + history.json）
+            var btnClear = PowerButtonCreator.CreateSimpleButton(
+                "economy_clear",
+                () =>
+                {
+                    HistoryService.ClearHistory();
+                    RefreshOverview();
+                },
+                IconLoader.Get("trash"),
+                _tab.transform, Vector2.zero);
+            RegisterTooltip(btnClear, "economy_clear",
+                "清除历史", "清空所有历史快照数据",
+                "Clear History", "Wipe all historical snapshot data");
+            PowerButtonCreator.AddButtonToTab(btnClear, _tab, null);
+
+            // 创建"全球富豪榜"工具按钮（带皇冠图标，与悬浮窗按钮并列），
+            // 点击弹出工具框显示财富前 10 的存活开智生物
+            var btnRich = PowerButtonCreator.CreateSimpleButton(
+                "economy_rich",
+                () => RichListWindow.Instance?.Toggle(),
+                IconLoader.Get("crown"),
+                _tab.transform, Vector2.zero);
+            RegisterTooltip(btnRich, "economy_rich",
+                "全球富豪榜", "查看财富排行",
+                "Rich List", "View the wealthiest actors");
+            PowerButtonCreator.AddButtonToTab(btnRich, _tab, null);
+
+            // 创建"经济事件"工具按钮（带铃铛图标）：切换事件流悬浮窗显隐
+            var btnEvents = PowerButtonCreator.CreateSimpleButton(
+                "economy_events",
+                () => EventWindow.Instance?.Toggle(),
+                IconLoader.Get("bell"),
+                _tab.transform, Vector2.zero);
+            RegisterTooltip(btnEvents, "economy_events",
+                "经济事件", "切换事件流悬浮窗",
+                "Economy Events", "Toggle the event stream window");
+            PowerButtonCreator.AddButtonToTab(btnEvents, _tab, null);
+
+            // 创建"经济阶段"切换按钮组（4个按钮，与悬浮窗按钮并列）
+            var btnBoom = PowerButtonCreator.CreateSimpleButton(
+                "economy_phase_boom",
+                () => { EconomyCycleModulator.SetPhaseManual(EconomyPhase.Boom); RefreshOverview(); },
+                IconLoader.Get("phase_boom"),
+                _tab.transform, Vector2.zero);
+            RegisterTooltip(btnBoom, "economy_phase_boom",
+                "繁荣期", "切换至繁荣期：信用扩张、泡沫累积",
+                "Boom", "Switch to Boom: credit expansion, bubble buildup");
+            PowerButtonCreator.AddButtonToTab(btnBoom, _tab, null);
+
+            var btnRecession = PowerButtonCreator.CreateSimpleButton(
+                "economy_phase_recession",
+                () => { EconomyCycleModulator.SetPhaseManual(EconomyPhase.Recession); RefreshOverview(); },
+                IconLoader.Get("phase_recession"),
+                _tab.transform, Vector2.zero);
+            RegisterTooltip(btnRecession, "economy_phase_recession",
+                "衰退期", "切换至衰退期：经济收缩、泡沫破裂",
+                "Recession", "Switch to Recession: economic contraction, bubble burst");
+            PowerButtonCreator.AddButtonToTab(btnRecession, _tab, null);
+
+            var btnDepression = PowerButtonCreator.CreateSimpleButton(
+                "economy_phase_depression",
+                () => { EconomyCycleModulator.SetPhaseManual(EconomyPhase.Depression); RefreshOverview(); },
+                IconLoader.Get("phase_depression"),
+                _tab.transform, Vector2.zero);
+            RegisterTooltip(btnDepression, "economy_phase_depression",
+                "萧条期", "切换至萧条期：饥荒风险、人口死亡",
+                "Depression", "Switch to Depression: famine risk, population death");
+            PowerButtonCreator.AddButtonToTab(btnDepression, _tab, null);
+
+            var btnRecovery = PowerButtonCreator.CreateSimpleButton(
+                "economy_phase_recovery",
+                () => { EconomyCycleModulator.SetPhaseManual(EconomyPhase.Recovery); RefreshOverview(); },
+                IconLoader.Get("phase_recovery"),
+                _tab.transform, Vector2.zero);
+            RegisterTooltip(btnRecovery, "economy_phase_recovery",
+                "复苏期", "切换至复苏期：缓慢回暖、重建信心",
+                "Recovery", "Switch to Recovery: slow rebound, confidence rebuild");
+            PowerButtonCreator.AddButtonToTab(btnRecovery, _tab, null);
+
+            Debug.Log("[ClassicalEconomics] EconomyUI 初始化完成（悬浮HUD + 煽动工具 + 富豪榜工具 + 事件流窗口 + 阶段切换）");
+        }
+
+        /// <summary>
+        /// 刷新概览数据（采集周期或手动采集后调用）。
+        /// 富豪榜悬浮窗若处于打开状态，同步刷新其数据。
+        /// </summary>
+        public static void RefreshOverview()
+        {
+            if (EconomyHUD.Instance != null && EconomyHUD.Instance.IsVisible)
+            {
+                EconomyHUD.Instance.RefreshCurrentSection();
+            }
+            if (RichListWindow.Instance != null && RichListWindow.Instance.IsVisible)
+            {
+                RichListWindow.Instance.RefreshNow();
+            }
+            if (EventWindow.Instance != null && EventWindow.Instance.IsVisible)
+            {
+                EventWindow.Instance.RefreshNow();
+            }
+        }
+    }
+}
