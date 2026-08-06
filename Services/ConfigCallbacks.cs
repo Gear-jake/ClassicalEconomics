@@ -1,4 +1,4 @@
-﻿using EconomyMod.Models;
+using EconomyMod.Models;
 using EconomyMod.UI;
 using NeoModLoader.General;
 
@@ -86,6 +86,7 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("recovery_max_duration", out var rcm)) u.RecoveryMaxDuration = ParseInt(rcm.TextVal, u.RecoveryMaxDuration, 1, 20);
                 if (group.TryGetValue("survival_line", out var sl))      u.SurvivalLine = ParseFloat(sl.TextVal, u.SurvivalLine, 0.5f, 10f);
                 if (group.TryGetValue("war_plunder_ratio", out var wp))  u.WarPlunderRatio = ParseFloat(wp.TextVal, u.WarPlunderRatio, 0f, 0.5f);
+                if (group.TryGetValue("war_waste_ratio", out var ww))    u.WarWasteRatio = ParseFloat(ww.TextVal, u.WarWasteRatio, 0f, 1f);
                 if (group.TryGetValue("revolution_delay_years", out var rd)) u.RevolutionDelayYears = ParseInt(rd.TextVal, u.RevolutionDelayYears, 1, 10);
                 if (group.TryGetValue("revolution_kill_ratio", out var rk)) u.RevolutionKillRatio = ParseFloat(rk.TextVal, u.RevolutionKillRatio, 0.1f, 0.8f);
                 // 年度累进税
@@ -244,6 +245,11 @@ namespace EconomyMod.Services
         public static void OnWarPlunderRatioChanged(string pValue)
         {
             UnrestConfig.Instance.WarPlunderRatio = ParseFloat(pValue, UnrestConfig.Instance.WarPlunderRatio, 0f, 0.5f);
+        }
+
+        public static void OnWarWasteRatioChanged(string pValue)
+        {
+            UnrestConfig.Instance.WarWasteRatio = ParseFloat(pValue, UnrestConfig.Instance.WarWasteRatio, 0f, 1f);
         }
 
         public static void OnRevolutionDelayChanged(string pValue)

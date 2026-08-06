@@ -1,4 +1,4 @@
-﻿{
+{
   "Economy": "经济",
   "Economy Tab": "经济概览标签页",
   "economy_title": "古典经济学",
@@ -140,6 +140,8 @@
   "survival_line Description": "人均财富低于该值判定经济萧条",
   "war_plunder_ratio": "战争掠夺比例",
   "war_plunder_ratio Description": "战争结束后胜方掠夺败方王国硬币的比例",
+  "war_waste_ratio": "战争损耗比例",
+  "war_waste_ratio Description": "掠夺额中直接蒸发（战乱破坏、不转移给胜方）的比例，从败方富人优先扣除 → 降低基尼",
   "revolution_delay_years": "革命触发延迟（年）",
   "revolution_delay_years Description": "叛乱持续满 N 年触发革命（旧政权被推翻）",
   "revolution_kill_ratio": "革命击杀比例",

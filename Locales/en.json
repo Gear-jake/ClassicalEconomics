@@ -1,4 +1,4 @@
-﻿{
+{
   "Economy": "Economy",
   "Economy Tab": "Economy Overview Tab",
   "economy_title": "Classical Economics",
@@ -140,6 +140,8 @@
   "survival_line Description": "Economy turns depressed when average wealth falls below this",
   "war_plunder_ratio": "War Plunder Ratio",
   "war_plunder_ratio Description": "Share of the loser kingdom's coins plundered by the winner after a war",
+  "war_waste_ratio": "War Waste Ratio",
+  "war_waste_ratio Description": "Share of plunder that evaporates (war damage, not transferred). Deducted from the rich first, lowering the Gini coefficient",
   "revolution_delay_years": "Revolution Delay (years)",
   "revolution_delay_years Description": "A kingdom falls when its rebellion lasts this many years",
   "revolution_kill_ratio": "Revolution Kill Ratio",

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Reflection;
 using EconomyMod.Models;
 using EconomyMod.Services;
@@ -32,6 +32,9 @@ namespace EconomyMod.Core
         private static readonly HashSet<string> _currentWarKeys = new HashSet<string>();
         private static readonly List<string> _staleWarKeys = new List<string>();
         private static readonly List<KingdomStats> _poorestPool = new List<KingdomStats>();
+
+        // 战败结算：财富降序比较器（富人优先被扣 → 劫富济贫）
+        private static readonly System.Comparison<Actor> _wealthDescCompare = (a, b) => WealthOf(b).CompareTo(WealthOf(a));
 
         /// <summary>每年评估一次（在 UnrestEngine.Evaluate 之后调用）。</summary>
         public static void Evaluate()
@@ -95,7 +98,12 @@ namespace EconomyMod.Core
             foreach (var k in stale) _warWinnerCache.Remove(k);
         }
 
-        /// <summary>胜方掠夺败方王国 WarPlunderRatio 比例的硬币，平分给胜方成员。</summary>
+        /// <summary>
+        /// 战败结算（两个机制配合，直接降低基尼系数）：
+        /// 1) 战争损耗：掠夺额的 <see cref="UnrestConfig.WarWasteRatio"/> 比例直接"蒸发"
+        ///    （战乱破坏财富、不转移给任何人），从败方富人优先扣除 → 总财富减少、富人损失绝对额更大；
+        /// 2) 劫富济贫：剩余掠夺额从败方富人优先抽取，均分给败方与胜方的贫困公民。
+        /// </summary>
         private static void Plunder(long attackerId, long defenderId, int winner, UnrestConfig cfg)
         {
             long winnerId = winner == WinnerAttackers ? attackerId : defenderId;
@@ -105,38 +113,88 @@ namespace EconomyMod.Core
             if (loserKingdom == null || loserKingdom.units == null || loserKingdom.units.Count == 0) return;
             if (winnerKingdom == null || winnerKingdom.units == null || winnerKingdom.units.Count == 0) return;
 
-            // 计算败方总硬币与掠夺额（用复用缓冲，避免 new List）
+            // 败方成员（复用缓冲），按财富降序 → 富人优先被扣（劫富）
             var loserUnits = SnapshotUnits(loserKingdom, _actorPool);
+            loserUnits.Sort(_wealthDescCompare);
+
             long loot = 0;
             foreach (var a in loserUnits)
-            {
-                if (a == null || !a.isAlive()) continue;
-                try { loot += Mathf.Max(0, Mathf.RoundToInt(a.money)); } catch (System.Exception) { }
-            }
+                if (a != null && a.isAlive()) loot += Mathf.Max(0, Mathf.RoundToInt(a.money));
             long steal = (long)(loot * cfg.WarPlunderRatio);
             if (steal <= 0) return;
 
-            // 从败方逐人扣款
-            GameHelpers.DeductCoins(loserUnits, steal);
+            // 1) 战争损耗：直接蒸发（不转移），从败方（富人优先）扣除
+            long evap = (long)(steal * Mathf.Clamp01(cfg.WarWasteRatio));
+            if (evap > 0) GameHelpers.DeductCoins(loserUnits, evap);
 
-            // 平分给胜方存活成员
-            var winnerUnits = SnapshotUnits(winnerKingdom, _actorPool2);
-            int receivers = 0;
-            foreach (var a in winnerUnits)
-                if (a != null && a.isAlive()) receivers++;
-            if (receivers == 0) return;
-            int share = (int)(steal / receivers);
-            if (share > 0)
+            // 2) 劫富济贫：剩余部分从败方（富人优先）抽取，分给败方/胜方贫困公民
+            long transfer = steal - evap;
+            long actual = transfer > 0 ? GameHelpers.DeductCoins(loserUnits, transfer) : 0L;
+            long given = 0L;
+            if (actual > 0)
             {
-                foreach (var a in winnerUnits)
-                {
-                    if (a == null || !a.isAlive()) continue;
-                    try { a.addMoney(share); } catch (System.Exception) { }
-                }
+                var winnerUnits = SnapshotUnits(winnerKingdom, _actorPool2);
+                given = GiveToPoor(loserUnits, winnerUnits, actual);
             }
 
-            GameHelpers.Log($"[ClassicalEconomics] 战争掠夺 {WinnerName(winner)} 胜 掠夺={steal} 来自<{GameHelpers.SafeKingdomName(loserKingdom)}>");
+            GameHelpers.Log($"[ClassicalEconomics] 战争掠夺 {WinnerName(winner)} 胜 掠夺={steal}(损耗{evap}+济贫{given}) 来自<{GameHelpers.SafeKingdomName(loserKingdom)}>");
             EventStreamService.Record(EventStreamService.TypePlunder, GameHelpers.SafeKingdomName(loserKingdom), steal);
+        }
+
+        /// <summary>安全读取生物财富（半销毁对象可能读取失败，返回 0）。</summary>
+        private static float WealthOf(Actor a)
+        {
+            try { return Mathf.Max(0f, Mathf.RoundToInt(a.money)); } catch (System.Exception) { return 0f; }
+        }
+
+        /// <summary>单位列表存活成员的平均财富。</summary>
+        private static float AvgWealth(List<Actor> units)
+        {
+            long sum = 0; int n = 0;
+            foreach (var a in units)
+            {
+                if (a == null || !a.isAlive()) continue;
+                sum += Mathf.Max(0, Mathf.RoundToInt(a.money));
+                n++;
+            }
+            return n > 0 ? (float)sum / n : 0f;
+        }
+
+        /// <summary>
+        /// 把金额均分给"败方 + 胜方"中低于各自王国人均×0.8 的贫困公民（余数补给第一个）。
+        /// 财富从败方富人（已被优先抽取）流向两国的穷人 → 直接降低基尼系数。
+        /// 返回实际发放金额。
+        /// </summary>
+        private static long GiveToPoor(List<Actor> losers, List<Actor> winners, long amount)
+        {
+            float lAvg = AvgWealth(losers);
+            float wAvg = AvgWealth(winners);
+            float lPoor = lAvg * 0.8f;
+            float wPoor = wAvg * 0.8f;
+
+            int poorCount = 0;
+            foreach (var a in losers) if (a != null && a.isAlive() && WealthOf(a) < lPoor) poorCount++;
+            foreach (var a in winners) if (a != null && a.isAlive() && WealthOf(a) < wPoor) poorCount++;
+            if (poorCount <= 0) return 0L;
+
+            long per = amount / poorCount;
+            if (per <= 0) return 0L;
+            long remain = amount - per * poorCount;
+            long given = 0L;
+            bool first = true;
+            foreach (var a in losers)
+            {
+                if (a == null || !a.isAlive() || WealthOf(a) >= lPoor) continue;
+                try { a.addMoney((int)per + (first ? (int)remain : 0)); } catch (System.Exception) { }
+                given += per; first = false;
+            }
+            foreach (var a in winners)
+            {
+                if (a == null || !a.isAlive() || WealthOf(a) >= wPoor) continue;
+                try { a.addMoney((int)per + (first ? (int)remain : 0)); } catch (System.Exception) { }
+                given += per; first = false;
+            }
+            return given;
         }
 
         // ===== 2. 革命与政权更迭 =====

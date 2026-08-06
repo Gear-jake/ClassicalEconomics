@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace EconomyMod.Models
 {
@@ -73,6 +73,10 @@ namespace EconomyMod.Models
 
         /// <summary>战争掠夺比例：胜方掠夺败方王国硬币比例。</summary>
         public float WarPlunderRatio = 0.20f;
+
+        /// <summary>战争损耗比例：掠夺额中直接"蒸发"（战乱破坏财富、不转移给胜方）的比例。
+        /// 损耗从败方富人优先扣除且不进入任何人口袋 → 总财富减少、直接降低基尼系数。</summary>
+        public float WarWasteRatio = 0.50f;
 
         /// <summary>叛乱持续满 N 年触发革命（王国被推翻）。</summary>
         public int RevolutionDelayYears = 3;

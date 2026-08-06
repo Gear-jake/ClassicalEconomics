@@ -1,4 +1,4 @@
-﻿{
+{
   "economy_general": [
     {
       "Id": "use_chinese_ui",
@@ -119,6 +119,12 @@
       "Type": "TEXT",
       "TextVal": "0.2",
       "Callback": "EconomyConfigCallbacks:OnWarPlunderRatioChanged"
+    },
+    {
+      "Id": "war_waste_ratio",
+      "Type": "TEXT",
+      "TextVal": "0.5",
+      "Callback": "EconomyConfigCallbacks:OnWarWasteRatioChanged"
     },
     {
       "Id": "revolution_delay_years",
