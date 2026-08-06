@@ -10,7 +10,7 @@
 # Watermark removal: bottom band pixels not connected to the main body get deleted
 Add-Type -AssemblyName System.Drawing
 
-$rootDir  = "e:\code\new\EconomyMod"
+$rootDir  = $PSScriptRoot
 $srcDir   = Join-Path $rootDir "ai_icons"
 $uiDir    = Join-Path $rootDir "Icons"
 $eraDir   = Join-Path $rootDir "GameResources\ui\Icons"

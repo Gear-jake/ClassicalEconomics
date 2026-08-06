@@ -2,9 +2,6 @@
 bin/
 obj/
 
-# 运行时生成的图标缓存（首次运行自动创建，仅根目录）
-/Icons/
-
 # 原始大图标
 icon.original.png
 
