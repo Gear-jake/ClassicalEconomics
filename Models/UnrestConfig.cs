@@ -84,6 +84,21 @@ namespace EconomyMod.Models
         /// <summary>革命时击杀王国人口比例。</summary>
         public float RevolutionKillRatio = 0.30f;
 
+        // ===== 街头起义（政权彻底崩塌）=====
+
+        /// <summary>街头起义触发阈值：叛乱后基尼仍 ≥ 该值持续满 UprisingDelayYears 年 → 街头起义。
+        /// 起义 = 全城暴动 + 杀富济贫 + 推翻国王（比普通叛乱更彻底）。</summary>
+        public float UprisingGiniThreshold = 0.95f;
+
+        /// <summary>起义延迟（年）：叛乱后基尼持续超起义阈值满 N 年触发街头起义。</summary>
+        public int UprisingDelayYears = 3;
+
+        /// <summary>杀富比例：起义/革命时处决王国最富人口的 Top 比例（Top1% 表示 0.01）。</summary>
+        public float KillRichRatio = 0.05f;
+
+        /// <summary>杀富再分配比例：被处决富人的财富按该比例分给最穷公民（其余蒸发/掉落）。</summary>
+        public float KillRichRedistRatio = 0.60f;
+
         // ===== 年度累进税（全员再分配，直接降低全球基尼）=====
 
         /// <summary>是否启用年度累进税（全球超税线公民纳税，补贴贫困公民）。</summary>

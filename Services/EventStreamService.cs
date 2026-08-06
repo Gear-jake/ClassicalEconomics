@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace EconomyMod.Services
 {
@@ -18,6 +18,7 @@ namespace EconomyMod.Services
         public const string TypeSuppress   = "ev_suppress";    // 手动镇压
         public const string TypePlunder    = "ev_plunder";     // 战争掠夺
         public const string TypeRevolution = "ev_revolution";  // 革命爆发
+        public const string TypeUprising   = "ev_uprising";    // 街头起义（政权崩塌）
         public const string TypeBuildInv     = "ev_build_inv";      // 建造投资
         public const string TypeCraftArsenal = "ev_craft_arsenal";  // 打造军械
         public const string TypeWholesale    = "ev_wholesale";      // 武器批发

@@ -89,6 +89,11 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("war_waste_ratio", out var ww))    u.WarWasteRatio = ParseFloat(ww.TextVal, u.WarWasteRatio, 0f, 1f);
                 if (group.TryGetValue("revolution_delay_years", out var rd)) u.RevolutionDelayYears = ParseInt(rd.TextVal, u.RevolutionDelayYears, 1, 10);
                 if (group.TryGetValue("revolution_kill_ratio", out var rk)) u.RevolutionKillRatio = ParseFloat(rk.TextVal, u.RevolutionKillRatio, 0.1f, 0.8f);
+                // 街头起义（政权崩塌）
+                if (group.TryGetValue("uprising_gini_threshold", out var ug)) u.UprisingGiniThreshold = ParseFloat(ug.TextVal, u.UprisingGiniThreshold, 0.7f, 1f);
+                if (group.TryGetValue("uprising_delay_years", out var uy))    u.UprisingDelayYears = ParseInt(uy.TextVal, u.UprisingDelayYears, 1, 10);
+                if (group.TryGetValue("kill_rich_ratio", out var kr))         u.KillRichRatio = ParseFloat(kr.TextVal, u.KillRichRatio, 0.01f, 0.3f);
+                if (group.TryGetValue("kill_rich_redist_ratio", out var krr)) u.KillRichRedistRatio = ParseFloat(krr.TextVal, u.KillRichRedistRatio, 0.1f, 1f);
                 // 年度累进税
                 if (group.TryGetValue("wealth_tax_enabled", out var wt))       u.WealthTaxEnabled = wt.BoolVal;
                 if (group.TryGetValue("wealth_tax_ratio", out var wtr))        u.WealthTaxRatio = ParseFloat(wtr.TextVal, u.WealthTaxRatio, 0f, 0.5f);
@@ -260,6 +265,26 @@ namespace EconomyMod.Services
         public static void OnRevolutionKillRatioChanged(string pValue)
         {
             UnrestConfig.Instance.RevolutionKillRatio = ParseFloat(pValue, UnrestConfig.Instance.RevolutionKillRatio, 0.1f, 0.8f);
+        }
+
+        public static void OnUprisingGiniThresholdChanged(string pValue)
+        {
+            UnrestConfig.Instance.UprisingGiniThreshold = ParseFloat(pValue, UnrestConfig.Instance.UprisingGiniThreshold, 0.7f, 1f);
+        }
+
+        public static void OnUprisingDelayYearsChanged(string pValue)
+        {
+            UnrestConfig.Instance.UprisingDelayYears = ParseInt(pValue, UnrestConfig.Instance.UprisingDelayYears, 1, 10);
+        }
+
+        public static void OnKillRichRatioChanged(string pValue)
+        {
+            UnrestConfig.Instance.KillRichRatio = ParseFloat(pValue, UnrestConfig.Instance.KillRichRatio, 0.01f, 0.3f);
+        }
+
+        public static void OnKillRichRedistRatioChanged(string pValue)
+        {
+            UnrestConfig.Instance.KillRichRedistRatio = ParseFloat(pValue, UnrestConfig.Instance.KillRichRedistRatio, 0.1f, 1f);
         }
 
         // ===== 年度累进税回调 =====

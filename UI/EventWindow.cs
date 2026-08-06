@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using EconomyMod.Services;
 
 namespace EconomyMod.UI
@@ -87,6 +87,7 @@ namespace EconomyMod.UI
                 case EventStreamService.TypeSuppress:   return UIHelpers.L("ev_desc_suppress");
                 case EventStreamService.TypePlunder:    return UIHelpers.Lf("ev_desc_plunder", e.Value);
                 case EventStreamService.TypeRevolution: return UIHelpers.Lf("ev_desc_revolution", e.Value);
+                case EventStreamService.TypeUprising:   return UIHelpers.Lf("ev_desc_uprising", e.Value);
                 case EventStreamService.TypeBuildInv:     return UIHelpers.Lf("ev_desc_build_inv", e.KingdomName);
                 case EventStreamService.TypeCraftArsenal: return UIHelpers.Lf("ev_desc_craft_arsenal", e.KingdomName, e.Value);
                 case EventStreamService.TypeWholesale:    return UIHelpers.Lf("ev_desc_wholesale", e.KingdomName, e.Value);
@@ -115,6 +116,7 @@ namespace EconomyMod.UI
                 case EventStreamService.TypeSuppress:   return new Color(0.4f, 0.7f, 1f);
                 case EventStreamService.TypePlunder:    return new Color(0.95f, 0.8f, 0.3f);
                 case EventStreamService.TypeRevolution: return new Color(0.85f, 0.25f, 0.4f);
+                case EventStreamService.TypeUprising:   return new Color(0.9f, 0.15f, 0.1f);
                 case EventStreamService.TypeBuildInv:     return new Color(0.85f, 0.75f, 0.5f);
                 case EventStreamService.TypeCraftArsenal: return new Color(0.9f, 0.9f, 0.4f);
                 case EventStreamService.TypeWholesale:    return new Color(1f, 0.7f, 0.3f);

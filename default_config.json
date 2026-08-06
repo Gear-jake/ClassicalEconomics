@@ -139,6 +139,30 @@
       "Callback": "EconomyConfigCallbacks:OnRevolutionKillRatioChanged"
     },
     {
+      "Id": "uprising_gini_threshold",
+      "Type": "TEXT",
+      "TextVal": "0.95",
+      "Callback": "EconomyConfigCallbacks:OnUprisingGiniThresholdChanged"
+    },
+    {
+      "Id": "uprising_delay_years",
+      "Type": "TEXT",
+      "TextVal": "3",
+      "Callback": "EconomyConfigCallbacks:OnUprisingDelayYearsChanged"
+    },
+    {
+      "Id": "kill_rich_ratio",
+      "Type": "TEXT",
+      "TextVal": "0.05",
+      "Callback": "EconomyConfigCallbacks:OnKillRichRatioChanged"
+    },
+    {
+      "Id": "kill_rich_redist_ratio",
+      "Type": "TEXT",
+      "TextVal": "0.6",
+      "Callback": "EconomyConfigCallbacks:OnKillRichRedistRatioChanged"
+    },
+    {
       "Id": "wealth_tax_enabled",
       "Type": "SWITCH",
       "BoolVal": true,

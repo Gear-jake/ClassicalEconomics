@@ -940,6 +940,12 @@ namespace EconomyMod.UI
                         color: new Color(1f, 0.4f, 0.2f));
                     stateCount++;
                 }
+                else if (st == 3)
+                {
+                    AddLine(UIHelpers.Lf("unrest_state_uprising", k.KingdomName),
+                        color: new Color(0.9f, 0.15f, 0.1f));
+                    stateCount++;
+                }
             }
             if (stateCount == 0)
             {

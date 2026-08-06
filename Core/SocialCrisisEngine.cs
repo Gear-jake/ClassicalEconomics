@@ -207,20 +207,38 @@ namespace EconomyMod.Core
             {
                 if (kingdom == null || kingdom.data == null) continue;
                 int state = UnrestEngine.GetState(kingdom.data.id, out int elapsed);
-                if (state != 2) continue;                          // 非暴动中
+                if (state != 2) continue;                          // 仅普通叛乱触发革命；街头起义（3）已是政权崩塌完整事件
                 if (elapsed < cfg.RevolutionDelayYears) continue;  // 叛乱持续未满 N 年
 
                 Revolution(kingdom, cfg);
             }
         }
 
-        /// <summary>革命：击杀人口 + 移除叛乱特质 + 硬币重新分配（旧政权被推翻）。</summary>
+        /// <summary>革命：击杀人口 + 处决富豪（杀富济贫）+ 移除叛乱特质 + 硬币重新分配（旧政权被推翻）。</summary>
         private static void Revolution(Kingdom kingdom, UnrestConfig cfg)
         {
             string name = GameHelpers.SafeKingdomName(kingdom);
 
+            // 0. 推翻国王：政权彻底崩塌（起义军处决暴君；若已无王则跳过）
+            if (kingdom.hasKing()) GameHelpers.TryRemoveKing(kingdom);
+
             // 1. 击杀王国部分人口（革命暴力）
             int killed = KillRatioOfKingdom(kingdom, cfg.RevolutionKillRatio);
+
+            // 1.5 杀富济贫：处决王国最富 Top 富豪，财富分给最穷公民（双通道降基尼）
+            int richKilled = 0;
+            if (kingdom.units != null)
+            {
+                int civCount = 0;
+                foreach (var a in kingdom.units)
+                    if (a != null && a.isAlive() && a.asset != null && a.asset.civ) civCount++;
+                if (civCount >= 4)
+                {
+                    int richCount = Mathf.Max(1, Mathf.RoundToInt(civCount * cfg.KillRichRatio));
+                    int poorCount = Mathf.Max(3, Mathf.RoundToInt(civCount * 0.15f));
+                    richKilled = GameHelpers.KillRichGiveToPoor(kingdom, richCount, poorCount, cfg.KillRichRedistRatio);
+                }
+            }
 
             // 2. 移除叛乱特质并清除震荡状态（复用镇压逻辑）
             try { UnrestEngine.Suppress(kingdom); } catch (System.Exception) { }
@@ -231,9 +249,9 @@ namespace EconomyMod.Core
             // 3.5 王国内部劫富济贫：旧政权被推翻，从该国富人抽税分给穷人（直接降低该国基尼）
             long internalRedist = GameHelpers.RedistributeWithinKingdom(kingdom, 5, 10, 0.40f, 2.5f);
 
-            GameHelpers.Log($"[ClassicalEconomics] 革命爆发！<{name}> 旧政权被推翻 击杀{killed}人 重分配硬币={extracted} 王国内济贫={internalRedist}");
-            GameHelpers.Notify($"[革命] <{name}> 旧政权被推翻！击杀 {killed} 人");
-            EventStreamService.Record(EventStreamService.TypeRevolution, name, killed);
+            GameHelpers.Log($"[ClassicalEconomics] 革命爆发！<{name}> 旧政权被推翻 击杀{killed}人 处决富豪{richKilled}人 重分配硬币={extracted} 王国内济贫={internalRedist}");
+            GameHelpers.Notify($"[革命] <{name}> 政权彻底崩塌！击杀 {killed} 人，处决富豪 {richKilled} 人");
+            EventStreamService.Record(EventStreamService.TypeRevolution, name, killed + richKilled);
             try
             {
                 var any = GameHelpers.FindFirstCivActor(kingdom);

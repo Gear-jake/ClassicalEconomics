@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using EconomyMod.Models;
 using UnityEngine;
 
@@ -279,6 +279,73 @@ namespace EconomyMod.Core
                 }
             }
             return totalTax;
+        }
+
+        /// <summary>
+        /// 王国内杀富济贫（街头起义/革命后调用，事件驱动，常态零开销）：
+        /// 找出王国最富 richCount 名智慧成员，按 redistRatio 抽取其财富（抽完后处决），
+        /// 抽出的财富均分给最穷 poorCount 名成员。
+        /// "杀富"（富人绝对损失 + 人口消失）+ "济贫"（穷人获得财富）双通道直接降低基尼系数。
+        /// 返回处决的富人数；无对象/无富余时返回 0。
+        /// </summary>
+        public static int KillRichGiveToPoor(Kingdom kingdom,
+            int richCount, int poorCount, float redistRatio)
+        {
+            if (kingdom == null || kingdom.units == null || kingdom.units.Count == 0) return 0;
+            if (richCount <= 0 || poorCount <= 0) return 0;
+
+            var rich = _redistRich; rich.Clear();
+            var poor = _redistPoor; poor.Clear();
+            float richEdge = 0f, poorEdge = 0f;
+
+            foreach (var a in kingdom.units)
+            {
+                if (a == null || !a.isAlive()) continue;
+                if (a.asset == null || !a.asset.civ) continue;
+                float w;
+                if (!TryGetWealth(a, out w)) continue;
+                UpdateTopN(rich, ref richEdge, a, w, richCount, true);   // 最富（越界替换）
+                UpdateTopN(poor, ref poorEdge, a, w, poorCount, false);  // 最穷（越界替换）
+            }
+            if (rich.Count == 0 || poor.Count == 0) return 0;
+
+            // 第一遍：抽取富人财富（只取部分比例，避免把王国财富全部抽干）
+            long totalLoot = 0;
+            for (int i = 0; i < rich.Count; i++)
+            {
+                float w;
+                if (!TryGetWealth(rich[i], out w)) continue;
+                if (w <= 0) continue;
+                long loot = (long)(w * redistRatio);
+                if (loot <= 0) continue;
+                try { rich[i].addMoney(-(int)loot); } catch (System.Exception) { }
+                totalLoot += loot;
+            }
+            if (totalLoot <= 0) return 0;
+
+            // 第二遍：均分给最穷成员（余数补第一名）
+            long per = totalLoot / poor.Count;
+            if (per > 0)
+            {
+                for (int i = 0; i < poor.Count; i++)
+                {
+                    try { poor[i].addMoney((int)per + (i == 0 ? (int)(totalLoot - per * poor.Count) : 0)); }
+                    catch (System.Exception) { }
+                }
+            }
+
+            // 第三遍：处决最富成员（杀富）——跳过与最穷池重叠者（人口极少时避免误杀刚分到钱的穷人）
+            int killed = 0;
+            for (int i = 0; i < rich.Count; i++)
+            {
+                if (rich[i] == null || !rich[i].isAlive()) continue;
+                bool overlaps = false;
+                for (int j = 0; j < poor.Count; j++)
+                    if (poor[j] == rich[i]) { overlaps = true; break; }
+                if (overlaps) continue;
+                if (TryDieActor(rich[i], AttackType.Other)) killed++;
+            }
+            return killed;
         }
 
         /// <summary>

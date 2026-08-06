@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using EconomyMod.Models;
 using EconomyMod.Services;
 using UnityEngine;
@@ -20,13 +20,18 @@ namespace EconomyMod.Core
         public const int UnrestDelayYears = 10;
 
         /// <summary>
-        /// 王国震荡状态：StartYear=高基尼起始年（-1=无），HasRebelled=是否已开始暴动。
-        /// 基尼 ≥ 阈值持续 UnrestDelayYears 年后触发暴动，基尼回落则状态清零、移除动荡特质。
+        /// 王国震荡状态：StartYear=高基尼起始年（-1=无），HasRebelled=是否已开始暴动，
+        /// UprisingStartYear=街头起义起始年（-1=无），HasUprising=是否已触发街头起义。
+        /// 基尼 ≥ 阈值持续 UnrestDelayYears 年后触发暴动；
+        /// 暴动后基尼仍 ≥ UprisingGiniThreshold 持续 UprisingDelayYears 年 → 街头起义（政权崩塌）。
+        /// 基尼回落则状态清零、移除动荡特质。
         /// </summary>
         private class UnrestState
         {
             public int StartYear = -1;
             public bool HasRebelled;
+            public int UprisingStartYear = -1;
+            public bool HasUprising;
         }
 
         private static readonly Dictionary<long, UnrestState> _states = new Dictionary<long, UnrestState>();
@@ -97,6 +102,32 @@ namespace EconomyMod.Core
                                           $"持续高基尼{elapsed}年 基尼={stats.GiniCoefficient:F2} 影响={affected}");
                             }
                         }
+                    }
+                    // 暴动后基尼仍 ≥ 起义阈值持续 UprisingDelayYears 年 → 街头起义（政权崩塌：全城暴动+杀富济贫+推翻国王）
+                    else if (st.HasRebelled && !st.HasUprising && stats.GiniCoefficient >= cfg.UprisingGiniThreshold)
+                    {
+                        if (st.UprisingStartYear < 0) st.UprisingStartYear = currentYear;
+                        int uElapsed = currentYear - st.UprisingStartYear;
+                        if (uElapsed >= cfg.UprisingDelayYears)
+                        {
+                            int killed = TriggerUprising(kingdom, stats);
+                            if (killed > 0)
+                            {
+                                st.HasUprising = true;
+                                EventStreamService.Record(EventStreamService.TypeUprising, stats.KingdomName, killed);
+                                GameHelpers.Notify($"[起义] <{stats.KingdomName}> 街头起义爆发！{killed} 名富豪被处决，国王被推翻");
+                                if (cfg.LogToWorldLog)
+                                {
+                                    Debug.Log($"[ClassicalEconomics] 街头起义 王国<{stats.KingdomName}> " +
+                                              $"叛乱后基尼仍超起义阈值{uElapsed}年 基尼={stats.GiniCoefficient:F2} 处决富豪={killed}");
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // 基尼在动荡阈值以上但未达起义条件：若曾进入起义累积，重置计时
+                        st.UprisingStartYear = -1;
                     }
                 }
                 else
@@ -326,7 +357,8 @@ namespace EconomyMod.Core
         }
 
         /// <summary>
-        /// 查询王国震荡状态：0=无状态，1=高基尼累积中（elapsedYears=已持续年数），2=暴动中。
+        /// 查询王国震荡状态：0=无状态，1=高基尼累积中（elapsedYears=已持续年数），
+        /// 2=暴动中，3=街头起义中（政权崩塌，elapsedYears=起义持续年数）。
         /// 供 UI 展示"用状态表示"的震荡进度。
         /// </summary>
         public static int GetState(long kingdomId, out int elapsedYears)
@@ -334,6 +366,11 @@ namespace EconomyMod.Core
             elapsedYears = 0;
             if (_states.TryGetValue(kingdomId, out var st))
             {
+                if (st.HasUprising)
+                {
+                    elapsedYears = st.UprisingStartYear >= 0 ? EconomyModMain.GetCurrentGameYear() - st.UprisingStartYear : 0;
+                    return 3;
+                }
                 if (st.HasRebelled) return 2;
                 if (st.StartYear >= 0)
                 {
@@ -451,6 +488,61 @@ namespace EconomyMod.Core
             // 上限随贫富差距线性放大：差距越大上限越高（最小 1，最大 MaxAffectedPerKingdom）
             int upper = 1 + Mathf.RoundToInt(ratio * (max - 1));
             return Random.Range(1, upper + 1); // [1, upper]
+        }
+
+        /// <summary>
+        /// 街头起义（政权彻底崩塌）：在普通暴动的基础上彻底清算——
+        /// 1. 杀富济贫：按人口比例处决王国最富 Top 富豪，其财富分给最穷公民；
+        /// 2. 全城暴动：所有城市同时叛乱（不受 MaxAffectedPerKingdom 限制）；
+        /// 3. 推翻国王：removeKing（政权崩塌，游戏稍后自动产生新王）。
+        /// 返回处决的富豪数（0 = 无富余/无人口，起义未实质爆发）。
+        /// </summary>
+        private static int TriggerUprising(Kingdom kingdom, KingdomStats stats)
+        {
+            var cfg = UnrestConfig.Instance;
+
+            // 1. 杀富济贫：处决 Top 富豪（比例按人口），财富分给最穷公民
+            int civCount = 0;
+            if (kingdom.units != null)
+                foreach (var a in kingdom.units)
+                    if (a != null && a.isAlive() && a.asset != null && a.asset.civ) civCount++;
+            if (civCount < 4) return 0; // 人口过少不触发（避免误杀国王/唯一富户）
+
+            int richCount = Mathf.Max(1, Mathf.RoundToInt(civCount * cfg.KillRichRatio));
+            int poorCount = Mathf.Max(3, Mathf.RoundToInt(civCount * 0.15f));
+            int killed = GameHelpers.KillRichGiveToPoor(kingdom, richCount, poorCount, cfg.KillRichRedistRatio);
+
+            // 2. 全城暴动：全部城市叛乱（街头起义，不受数量上限限制）
+            int affected = 0;
+            var cities = kingdom.cities;
+            if (cities != null)
+            {
+                var cityList = _cityPool;
+                cityList.Clear();
+                cityList.AddRange(cities);
+                foreach (var city in cityList)
+                {
+                    if (city == null) continue;
+                    Actor leader = PickCityActor(city, kingdom);
+                    if (leader == null) continue;
+                    try
+                    {
+                        var plot = new Plot();
+                        DiplomacyHelpersRebellion.startRebellion(leader, plot, true);
+                        RecordRebelKingdom(kingdom);
+                        affected++;
+                    }
+                    catch (System.Exception) { }
+                }
+            }
+
+            // 3. 推翻国王：政权崩塌（起义军处决暴君）
+            if (kingdom.hasKing()) GameHelpers.TryRemoveKing(kingdom);
+
+            // 4. 施加国家特质（保持暴动状态直至城市收回）
+            kingdom.addTrait(UnrestTraitId, true);
+
+            return killed > 0 ? killed : affected;
         }
 
         /// <summary>
