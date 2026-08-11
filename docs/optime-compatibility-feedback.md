@@ -68,10 +68,11 @@ for (int i = 0; i < count; i++) {
 
 ## 六、本侧兼容兜底（供参考）
 
-Classical Economics v0.8.1 内置 `OptimeCompatibility` 兼容层：
+Classical Economics v0.8.2 内置 `OptimeCompatibility` 兼容层，**完全不修改 Optime 任何文件**（源码与编译产物均保持原始状态），纯运行时防御：
 
-- 启动首帧检测 Optime 程序集，命中后对 `BatchActors.u4_deadCheck` 挂 Harmony Finalizer
-- Finalizer 仅当异常堆栈包含 `ActorJobFlatten` 时吞掉该帧异常（跳过本帧批次更新），其余异常照常抛出
-- 正常路径零开销（Finalizer 仅在异常时执行）
+- **Transpiler（主防线）**：检测到 Optime 程序集后，对 Optime 已编译的 `ActorJobFlatten.BatchActors_u4_deadCheck_Prefix` 方法挂 Harmony Transpiler，在扁平循环「actor 加载」后注入 `actor == null → 跳过本次迭代` 分支——Optime 优化逻辑 100% 原样执行，仅补齐其缺失的空值防御
+- **Finalizer（第二道防线）**：给 `BatchActors.u4_deadCheck` 挂 Harmony Finalizer，仅吞掉堆栈命中 `ActorJobFlatten` 的 NRE（该帧批次跳过、下一帧重试），其余异常照常抛出；日志 30 秒限频防刷屏
+- **安全回退**：若 Optime 更新导致 IL 模式不匹配，Transpiler 返回原指令（不改动任何逻辑），由 Finalizer 兜底防崩溃
+- **零开销**：未装 Optime 时不挂任何 patch，原版批处理照常运行
 
-该兜底不影响 Optime 修复上游缺陷，仅作为未升级用户的防崩溃保障。
+该兜底不影响 Optime 修复上游缺陷，仅作为未升级用户的防崩溃保障；且因注入发生在运行时，Optime 的编译产物完全不变，无需重编译 Optime。

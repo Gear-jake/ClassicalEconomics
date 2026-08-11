@@ -3,7 +3,7 @@
 > 为 WorldBox 引入完整的宏观经济模拟 —— 财富采集、经济周期、王国贸易、社会动荡与智慧生物消费。
 
 **作者**：Jake
-**版本**：0.8.0
+**版本**：0.8.2
 **类型**：宏观经济 / 模拟增强
 **目标版本**：WorldBox 0.51.2+
 
@@ -192,11 +192,16 @@
 - 时代特质通过游戏原生特质系统注册，可正常显示图标与描述
 - 支持读档、新地图（自动重置/保留状态逻辑完善）
 - 所有统计在后台线程计算，主线程零开销
-- **与 Optime 优化模组兼容**：针对 Optime 的 `ActorJobFlatten` 扁平化重写未做空引用防御、在生物大规模死亡（饥荒/杀富/战争掠夺等）后遍历到已回收槽位导致 NRE 崩溃的问题，本模组内置 Harmony Finalizer 兜底——仅当异常堆栈命中 `ActorJobFlatten` 时吞掉该帧异常，其余异常照常抛出，正常路径零开销。安装 Optime 时二者可安全共存
+- **与 Optime 优化模组兼容**：Optime 的 `ActorJobFlatten` 扁平化重写未做空引用防御、在生物大规模死亡（饥荒/杀富/战争掠夺等）后遍历到已回收槽位导致 NRE 崩溃。本模组的 `OptimeCompatibility` 兼容层**完全不修改 Optime 任何文件**，通过 Harmony Transpiler 在运行时向 Optime 已编译的扁平循环注入 null 防御（actor 为 null 时跳过本次迭代，优化逻辑 100% 保留），并以 Finalizer 兜底残余 NRE——正常路径零开销，安装 Optime 时二者可安全共存
 
 ---
 
 ## 更新日志
+
+### v0.8.2
+- **Optime 兼容层升级为「零修改 + Transpiler 运行时注入」**：不再修改 Optime 源码/编译产物（Optime 目录保持原始状态），改为对 Optime 已编译的 `ActorJobFlatten.BatchActors_u4_deadCheck_Prefix` 方法挂 Harmony Transpiler——在扁平循环 actor 加载后注入 `null → 跳过本次迭代` 分支，Optime 优化逻辑 100% 保留；IL 模式不匹配时安全回退
+- **双防线兜底**：Transpiler 主防线 + Finalizer 副防线（仅吞掉堆栈命中 `ActorJobFlatten` 的 NRE，其余异常照常抛出），日志 30 秒限频
+- **无需重编译 Optime**：注入发生在运行时，Optime 的编译产物完全不变，仅需重启游戏生效
 
 ### v0.8.1
 - **与 Optime 优化模组完全兼容**：Optime 的 `ActorJobFlatten` 功能未做空引用防御，批量扁平化遍历到死亡生物回收后的 null 槽位时抛 NRE 导致游戏崩溃；本模组新增 `OptimeCompatibility` 兼容层（Harmony Finalizer），仅吞掉命中 `ActorJobFlatten` 帧的 NRE，其余异常照常抛出，正常路径零开销
