@@ -30,6 +30,8 @@ namespace EconomyMod.Services
                 string dir = main.GetLocaleFilesDirectory(decl);
                 string chPath = System.IO.Path.Combine(dir, "ch.json");
                 string enPath = System.IO.Path.Combine(dir, "en.json");
+                string zhTwPath = System.IO.Path.Combine(dir, "zh_tw.json");
+                string ruPath = System.IO.Path.Combine(dir, "ru.json");
                 if (System.IO.File.Exists(chPath))
                 {
                     LM.LoadLocale("zh", chPath);
@@ -40,13 +42,69 @@ namespace EconomyMod.Services
                 {
                     LM.LoadLocale("en", enPath);
                 }
+                if (System.IO.File.Exists(zhTwPath))
+                {
+                    LM.LoadLocale("zh_tw", zhTwPath); // 繁体独立文件
+                }
+                if (System.IO.File.Exists(ruPath))
+                {
+                    LM.LoadLocale("ru", ruPath); // 俄语
+                }
                 LM.ApplyLocale(false);
+                // 按模组界面语言把配置项标签注入当前 NML locale（设置窗口跟随 ui_language）
+                RegisterConfigLocale();
                 // 验证标签是否解析为中文（写入日志便于部署检查）
                 UnityEngine.Debug.Log($"[ClassicalEconomics] 设置标签示例: economy_general = {LM.Get("economy_general")} / gini_threshold = {LM.Get("gini_threshold")}");
             }
             catch (System.Exception e)
             {
                 UnityEngine.Debug.LogWarning($"[ClassicalEconomics] 注册本地化失败: {e.Message}");
+            }
+        }
+
+        /// <summary>default_config.json 全部配置项 Id（用于注入设置窗口本地化）。</summary>
+        private static readonly string[] AllConfigIds =
+        {
+            "ui_language", "unrest_enabled", "log_worldlog", "gini_threshold",
+            "unrest_grace_years", "unrest_max_cities", "policy_enabled", "cycle_enabled",
+            "cycle_gini_high", "cycle_gini_low", "cycle_gini_periods", "boom_stimulus_ratio",
+            "boom_bubble_factor", "bubble_threshold", "boom_max_duration", "recession_max_duration",
+            "depression_max_duration", "recovery_max_duration", "survival_line", "war_plunder_ratio",
+            "war_waste_ratio", "revolution_delay_years", "revolution_kill_ratio",
+            "uprising_gini_threshold", "uprising_delay_years", "kill_rich_ratio", "kill_rich_redist_ratio",
+            "wealth_tax_enabled", "wealth_tax_ratio", "wealth_tax_line", "trade_enabled",
+            "trade_flow_ratio", "population_enabled", "population_overcrowd", "era_enabled",
+            "era_duration_years", "collapse_drop_ratio", "collapse_duration_years",
+            "flourish_military_ratio", "flourish_periods", "labor_enabled", "labor_wage_base",
+            "real_time_refresh", "real_time_interval", "money_velocity", "inflation_bubble_boost",
+            "disaster_enabled", "disaster_wealth_loss", "disaster_mine_bonus", "banking_enabled",
+            "credit_rate", "default_rate_depression", "crisis_contagion_threshold"
+        };
+
+        /// <summary>
+        /// 按模组界面语言（ui_language）把所有配置项标签注入 NML 当前 locale 字典，
+        /// 使设置窗口分组/配置项名称/描述显示对应语言（zh/zh_tw/en/ru）。
+        /// AddToCurrentLocale 写入的是 NML 当前 locale，与游戏语言码无关，
+        /// 因此无论游戏语言如何设置，设置窗口都跟随模组界面语言。
+        /// 语言切换后需重新调用。
+        /// </summary>
+        public static void RegisterConfigLocale()
+        {
+            try
+            {
+                // 分组名
+                LM.AddToCurrentLocale(GroupId, LocalizationService.Get(GroupId));
+                // 全部配置项（Id + Description）
+                foreach (var id in AllConfigIds)
+                {
+                    LM.AddToCurrentLocale(id, LocalizationService.Get(id));
+                    LM.AddToCurrentLocale(id + " Description", LocalizationService.Get(id + " Description"));
+                }
+                LM.ApplyLocale(false);
+            }
+            catch (System.Exception e)
+            {
+                UnityEngine.Debug.LogWarning($"[ClassicalEconomics] 注入配置项本地化失败: {e.Message}");
             }
         }
 
@@ -65,7 +123,7 @@ namespace EconomyMod.Services
                 if (group == null) return;
 
                 var u = UnrestConfig.Instance;
-                if (group.TryGetValue("use_chinese_ui", out var lang)) u.Language = lang.BoolVal ? "zh" : "en";
+                if (group.TryGetValue("ui_language", out var lang)) u.Language = NormalizeLanguage(lang.TextVal);
                 if (group.TryGetValue("unrest_enabled", out var on))   u.Enabled = on.BoolVal;
                 if (group.TryGetValue("log_worldlog", out var log))    u.LogToWorldLog = log.BoolVal;
                 if (group.TryGetValue("gini_threshold", out var g))    u.GiniThreshold = ParseFloat(g.TextVal, u.GiniThreshold, 0.1f, 1.0f);
@@ -117,6 +175,18 @@ namespace EconomyMod.Services
                 // 实时数据刷新
                 if (group.TryGetValue("real_time_refresh", out var rtr))    u.RealTimeRefresh = rtr.BoolVal;
                 if (group.TryGetValue("real_time_interval", out var rti))   u.RealTimeInterval = ParseFloat(rti.TextVal, u.RealTimeInterval, 1f, 60f);
+                // 货币供给与价格指数（CPI）
+                if (group.TryGetValue("money_velocity", out var mv))         u.MoneyVelocity = ParseFloat(mv.TextVal, u.MoneyVelocity, 0.1f, 2f);
+                if (group.TryGetValue("inflation_bubble_boost", out var ibb)) u.InflationBubbleBoost = ParseFloat(ibb.TextVal, u.InflationBubbleBoost, 0f, 0.5f);
+                // 灾害经济冲击
+                if (group.TryGetValue("disaster_enabled", out var den))        u.DisasterEnabled = den.BoolVal;
+                if (group.TryGetValue("disaster_wealth_loss", out var dwl))     u.DisasterWealthLoss = ParseFloat(dwl.TextVal, u.DisasterWealthLoss, 0f, 0.8f);
+                if (group.TryGetValue("disaster_mine_bonus", out var dmb))      u.DisasterMineBonus = ParseFloat(dmb.TextVal, u.DisasterMineBonus, 0f, 1f);
+                // 银行信贷与危机传染
+                if (group.TryGetValue("banking_enabled", out var ben))          u.BankingEnabled = ben.BoolVal;
+                if (group.TryGetValue("credit_rate", out var cr))                 u.CreditRate = ParseFloat(cr.TextVal, u.CreditRate, 0.01f, 0.5f);
+                if (group.TryGetValue("default_rate_depression", out var drd)) u.DefaultRateDepression = ParseFloat(drd.TextVal, u.DefaultRateDepression, 0.1f, 0.8f);
+                if (group.TryGetValue("crisis_contagion_threshold", out var cct)) u.CrisisContagionThreshold = ParseFloat(cct.TextVal, u.CrisisContagionThreshold, 0.05f, 0.5f);
             }
             catch (System.Exception e)
             {
@@ -145,12 +215,29 @@ namespace EconomyMod.Services
 
         // ===== NML 设置回调（TEXT 输入框的回调参数为 string，需解析后写入）=====
 
-        public static void OnLanguageChanged(bool pValue)
+        /// <summary>语言规范化：zh/zh_tw/en/ru，非法值回退 zh。</summary>
+        public static string NormalizeLanguage(string lang)
         {
-            UnrestConfig.Instance.Language = pValue ? "zh" : "en";
-            // 语言切换后刷新悬浮窗所有静态文本 + 重新注入按钮 tooltip（中/英）
+            switch (lang)
+            {
+                case "zh_tw": case "en": case "ru": return lang;
+                default: return "zh"; // 空/未知统一回退简中
+            }
+        }
+
+        public static void OnLanguageChanged(string pValue)
+        {
+            UnrestConfig.Instance.Language = NormalizeLanguage(pValue);
+            // 语言切换后：刷新设置窗口标签 + 悬浮窗静态文本 + 重新注入按钮 tooltip（4 语言）
+            try { RegisterConfigLocale(); } catch (System.Exception) { }
             try { EconomyHUD.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { EconomyUI.ReapplyTooltips(); } catch (System.Exception) { }
+        }
+
+        /// <summary>兼容旧配置（旧版 SWITCH 开关回调，保留以防旧 config.json 残留）。</summary>
+        public static void OnLanguageChanged(bool pValue)
+        {
+            OnLanguageChanged(pValue ? "zh" : "en");
         }
 
         public static void OnEnabledChanged(bool pValue)
@@ -192,12 +279,18 @@ namespace EconomyMod.Services
 
         public static void OnGiniHighChanged(string pValue)
         {
-            UnrestConfig.Instance.CycleGiniHigh = ParseFloat(pValue, UnrestConfig.Instance.CycleGiniHigh, 0.3f, 0.9f);
+            var u = UnrestConfig.Instance;
+            float v = ParseFloat(pValue, u.CycleGiniHigh, 0.3f, 0.9f);
+            if (v <= u.CycleGiniLow) v = u.CycleGiniLow + 0.05f; // 不变量：high > low
+            u.CycleGiniHigh = v;
         }
 
         public static void OnGiniLowChanged(string pValue)
         {
-            UnrestConfig.Instance.CycleGiniLow = ParseFloat(pValue, UnrestConfig.Instance.CycleGiniLow, 0.2f, 0.7f);
+            var u = UnrestConfig.Instance;
+            float v = ParseFloat(pValue, u.CycleGiniLow, 0.2f, 0.7f);
+            if (v >= u.CycleGiniHigh) v = u.CycleGiniHigh - 0.05f; // 不变量：low < high
+            u.CycleGiniLow = v;
         }
 
         public static void OnGiniPeriodsChanged(string pValue)
@@ -382,6 +475,57 @@ namespace EconomyMod.Services
         public static void OnRealTimeIntervalChanged(string pValue)
         {
             UnrestConfig.Instance.RealTimeInterval = ParseFloat(pValue, UnrestConfig.Instance.RealTimeInterval, 1f, 60f);
+        }
+
+        // ===== 货币供给与价格指数（CPI）回调 =====
+
+        public static void OnMoneyVelocityChanged(string pValue)
+        {
+            UnrestConfig.Instance.MoneyVelocity = ParseFloat(pValue, UnrestConfig.Instance.MoneyVelocity, 0.1f, 2f);
+        }
+
+        public static void OnInflationBubbleBoostChanged(string pValue)
+        {
+            UnrestConfig.Instance.InflationBubbleBoost = ParseFloat(pValue, UnrestConfig.Instance.InflationBubbleBoost, 0f, 0.5f);
+        }
+
+        // ===== 灾害经济冲击（DisasterEngine）回调 =====
+
+        public static void OnDisasterEnabledChanged(bool pValue)
+        {
+            UnrestConfig.Instance.DisasterEnabled = pValue;
+        }
+
+        public static void OnDisasterWealthLossChanged(string pValue)
+        {
+            UnrestConfig.Instance.DisasterWealthLoss = ParseFloat(pValue, UnrestConfig.Instance.DisasterWealthLoss, 0f, 0.8f);
+        }
+
+        public static void OnDisasterMineBonusChanged(string pValue)
+        {
+            UnrestConfig.Instance.DisasterMineBonus = ParseFloat(pValue, UnrestConfig.Instance.DisasterMineBonus, 0f, 1f);
+        }
+
+        // ===== 银行信贷与危机传染（BankingEngine）回调 =====
+
+        public static void OnBankingEnabledChanged(bool pValue)
+        {
+            UnrestConfig.Instance.BankingEnabled = pValue;
+        }
+
+        public static void OnCreditRateChanged(string pValue)
+        {
+            UnrestConfig.Instance.CreditRate = ParseFloat(pValue, UnrestConfig.Instance.CreditRate, 0.01f, 0.5f);
+        }
+
+        public static void OnDefaultRateDepressionChanged(string pValue)
+        {
+            UnrestConfig.Instance.DefaultRateDepression = ParseFloat(pValue, UnrestConfig.Instance.DefaultRateDepression, 0.1f, 0.8f);
+        }
+
+        public static void OnCrisisContagionThresholdChanged(string pValue)
+        {
+            UnrestConfig.Instance.CrisisContagionThreshold = ParseFloat(pValue, UnrestConfig.Instance.CrisisContagionThreshold, 0.05f, 0.5f);
         }
     }
 }

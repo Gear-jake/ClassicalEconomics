@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using EconomyMod.Models;
 using EconomyMod.Services;
 using UnityEngine;
@@ -62,11 +63,81 @@ namespace EconomyMod.Core
             if (_kingdomTrait.ContainsKey(kid)) return; // 已有事件，不重复触发
             _kingdomTrait[kid] = kingdomTrait;
             _startYears[kid] = year;
+            // M2 时代事件经济深度：触发时施加对应经济效果（财政盈余/救济重建/军费扩张）
+            ApplyEraEconomicEffect(kingdom, kingdomTrait);
             // 注意：不写原版王国特质（era_* 未在 KingdomTraitLibrary 注册，addTrait 静默无效），
             // 时代标记仅存于本模组字典，国民加成走已注册的 Actor 特质（真实生效）。
             GameHelpers.Log($"[ClassicalEconomics] {EventName(kingdomTrait)} <{GameHelpers.SafeKingdomName(kingdom)}> 时代开启（国民加成生效）");
             GameHelpers.Notify($"[时代] {EventName(kingdomTrait)} <{GameHelpers.SafeKingdomName(kingdom)}> 开启");
             EventStreamService.Record(EventTypeOf(kingdomTrait), GameHelpers.SafeKingdomName(kingdom), 0);
+        }
+
+        /// <summary>
+        /// M2 时代事件经济深度：触发时向王国注入对应经济效果——
+        /// 盛世 = GDP×2% 财政盈余（城市仓库）；复兴 = GDP×1% 救济金（均分最穷成员）；强盛期 = GDP×3% 军费（城市仓库）。
+        /// </summary>
+        private static void ApplyEraEconomicEffect(Kingdom kingdom, string kingdomTrait)
+        {
+            if (kingdom == null || kingdom.data == null) return;
+            long kid = kingdom.data.id;
+            if (!EconomyEngine.KingdomStats.TryGetValue(kid, out var ks)) return;
+            long gdp = ks.GDP;
+            if (gdp <= 0) return;
+
+            long amount;
+            switch (kingdomTrait)
+            {
+                case KingdomTraitGolden:   amount = (long)(gdp * 0.02f); break; // 盛世财政盈余
+                case KingdomTraitFlourish: amount = (long)(gdp * 0.03f); break; // 强盛期军费
+                default:                   amount = 0L; break; // 复兴走救济通道
+            }
+
+            if (amount > 0)
+            {
+                var cities = kingdom.getCities();
+                if (cities != null && cities.Count() > 0)
+                {
+                    long per = amount / cities.Count();
+                    if (per > 0)
+                    {
+                        foreach (var city in cities)
+                        {
+                            if (city == null) continue;
+                            try { city.addResourcesToRandomStockpile("gold", (int)per); } catch { }
+                        }
+                    }
+                }
+            }
+
+            // 复兴救济金：均分给王国最穷的 8 名成员（经济重建均化，降低基尼）
+            if (kingdomTrait == KingdomTraitRevival && kingdom.units != null && kingdom.units.Count > 0)
+            {
+                long relief = (long)(gdp * 0.01f);
+                if (relief > 0)
+                {
+                    var poorest = new List<Actor>(8);
+                    float edge = float.MaxValue;
+                    foreach (var a in kingdom.units)
+                    {
+                        if (a == null || !a.isAlive()) continue;
+                        if (a.asset == null || !a.asset.civ) continue;
+                        float w;
+                        if (!GameHelpers.TryGetWealth(a, out w)) continue;
+                        GameHelpers.UpdateTopN(poorest, ref edge, a, w, 8, false);
+                    }
+                    if (poorest.Count > 0)
+                    {
+                        long per = relief / poorest.Count;
+                        if (per > 0)
+                        {
+                            foreach (var a in poorest)
+                            {
+                                try { a.addMoney((int)per); } catch { }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>按当前周期阶段与王国条件选择可赞助的时代（无合适时代返回 null；供 SpendingEngine 花钱触发）。</summary>

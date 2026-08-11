@@ -58,10 +58,10 @@ namespace EconomyMod.Core
                 // 花掉超出阈值部分的三分之二（扩大个人消费），单次上限提高到 400（支撑大额消费如武器批发）
                 int spend = Mathf.Clamp((money - WealthyThreshold) * 2 / 3, 10, 400);
 
-                // 七类消费轮换（枚举分派）；除缴税外任何消费失败都统一回退缴税，保证富人确实在消费
+                // 七类消费按情境权重选择（战时多买武器、和平多投资、高基尼多施舍）
+                SpendKind kind = PickSpendKindByContext(actor);
                 bool spent = false;
                 string note = "";
-                SpendKind kind = (SpendKind)_rng.Next(0, 7);
                 spent = kind switch
                 {
                     SpendKind.BuyWeapon         => TryBuyWeapon(actor, spend, out note),
@@ -82,6 +82,110 @@ namespace EconomyMod.Core
                     Debug.Log($"[ClassicalEconomics] 消费 {GameHelpers.SafeName(actor)} 花费={spend} {note}");
                 }
             }
+        }
+
+        /// <summary>
+        /// 按情境权重选择消费方式：
+        /// 战争中王国→武器类权重×3；高基尼(>0.7)→慈善×2；繁荣期→建造投资×2；
+        /// 萧条期→慈善×1.5、缴税减半；其他默认权重1。
+        /// </summary>
+        private static SpendKind PickSpendKindByContext(Actor actor)
+        {
+            // 默认权重
+            float wWeapon = 1f, wBuild = 1f, wCraft = 1f, wWholesale = 1f;
+            float wEra = 1f, wCharity = 1f, wTax = 1f;
+
+            // 王国情境
+            Kingdom kingdom = null;
+            float kingdomGini = 0f;
+            bool atWar = false;
+            try
+            {
+                kingdom = actor.kingdom;
+                if (kingdom != null)
+                {
+                    // curKing 为游戏 internal 属性，编译期不可见，用反射安全读取
+                    atWar = IsKingdomAtWar(kingdom);
+                }
+            }
+            catch { }
+
+            // 经济阶段情境
+            var phase = EconomyCycleModulator.CurrentPhase;
+
+            // 战时：武器类权重 ×3
+            if (atWar)
+            {
+                wWeapon *= 3f; wCraft *= 2f; wWholesale *= 2f;
+            }
+
+            // 高基尼：慈善施舍 ×2
+            if (EconomyEngine.KingdomStats.TryGetValue(SafeKingdomId(kingdom), out var ks))
+                kingdomGini = ks.GiniCoefficient;
+            if (kingdomGini > 0.7f) wCharity *= 2f;
+
+            // 繁荣期：建造投资 ×2
+            if (phase == EconomyPhase.Boom) wBuild *= 2f;
+
+            // 萧条期：慈善 ×1.5，缴税减半（穷人已穷，少收税）
+            if (phase == EconomyPhase.Depression) { wCharity *= 1.5f; wTax *= 0.5f; }
+
+            // 按权重随机选择
+            float total = wWeapon + wBuild + wCraft + wWholesale + wEra + wCharity + wTax;
+            float r = (float)_rng.NextDouble() * total;
+            if ((r -= wWeapon) < 0) return SpendKind.BuyWeapon;
+            if ((r -= wBuild) < 0) return SpendKind.BuildInvestment;
+            if ((r -= wCraft) < 0) return SpendKind.CraftArsenal;
+            if ((r -= wWholesale) < 0) return SpendKind.WholesaleWeapons;
+            if ((r -= wEra) < 0) return SpendKind.EraEvent;
+            if ((r -= wCharity) < 0) return SpendKind.Charity;
+            return SpendKind.PayTax;
+        }
+
+        private static long SafeKingdomId(Kingdom k)
+        {
+            if (k == null || k.data == null) return 0L;
+            try { return k.data.id; } catch { return 0L; }
+        }
+
+        // ===== 王国战争状态检测（curKing/hasNegativeStatus 为游戏 internal，反射访问）=====
+
+        private static System.Reflection.PropertyInfo _curKingProp;
+        private static System.Reflection.PropertyInfo _personProp;
+        private static System.Reflection.MethodInfo _hasNegativeStatusMethod;
+
+        /// <summary>反射检测王国是否处于战争状态（国王有"war"负面状态）；失败返回 false。</summary>
+        private static bool IsKingdomAtWar(Kingdom kingdom)
+        {
+            try
+            {
+                if (_curKingProp == null)
+                {
+                    _curKingProp = typeof(Kingdom).GetProperty("curKing",
+                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                }
+                if (_curKingProp == null) return false;
+                var curKing = _curKingProp.GetValue(kingdom);
+                if (curKing == null) return false;
+
+                if (_personProp == null)
+                {
+                    _personProp = curKing.GetType().GetProperty("person",
+                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                }
+                if (_personProp == null) return false;
+                var person = _personProp.GetValue(curKing);
+                if (person == null) return false;
+
+                if (_hasNegativeStatusMethod == null)
+                {
+                    _hasNegativeStatusMethod = person.GetType().GetMethod("hasNegativeStatus",
+                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                }
+                if (_hasNegativeStatusMethod == null) return false;
+                return (bool)_hasNegativeStatusMethod.Invoke(person, new object[] { "war" });
+            }
+            catch (System.Exception) { return false; }
         }
 
         /// <summary>购买武器：反射造真实武器，金币转给城市领袖（军械收入）。</summary>

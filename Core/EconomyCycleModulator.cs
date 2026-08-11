@@ -1,4 +1,6 @@
 ﻿using EconomyMod.Models;
+using EconomyMod.Services;
+using NeoModLoader.api.attributes;
 using UnityEngine;
 
 namespace EconomyMod.Core
@@ -38,6 +40,12 @@ namespace EconomyMod.Core
 
         /// <summary>本期 GDP 增长率（仅展示用，不再作为阶段转移判据）。</summary>
         public static float GrowthRate { get; private set; }
+
+        /// <summary>当前价格指数 CPI（= 货币供给 / 总产出×流通速度，1.0=基准）。</summary>
+        public static float CurrentCPI { get; private set; } = 1f;
+
+        /// <summary>当前货币供给 M（繁荣注金+/泡沫蒸发- 追踪）。</summary>
+        public static float MoneySupply { get; private set; }
 
         /// <summary>玩家手动设置经济阶段（立即生效，重置持续期与泡沫值，并应用对应政策）。</summary>
         public static void SetPhaseManual(EconomyPhase phase)
@@ -87,12 +95,15 @@ namespace EconomyMod.Core
             _initialized = false;
             _highGiniStreak = 0;
             _lowGiniStreak = 0;
+            MoneySupply = 0f;
+            CurrentCPI = 1f;
         }
 
         /// <summary>
         /// 每个采集周期调用一次（在 EconomyEngine.Recalculate() 之后）。
         /// 顺序：更新增长率与基尼趋势 → 阶段转移（基尼驱动）→ 执行该阶段政策（注入/泡沫/税率）。
         /// </summary>
+        [Hotfixable]
         public static void Evaluate()
         {
             var cfg = UnrestConfig.Instance;
@@ -119,19 +130,29 @@ namespace EconomyMod.Core
             PhaseDuration++;
 
             AdvancePhase(cfg);
+            // 计算价格指数 CPI = 货币供给 / (总产出 × 流通速度)
+            float production = EconomyEngine.TotalProduction;
+            float velocity = cfg.MoneyVelocity;
+            CurrentCPI = production > 0f && velocity > 0f ? MoneySupply / (production * velocity) : 1f;
             ApplyPhasePolicies(cfg);
         }
 
         // ===== 阶段转移（由全球贫富差距决定）=====
 
+        [Hotfixable]
         private static void AdvancePhase(UnrestConfig cfg)
         {
             switch (CurrentPhase)
             {
                 case EconomyPhase.Boom:
                     // 繁荣结束：贫富差距越危险线持续 N 期（泡沫破裂）、泡沫超阈值、或繁荣超绝对上限
+                    // 泡沫阈值自适应：大图用绝对值 BubbleThreshold，小图用 GDP 的 10%（避免小图永不破裂）
+                    float gdp = EconomyEngine.GlobalGDP;
+                    float bubbleThreshold = gdp > cfg.BubbleThreshold
+                        ? cfg.BubbleThreshold
+                        : gdp * 0.1f;
                     if (_highGiniStreak >= cfg.CycleGiniPeriods ||
-                        BubbleValue >= cfg.BubbleThreshold ||
+                        BubbleValue >= bubbleThreshold ||
                         PhaseDuration > cfg.BoomMaxDuration)
                     {
                         TriggerBubbleBurst();
@@ -196,6 +217,7 @@ namespace EconomyMod.Core
         }
 
         /// <summary>繁荣期：向全体文明注入硬币（信用扩张）+ 泡沫累积 + 低税率刺激。</summary>
+        [Hotfixable]
         private static void ApplyBoomPolicy(UnrestConfig cfg)
         {
             // 1. 信用扩张：按 GDP 比例折算成人均注入，均匀发给全体文明
@@ -210,8 +232,12 @@ namespace EconomyMod.Core
                     GameHelpers.Log($"[ClassicalEconomics] 繁荣期刺激 人均+{perActor} 覆盖{count}人");
             }
 
-            // 2. 泡沫累积：注入规模 × 泡沫系数
-            BubbleValue += stimulus * cfg.BoomBubbleFactor;
+            // 货币供给追踪：注金增加 M
+            MoneySupply += stimulus;
+
+            // 2. 泡沫累积：注入规模 × 泡沫系数 + 通胀加速（CPI>1 时泡沫累积更快）
+            float inflationBoost = CurrentCPI > 1f ? (CurrentCPI - 1f) * cfg.InflationBubbleBoost * stimulus : 0f;
+            BubbleValue += stimulus * cfg.BoomBubbleFactor + inflationBoost;
 
             // 3. 低税率刺激消费（繁荣期政策）
             ApplyTaxPolicy(localLow: true, localHigh: false, tributeHigh: false);
@@ -224,6 +250,7 @@ namespace EconomyMod.Core
             float gdp = EconomyEngine.GlobalGDP;
             float crashRatio = gdp > 0f ? Mathf.Min(BubbleValue / gdp, 0.5f) : 0f;
             int victims = 0;
+            float totalEvaporated = 0f;
             Actor bubbleVictim = null;
             var aliveList = World.world != null && World.world.units != null
                 ? World.world.units.units_only_alive : null;
@@ -242,13 +269,18 @@ namespace EconomyMod.Core
                         int evap = Mathf.Max(1, Mathf.RoundToInt(coins * crashRatio));
                         actor.addMoney(-evap);
                         victims++;
+                        totalEvaporated += evap;
                     }
                     catch (System.Exception) { }
                 }
             }
 
-            GameHelpers.Log($"[ClassicalEconomics] 经济泡沫破裂！蒸发比例 {crashRatio.ToString("P0")}，波及 {victims} 人（泡沫值 {BubbleValue:F0}）");
+            // 货币供给追踪：蒸发减少 M（通缩压力，下期 CPI 下降）
+            MoneySupply -= totalEvaporated;
+
+            GameHelpers.Log($"[ClassicalEconomics] 经济泡沫破裂！蒸发比例 {crashRatio.ToString("P0")}，波及 {victims} 人（泡沫值 {BubbleValue:F0}，CPI 将下降）");
             GameHelpers.Notify($"[经济] 泡沫破裂！{crashRatio.ToString("P0")} 财富蒸发，波及 {victims} 人");
+            EventStreamService.Record(EventStreamService.TypeBubbleBurst, "", Mathf.RoundToInt(crashRatio * 100f));
             try { if (bubbleVictim != null) WorldLog.logFavMurder(bubbleVictim, null); } catch (System.Exception) { }
             BubbleValue = 0f;
         }

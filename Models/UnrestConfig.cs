@@ -25,7 +25,7 @@ namespace EconomyMod.Models
         /// <summary>开局宽限期（年）：世界前 N 年不触发动荡，让经济先发展。</summary>
         public int MinUnrestStartYear = 5;
 
-        /// <summary>Mod 界面语言："zh" 中文 / "en" English（由模组设置切换，与游戏语言解耦）。</summary>
+        /// <summary>Mod 界面语言："zh" 简中 / "zh_tw" 繁中 / "en" English / "ru" Русский（由模组设置切换，与游戏语言解耦）。</summary>
         public string Language = "zh";
 
         /// <summary>是否启用国家政策（高基尼王国自动尝试贫富调节，失败则统治者退位/驾崩或陷入内战）。</summary>
@@ -161,6 +161,39 @@ namespace EconomyMod.Models
 
         /// <summary>实时刷新间隔（秒）：两次轻量采集之间至少相隔的秒数。</summary>
         public float RealTimeInterval = 5f;
+
+        // ===== 货币供给与价格指数（CPI）=====
+
+        /// <summary>货币流通速度（默认0.5）：CPI = 货币供给 / (总产出 × 流通速度)。</summary>
+        public float MoneyVelocity = 0.5f;
+
+        /// <summary>通胀加速泡沫系数：繁荣期 CPI 高于 1 时，超出部分乘此系数加速泡沫累积。</summary>
+        public float InflationBubbleBoost = 0.1f;
+
+        // ===== 灾害经济冲击（DisasterEngine）=====
+
+        /// <summary>是否启用灾害经济冲击（城市人口骤降>30%时触发财富蒸发）。</summary>
+        public bool DisasterEnabled = true;
+
+        /// <summary>灾害财富蒸发比例：受灾城市仓库金币按此比例蒸发（0~0.8）。</summary>
+        public float DisasterWealthLoss = 0.5f;
+
+        /// <summary>火山矿产刺激：繁荣期受灾区域获得额外金币 = 蒸发量 × 此系数（模拟火山矿产）。</summary>
+        public float DisasterMineBonus = 0.3f;
+
+        // ===== 银行信贷与危机传染（BankingEngine）=====
+
+        /// <summary>是否启用银行信贷系统（富人放贷给穷人，萧条期违约传染）。</summary>
+        public bool BankingEnabled = true;
+
+        /// <summary>年利率：借款人每年偿还本金的此比例作为利息。</summary>
+        public float CreditRate = 0.1f;
+
+        /// <summary>萧条期违约率：萧条阶段借款人按此比例违约。</summary>
+        public float DefaultRateDepression = 0.3f;
+
+        /// <summary>银行危机传染阈值：违约率超过此值时，贸易伙伴也受波及。</summary>
+        public float CrisisContagionThreshold = 0.2f;
 
         private static UnrestConfig _instance;
 

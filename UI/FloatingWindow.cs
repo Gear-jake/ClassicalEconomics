@@ -68,7 +68,7 @@ namespace EconomyMod.UI
             _panelRoot = _panelRect.gameObject;
             UIHelpers.CreateDragArea(_panelRect, _panelRect, Padding + 36);
             UIHelpers.CreateWindowTitle(_panelRect, UIHelpers.L(TitleKey), _gameFont,
-                new Color(1f, 0.85f, 0.35f), TitleFontSize, Padding, TitleLineHeight);
+                UIStyles.Gold, TitleFontSize, Padding, TitleLineHeight);
             UIHelpers.CreateResizeHandles(_panelRect, OnPanelResized);
             UIHelpers.CreateCloseButton(_panelRect, _gameFont, Hide);
             _content = UIHelpers.CreateScrollContent(_panelRect, Padding, Padding + 32f).gameObject;

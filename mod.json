@@ -1,8 +1,8 @@
 {
   "name": "古典经济学",
   "author": "Jake",
-  "version": "0.6fix",
-  "description": "古典经济学 WorldBox Mod - 采集开智种族财富、计算 GDP/基尼系数、按王国拆分指标、经济周期、贸易、人口约束与劳动价值",
+  "version": "0.7.0",
+  "description": "古典经济学 WorldBox Mod - 采集开智种族财富、计算 GDP/基尼系数、按王国拆分指标、经济周期、贸易、人口约束、劳动价值、灾害冲击与银行信贷",
   "targetGameBuild": 719,
   "iconPath": "icon.png",
   "ModType": "NEOMOD",

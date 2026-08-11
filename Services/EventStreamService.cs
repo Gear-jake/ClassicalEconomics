@@ -31,6 +31,9 @@ namespace EconomyMod.Services
         public const string TypeUnrestResolved = "ev_unrest_resolved"; // 暴动平定（城市收回）
         public const string TypePolicyFail   = "ev_policy_fail";    // 改革失败（1=退位 2=驾崩）
         public const string TypeKingInherit  = "ev_king_inherit";   // 王位继承（新王即位）
+        public const string TypeDisaster     = "ev_disaster";       // 灾害经济冲击（P2）
+        public const string TypeBanking      = "ev_banking";        // 银行信贷违约/危机传染（P2）
+        public const string TypeBubbleBurst  = "ev_bubble_burst";   // 经济泡沫破裂（P1）
 
         public class EventEntry
         {
@@ -38,6 +41,7 @@ namespace EconomyMod.Services
             public string TypeKey;
             public string KingdomName; // 可为空（如全球性饥荒）
             public long Value;
+            public string Narrative; // 叙事文本（经济史书风格）
         }
 
         // 环形数组缓冲：_head 指向下一个写入位置，_count 为当前条数（≤Capacity）
@@ -62,6 +66,7 @@ namespace EconomyMod.Services
             entry.TypeKey = typeKey;
             entry.KingdomName = string.IsNullOrEmpty(kingdomName) ? "" : kingdomName;
             entry.Value = value;
+            entry.Narrative = BuildNarrative(typeKey, entry.KingdomName, value, entry.GameYear);
             // 环形写入：覆盖最老条目（若已满），O(1)
             _events[_head] = entry;
             _head = (_head + 1) % Capacity;
@@ -69,6 +74,39 @@ namespace EconomyMod.Services
 
             _typeCounts.TryGetValue(typeKey, out int c);
             _typeCounts[typeKey] = c + 1;
+        }
+
+        /// <summary>
+        /// 构建经济史书风格叙事文本（E5 叙事化）：把机械事件记录转为带年份/王国的叙述语句。
+        /// </summary>
+        private static string BuildNarrative(string typeKey, string kingdomName, long value, int year)
+        {
+            string k = string.IsNullOrEmpty(kingdomName) ? "世界" : kingdomName;
+            switch (typeKey)
+            {
+                case TypeUnrest:        return $"{year}年，{k}动荡四起，贫富差距引发叛乱";
+                case TypeIncite:        return $"{year}年，{k}被外部势力煽动，叛乱爆发";
+                case TypeSuppress:      return $"{year}年，{k}叛乱被镇压，秩序恢复";
+                case TypePlunder:       return $"{year}年，{k}遭战争掠夺，财富损失{value}金币";
+                case TypeRevolution:    return $"{year}年，{k}爆发革命，旧政权被推翻";
+                case TypeUprising:      return $"{year}年，{k}街头起义，断头台落下，富人遭到清算";
+                case TypeBuildInv:      return $"{year}年，{k}大兴土木，投资{value}金币建设防御";
+                case TypeCraftArsenal:  return $"{year}年，{k}打造军械{value}件，军备扩张";
+                case TypeWholesale:     return $"{year}年，{k}大量批发武器{value}件";
+                case TypeEraGolden:     return $"{year}年，{k}迎来盛世，国泰民安";
+                case TypeEraRevival:    return $"{year}年，{k}迎来复兴，百废待兴";
+                case TypeEraFlourish:   return $"{year}年，{k}进入强盛期，军力鼎盛";
+                case TypeCollapse:      return $"{year}年，{k}经济崩溃，民不聊生";
+                case TypePolicy:        return $"{year}年，{k}推行贫富调节政策";
+                case TypeUnrestPeace:   return $"{year}年，{k}暴动和谈，局势缓和";
+                case TypeUnrestResolved: return $"{year}年，{k}收回叛乱城市，内乱平定";
+                case TypePolicyFail:    return $"{year}年，{k}改革失败，统治者付出代价";
+                case TypeKingInherit:   return $"{year}年，{k}王位更迭，新王即位";
+                case TypeDisaster:      return $"{year}年，{k}遭天灾冲击，{value}座城市财富蒸发";
+                case TypeBanking:       return $"{year}年，{k}爆发信贷危机，损失{value}金币";
+                case TypeBubbleBurst:   return $"{year}年，经济泡沫破裂！{value}%财富蒸发，波及全文明";
+                default:                return $"{year}年，{k}发生经济事件（{typeKey}）";
+            }
         }
 
         private static EventEntry RentEntry()

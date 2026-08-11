@@ -5,18 +5,23 @@ using EconomyMod.Models;
 namespace EconomyMod.Services
 {
     /// <summary>
-    /// Mod 自建本地化服务：界面语言由 Mod 配置页切换（zh/en），
+    /// Mod 自建本地化服务：界面语言由 Mod 配置页切换（zh/zh_tw/en/ru），
     /// 与游戏本体语言设置完全解耦（不依赖 LocalizedTextManager）。
-    /// 运行时从 Locales/ch.json、en.json 动态加载。
+    /// 运行时从 Locales/ch.json（简中）、zh_tw.json（繁中）、en.json（英文）、ru.json（俄文）动态加载。
     /// </summary>
     public static class LocalizationService
     {
         private static Dictionary<string, string> _zh = new Dictionary<string, string>();
+        private static Dictionary<string, string> _zhTw = new Dictionary<string, string>();
         private static Dictionary<string, string> _en = new Dictionary<string, string>();
+        private static Dictionary<string, string> _ru = new Dictionary<string, string>();
         private static bool _loaded;
 
-        /// <summary>当前 Mod 界面语言："zh" 或 "en"（持久化于 config.json）。</summary>
+        /// <summary>当前 Mod 界面语言："zh" / "zh_tw" / "en" / "ru"（持久化于 config.json）。</summary>
         public static string CurrentLanguage => UnrestConfig.Instance.Language;
+
+        /// <summary>是否为中文系界面（简/繁）。</summary>
+        public static bool IsChinese => CurrentLanguage == "zh" || CurrentLanguage == "zh_tw";
 
         private static void EnsureLoaded()
         {
@@ -29,26 +34,48 @@ namespace EconomyMod.Services
                 if (main == null || decl == null) return;
                 string dir = main.GetLocaleFilesDirectory(decl);
                 if (string.IsNullOrEmpty(dir)) return;
-                string chPath = System.IO.Path.Combine(dir, "ch.json");
-                string enPath = System.IO.Path.Combine(dir, "en.json");
-                if (System.IO.File.Exists(chPath))
-                    _zh = JsonConvert.DeserializeObject<Dictionary<string, string>>(System.IO.File.ReadAllText(chPath)) ?? _zh;
-                if (System.IO.File.Exists(enPath))
-                    _en = JsonConvert.DeserializeObject<Dictionary<string, string>>(System.IO.File.ReadAllText(enPath)) ?? _en;
+                _zh = LoadFile(System.IO.Path.Combine(dir, "ch.json"), _zh);
+                _zhTw = LoadFile(System.IO.Path.Combine(dir, "zh_tw.json"), _zhTw);
+                _en = LoadFile(System.IO.Path.Combine(dir, "en.json"), _en);
+                _ru = LoadFile(System.IO.Path.Combine(dir, "ru.json"), _ru);
             }
             catch (System.Exception) { }
         }
 
-        /// <summary>取当前语言的文本；缺失时回退英文，仍缺失则返回 key 本身。</summary>
+        private static Dictionary<string, string> LoadFile(string path, Dictionary<string, string> fallback)
+        {
+            try
+            {
+                if (System.IO.File.Exists(path))
+                {
+                    var loaded = JsonConvert.DeserializeObject<Dictionary<string, string>>(System.IO.File.ReadAllText(path));
+                    if (loaded != null) return loaded;
+                }
+            }
+            catch (System.Exception) { }
+            return fallback;
+        }
+
+        /// <summary>取当前语言的文本；缺失时依次回退英文、简中；仍缺失则返回 key 本身。</summary>
         public static string Get(string key)
         {
             EnsureLoaded();
-            if (CurrentLanguage == "zh")
-            {
-                if (_zh.TryGetValue(key, out var z) && !string.IsNullOrEmpty(z)) return z;
-            }
-            if (_en.TryGetValue(key, out var e) && !string.IsNullOrEmpty(e)) return e;
+            string lang = CurrentLanguage;
+            string v;
+            // 当前语言
+            if (TryGet(lang, key, out v)) return v;
+            // 回退英文
+            if (lang != "en" && TryGet("en", key, out v)) return v;
+            // 回退简中
+            if (lang != "zh" && TryGet("zh", key, out v)) return v;
             return key;
+        }
+
+        private static bool TryGet(string lang, string key, out string value)
+        {
+            value = null;
+            var dict = lang == "zh_tw" ? _zhTw : lang == "ru" ? _ru : lang == "en" ? _en : _zh;
+            return dict.TryGetValue(key, out value) && !string.IsNullOrEmpty(value);
         }
     }
 }

@@ -1,16 +1,23 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using EconomyMod.Models;
 using EconomyMod.Services;
 using UnityEngine;
 
 namespace EconomyMod.Core
 {
+    /// <summary>政策类型（M3 政策工具箱）：按经济情境选择，失败后果分级。</summary>
+    public enum PolicyKind
+    {
+        Redistribution, // 贫富调节（高基尼，激进，失败后果严重）
+        Fiscal,         // 财政政策（繁荣减税刺激/萧条增税补财政，失败后果轻微）
+        Trade           // 贸易政策（关税调节，失败后果中度）
+    }
+
     /// <summary>
     /// 国家政策引擎：高基尼王国每年以一定概率尝试"贫富调节政策"来降低基尼指数。
-    /// 政策有概率失败：失败时统治者退位（removeKing，游戏 5-20 年后自动产生新王）、
-    /// 死亡（die）或王国陷入内战（原版叛乱机制，持续至城市收回/和谈）；
-    /// 成功则王国内劫富济贫（财富再分配），基尼指数直接下降。
-    /// 概率设计：基尼越高改革越激进、越容易失败；失败后该王国进入冷却，缓冲后再次尝试。
+    /// M3 扩展为政策工具箱：按经济情境选择政策（贫富调节/财政/贸易），失败后果分级——
+    /// 贫富调节失败最严重（退位/驾崩/内战），财政失败轻微（仅降低支持），贸易失败中度（贸易伙伴报复）。
     /// </summary>
     public static class PolicyEngine
     {
@@ -56,14 +63,19 @@ namespace EconomyMod.Core
                 // 每年按概率尝试政策
                 if (Random.value > AttemptChance) continue;
 
-                if (RollSuccess(stats.GiniCoefficient))
+                // M3：按经济情境选择政策类型
+                PolicyKind kind = PickPolicyKind(stats);
+
+                if (RollSuccess(stats.GiniCoefficient, kind))
                 {
-                    ApplyPolicy(kingdom, stats);
+                    ApplyPolicy(kingdom, stats, kind);
                 }
                 else
                 {
-                    FailPolicy(kingdom, stats);
-                    _cooldown[kid] = currentYear + CooldownYears; // 失败进入冷却，到期自动解除
+                    FailPolicy(kingdom, stats, kind);
+                    // 财政失败后果轻微，不进入冷却（可每年轻试）；贫富调节/贸易失败进入冷却
+                    if (kind != PolicyKind.Fiscal)
+                        _cooldown[kid] = currentYear + CooldownYears;
                 }
             }
 
@@ -81,92 +93,195 @@ namespace EconomyMod.Core
             }
         }
 
-        /// <summary>成功概率：基尼越高成功率越低（改革越激进越易失败）。</summary>
-        private static bool RollSuccess(float gini)
+        /// <summary>按经济情境选择政策类型：高基尼→贫富调节；繁荣→减税(财政)；萧条→增税(财政)；贸易逆差大→关税(贸易)。</summary>
+        private static PolicyKind PickPolicyKind(KingdomStats stats)
         {
-            // gini=阈值 → 0.65；gini=1.0 → 0.35
-            float success = Mathf.Lerp(BaseSuccessChance, 0.35f,
+            var phase = EconomyCycleModulator.CurrentPhase;
+            // 基尼极高 → 贫富调节（最激进）
+            if (stats.GiniCoefficient > 0.75f) return PolicyKind.Redistribution;
+            // 萧条 → 增税补财政
+            if (phase == EconomyPhase.Depression) return PolicyKind.Fiscal;
+            // 贸易逆差大 → 关税调节
+            if (stats.TradeBalance < -stats.GDP * 0.03f) return PolicyKind.Trade;
+            // 繁荣 → 减税刺激
+            if (phase == EconomyPhase.Boom) return PolicyKind.Fiscal;
+            // 默认贫富调节
+            return PolicyKind.Redistribution;
+        }
+
+        /// <summary>成功概率：基尼越高成功率越低（改革越激进越易失败）；财政政策基础成功率更高。</summary>
+        private static bool RollSuccess(float gini, PolicyKind kind)
+        {
+            float baseChance = kind == PolicyKind.Fiscal ? 0.75f : BaseSuccessChance;
+            // gini=阈值 → base；gini=1.0 → 0.35
+            float success = Mathf.Lerp(baseChance, 0.35f,
                 Mathf.Clamp01((gini - PolicyGiniThreshold) / (1f - PolicyGiniThreshold)));
             return Random.value < success;
         }
 
-        /// <summary>政策成功：王国内劫富济贫（Top5 富 → Bottom10 穷），直接降低基尼。</summary>
-        private static void ApplyPolicy(Kingdom kingdom, KingdomStats stats)
+        /// <summary>政策成功：按类型分派（贫富调节=劫富济贫；财政=税率调整；贸易=关税调节）。</summary>
+        private static void ApplyPolicy(Kingdom kingdom, KingdomStats stats, PolicyKind kind)
         {
-            GameHelpers.RedistributeWithinKingdom(kingdom, 5, 10, 0.40f, 2f);
-            string kName = GameHelpers.SafeKingdomName(kingdom);
-            GameHelpers.Notify($"[政策] <{kName}> 推行贫富调节政策，财富再分配，贫富差距下降");
-            EventStreamService.Record(EventStreamService.TypePolicy, kName, 1);
-            if (UnrestConfig.Instance.LogToWorldLog)
+            switch (kind)
             {
-                Debug.Log($"[ClassicalEconomics] 政策成功 王国<{kName}> 基尼={stats.GiniCoefficient:F2}（财富再分配）");
+                case PolicyKind.Redistribution:
+                    GameHelpers.RedistributeWithinKingdom(kingdom, 5, 10, 0.40f, 2f);
+                    string kName = GameHelpers.SafeKingdomName(kingdom);
+                    GameHelpers.Notify($"[政策] <{kName}> 推行贫富调节政策，财富再分配，贫富差距下降");
+                    EventStreamService.Record(EventStreamService.TypePolicy, kName, 1);
+                    if (UnrestConfig.Instance.LogToWorldLog)
+                        Debug.Log($"[ClassicalEconomics] 政策成功(贫富调节) 王国<{kName}> 基尼={stats.GiniCoefficient:F2}");
+                    break;
+
+                case PolicyKind.Fiscal:
+                    ApplyFiscalPolicy(kingdom, stats);
+                    break;
+
+                case PolicyKind.Trade:
+                    ApplyTradePolicy(kingdom, stats);
+                    break;
             }
         }
 
-        /// <summary>政策失败：随机选择统治者退位、死亡或王国陷入内战（40% / 30% / 30%）。</summary>
-        private static void FailPolicy(Kingdom kingdom, KingdomStats stats)
+        /// <summary>财政政策：繁荣期低税率刺激消费；萧条期高税率补充财政（对财富前5王国调整税率特质）。</summary>
+        private static void ApplyFiscalPolicy(Kingdom kingdom, KingdomStats stats)
         {
             string kName = GameHelpers.SafeKingdomName(kingdom);
+            bool isBoom = EconomyCycleModulator.CurrentPhase == EconomyPhase.Boom;
+            try
+            {
+                // 繁荣减税（低税率特质）/ 萧条增税（高税率特质）
+                string taxTrait = isBoom ? "tax_rate_local_low" : "tax_rate_local_high";
+                if (kingdom.hasTrait(taxTrait)) return;
+                kingdom.addTrait(taxTrait, true);
+                if (!isBoom) // 萧条增税时同时移除低税率
+                {
+                    if (kingdom.hasTrait("tax_rate_local_low")) kingdom.removeTrait("tax_rate_local_low");
+                }
+                GameHelpers.Notify($"[政策] <{kName}> {(isBoom ? "减税刺激消费" : "增税补充财政")}");
+                EventStreamService.Record(EventStreamService.TypePolicy, kName, isBoom ? 2 : 3);
+                if (UnrestConfig.Instance.LogToWorldLog)
+                    Debug.Log($"[ClassicalEconomics] 政策成功(财政) 王国<{kName}> {(isBoom ? "减税" : "增税")}");
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>贸易政策：关税调节——顺差王国增收关税（提高贸易流），逆差王国削减进口（降低贸易流）。</summary>
+        private static void ApplyTradePolicy(Kingdom kingdom, KingdomStats stats)
+        {
+            string kName = GameHelpers.SafeKingdomName(kingdom);
+            // 模拟关税：顺差王国向城市仓库征收关税收入（贸易额×10%）
+            long tariff = stats.TradeBalance > 0 ? (long)(stats.TradeBalance * 0.1f) : 0;
+            if (tariff > 0)
+            {
+                var cities = kingdom.getCities();
+                if (cities != null && cities.Count() > 0)
+                {
+                    long per = tariff / cities.Count();
+                    if (per > 0)
+                    {
+                        foreach (var city in cities)
+                        {
+                            if (city == null) continue;
+                            try { city.addResourcesToRandomStockpile("gold", (int)per); } catch { }
+                        }
+                    }
+                }
+            }
+            GameHelpers.Notify($"[政策] <{kName}> 征收贸易关税（+{tariff}金币）");
+            EventStreamService.Record(EventStreamService.TypePolicy, kName, 4);
+            if (UnrestConfig.Instance.LogToWorldLog)
+                Debug.Log($"[ClassicalEconomics] 政策成功(贸易) 王国<{kName}> 关税收入{tariff}");
+        }
+
+        /// <summary>政策失败：后果分级——贫富调节最严重（退位/死亡/内战），贸易中度（贸易伙伴报复），财政轻微（仅支持下降）。</summary>
+        private static void FailPolicy(Kingdom kingdom, KingdomStats stats, PolicyKind kind)
+        {
+            string kName = GameHelpers.SafeKingdomName(kingdom);
+
+            // 财政失败：轻微后果（仅通知，不触发政权变动）
+            if (kind == PolicyKind.Fiscal)
+            {
+                GameHelpers.Notify($"[政策] <{kName}> 财政政策未能推行，民众不满");
+                EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 4); // 4=财政失败
+                if (UnrestConfig.Instance.LogToWorldLog)
+                    Debug.Log($"[ClassicalEconomics] 政策失败(财政) 王国<{kName}> 基尼={stats.GiniCoefficient:F2}");
+                return;
+            }
+
+            // 贸易失败：中度后果（贸易伙伴报复，损失部分城市财富）
+            if (kind == PolicyKind.Trade)
+            {
+                long loss = Mathf.Max(0, Mathf.RoundToInt(stats.GDP * 0.01f));
+                if (loss > 0)
+                {
+                    var cities = kingdom.getCities();
+                    if (cities != null)
+                    {
+                        foreach (var city in cities)
+                        {
+                            if (city == null) continue;
+                            int gold;
+                            try { gold = city.getResourcesAmount("gold"); } catch { gold = 0; }
+                            int take = Mathf.Min(gold, Mathf.RoundToInt(loss / Mathf.Max(1, cities.Count())));
+                            if (take > 0) { try { city.takeResource("gold", take); } catch { } }
+                        }
+                    }
+                }
+                GameHelpers.Notify($"[政策] <{kName}> 关税政策失败，贸易伙伴报复（损失{loss}金币）");
+                EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 5); // 5=贸易失败
+                if (UnrestConfig.Instance.LogToWorldLog)
+                    Debug.Log($"[ClassicalEconomics] 政策失败(贸易) 王国<{kName}> 损失{loss}");
+                return;
+            }
+
+            // 贫富调节失败：严重后果（随机选择统治者退位、死亡或王国陷入内战：40% / 30% / 30%）
             float roll = Random.value;
 
-            // 1) 退位（40%）：国王转回平民，游戏 5-20 年后自动产生新王（removeKing 为 internal，由 GameHelpers 反射调用）
+            // 1) 退位（40%）
             if (roll < 0.4f)
             {
                 if (kingdom.hasKing() && GameHelpers.TryRemoveKing(kingdom))
                 {
                     GameHelpers.Notify($"[政策] <{kName}> 改革失败！国王退位");
-                    EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 1); // 1=退位
+                    EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 1);
                     if (UnrestConfig.Instance.LogToWorldLog)
-                    {
                         Debug.Log($"[ClassicalEconomics] 政策失败 王国<{kName}> 国王退位（基尼={stats.GiniCoefficient:F2}）");
-                    }
                 }
                 return;
             }
 
-            // 2) 驾崩（30%）：国王死亡（dieAndDestroy 为 public）
+            // 2) 驾崩（30%）
             if (roll < 0.7f)
             {
                 var king = kingdom.king;
                 if (king != null && king.isAlive() && !king.hasDied())
                 {
-                    try
-                    {
-                        king.dieAndDestroy(AttackType.Other);
-                    }
-                    catch (System.Exception) { }
+                    try { king.dieAndDestroy(AttackType.Other); } catch (System.Exception) { }
                     GameHelpers.Notify($"[政策] <{kName}> 改革失败！国王驾崩");
-                    EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 2); // 2=驾崩
+                    EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 2);
                     if (UnrestConfig.Instance.LogToWorldLog)
-                    {
                         Debug.Log($"[ClassicalEconomics] 政策失败 王国<{kName}> 国王死亡（基尼={stats.GiniCoefficient:F2}）");
-                    }
                 }
                 return;
             }
 
-            // 3) 内战（30%）：改革失败引发城市叛乱，王国陷入内战（原版叛乱机制：叛军与原王国交战，
-            //    由 SustainRebelWars 持续维持，直到城市收回或和谈）。若王国已暴动中或内战无法触发
-            //    （无可用人口/城市），回退为退位。
+            // 3) 内战（30%）
             if (UnrestEngine.GetState(kingdom.data.id, out _) == 2 || UnrestEngine.TriggerCivilWar(kingdom) == 0)
             {
                 if (kingdom.hasKing() && GameHelpers.TryRemoveKing(kingdom))
                 {
                     GameHelpers.Notify($"[政策] <{kName}> 改革失败！国王退位");
-                    EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 1); // 1=退位
+                    EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 1);
                     if (UnrestConfig.Instance.LogToWorldLog)
-                    {
                         Debug.Log($"[ClassicalEconomics] 政策失败 王国<{kName}> 国王退位（内战触发失败回退，基尼={stats.GiniCoefficient:F2}）");
-                    }
                 }
                 return;
             }
             GameHelpers.Notify($"[政策] <{kName}> 改革失败！王国陷入内战");
-            EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 3); // 3=内战
+            EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 3);
             if (UnrestConfig.Instance.LogToWorldLog)
-            {
                 Debug.Log($"[ClassicalEconomics] 政策失败 王国<{kName}> 内战爆发（基尼={stats.GiniCoefficient:F2}）");
-            }
         }
     }
 }

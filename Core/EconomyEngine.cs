@@ -29,6 +29,9 @@ namespace EconomyMod.Core
         /// <summary>全王国贸易出口总额（顺差之和，金流模拟量）。</summary>
         public static long TotalTradeVolume { get; private set; }
 
+        /// <summary>全球年总产出（生产函数：Workers × Productivity × CapitalFactor）。</summary>
+        public static float TotalProduction { get; private set; }
+
         /// <summary>按王国 ID 聚合的经济统计（id=0 表示无王国桶）。</summary>
         public static Dictionary<long, KingdomStats> KingdomStats { get; private set; } = new Dictionary<long, KingdomStats>();
 
@@ -48,6 +51,7 @@ namespace EconomyMod.Core
             GiniCoefficient = res.GiniCoefficient;
             CycleIndex = res.CycleIndex;
             TotalTradeVolume = res.TotalTradeVolume;
+            TotalProduction = res.TotalProduction;
 
             KingdomStats.Clear();
             foreach (var ks in res.Kingdoms)

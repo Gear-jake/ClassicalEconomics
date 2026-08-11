@@ -4,23 +4,22 @@ using EconomyMod.Core;
 namespace EconomyMod.UI
 {
     /// <summary>
-    /// 全球富豪榜悬浮窗：与 GDP 概览悬浮窗同款交互逻辑——非模态不暂停游戏、
-    /// 标题栏可拖拽、四边/四角可缩放、右上角 × 关闭、Tab 皇冠按钮切换显隐；
-    /// 点击空白处不会关闭。实时列出财富（money+loot）前 10 的存活开智生物。
+    /// 全球富豪榜悬浮窗：非模态窗口——标题栏可拖拽、四边/四角可缩放、右上角 × 关闭、
+    /// Tab 皇冠按钮切换显隐；点击空白处不会关闭。实时列出财富（money+loot）前 10 的存活开智生物。
+    /// 采用设计系统 token（深色金融主题），第 1 名金色高亮。
     /// </summary>
     public class RichListWindow : FloatingWindow
     {
         private static RichListWindow _instance;
 
-        private const float PanelWidth = 340f;
-        private const float PanelHeight = 470f;
+        private const float PanelWidth = UIStyles.ListWidth;
+        private const float PanelHeight = UIStyles.ListHeight;
 
-        private static readonly Color Bg           = new Color(0.02f, 0.02f, 0.05f, 0.92f);
-        private static readonly Color TextColor    = Color.white;
-        private static readonly Color HeaderColor  = new Color(1f, 0.85f, 0.35f);
-        private static readonly Color SubColor     = new Color(0.75f, 0.75f, 0.8f);
-        private static readonly Color GoldRow      = new Color(1f, 0.9f, 0.5f);
-        private static readonly Color DividerColor = new Color(0.5f, 0.5f, 0.5f, 0.6f);
+        private static readonly Color Bg           = UIStyles.PanelBg;
+        private static readonly Color TextColor    = UIStyles.TextPrimary;
+        private static readonly Color SubColor     = UIStyles.TextSecondary;
+        private static readonly Color GoldRow      = UIStyles.Gold;
+        private static readonly Color DividerColor = UIStyles.Divider;
 
         public static RichListWindow Instance => _instance;
 

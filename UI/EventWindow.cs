@@ -13,14 +13,14 @@ namespace EconomyMod.UI
     {
         private static EventWindow _instance;
 
-        private const float PanelWidth = 340f;
-        private const float PanelHeight = 470f;
+        private const float PanelWidth = UIStyles.ListWidth;
+        private const float PanelHeight = UIStyles.ListHeight;
 
-        private static readonly Color Bg           = new Color(0.02f, 0.02f, 0.05f, 0.92f);
-        private static readonly Color TextColor    = Color.white;
-        private static readonly Color HeaderColor  = new Color(1f, 0.85f, 0.35f);
-        private static readonly Color SubColor     = new Color(0.75f, 0.75f, 0.8f);
-        private static readonly Color DividerColor = new Color(0.5f, 0.5f, 0.5f, 0.6f);
+        private static readonly Color Bg           = UIStyles.PanelBg;
+        private static readonly Color TextColor    = UIStyles.TextPrimary;
+        private static readonly Color HeaderColor  = UIStyles.Gold;
+        private static readonly Color SubColor     = UIStyles.TextSecondary;
+        private static readonly Color DividerColor = UIStyles.Divider;
 
         public static EventWindow Instance => _instance;
 
@@ -102,32 +102,38 @@ namespace EconomyMod.UI
                     : e.Value == 2 ? UIHelpers.L("ev_desc_policy_fail_death")
                     : UIHelpers.L("ev_desc_policy_fail_abdicate");
                 case EventStreamService.TypeKingInherit:  return UIHelpers.L("ev_desc_king_inherit");
+                case EventStreamService.TypeDisaster:     return UIHelpers.Lf("ev_desc_disaster", e.Value);
+                case EventStreamService.TypeBanking:      return UIHelpers.Lf("ev_desc_banking", e.Value);
+                case EventStreamService.TypeBubbleBurst:  return UIHelpers.Lf("ev_desc_bubble_burst", e.Value);
                 default:                                return UIHelpers.L(e.TypeKey);
             }
         }
 
-        /// <summary>事件类型对应的强调色。</summary>
+        /// <summary>事件类型对应的强调色（设计系统 token）。</summary>
         private static Color EventColor(string typeKey)
         {
             switch (typeKey)
             {
-                case EventStreamService.TypeUnrest:     return new Color(1f, 0.45f, 0.2f);
-                case EventStreamService.TypeIncite:     return new Color(0.95f, 0.3f, 0.3f);
-                case EventStreamService.TypeSuppress:   return new Color(0.4f, 0.7f, 1f);
-                case EventStreamService.TypePlunder:    return new Color(0.95f, 0.8f, 0.3f);
-                case EventStreamService.TypeRevolution: return new Color(0.85f, 0.25f, 0.4f);
-                case EventStreamService.TypeUprising:   return new Color(0.9f, 0.15f, 0.1f);
-                case EventStreamService.TypeBuildInv:     return new Color(0.85f, 0.75f, 0.5f);
-                case EventStreamService.TypeCraftArsenal: return new Color(0.9f, 0.9f, 0.4f);
-                case EventStreamService.TypeWholesale:    return new Color(1f, 0.7f, 0.3f);
-                case EventStreamService.TypeEraGolden:    return new Color(1f, 0.85f, 0.3f);
-                case EventStreamService.TypeEraRevival:   return new Color(0.4f, 0.8f, 0.8f);
-                case EventStreamService.TypeEraFlourish:  return new Color(0.9f, 0.55f, 0.2f);
-                case EventStreamService.TypeCollapse:     return new Color(0.55f, 0.15f, 0.15f);
-                case EventStreamService.TypeUnrestPeace:  return new Color(0.5f, 0.9f, 0.6f);
-                case EventStreamService.TypeUnrestResolved: return new Color(0.4f, 0.85f, 0.5f);
-                case EventStreamService.TypePolicyFail:   return new Color(0.9f, 0.4f, 0.4f);
-                case EventStreamService.TypeKingInherit:  return new Color(0.85f, 0.8f, 0.45f);
+                case EventStreamService.TypeUnrest:     return UIStyles.EvUnrest;
+                case EventStreamService.TypeIncite:     return UIStyles.EvIncite;
+                case EventStreamService.TypeSuppress:   return UIStyles.EvSuppress;
+                case EventStreamService.TypePlunder:    return UIStyles.EvPlunder;
+                case EventStreamService.TypeRevolution: return UIStyles.EvRevolution;
+                case EventStreamService.TypeUprising:   return UIStyles.EvUprising;
+                case EventStreamService.TypeBuildInv:     return UIStyles.EvBuild;
+                case EventStreamService.TypeCraftArsenal: return UIStyles.EvCraft;
+                case EventStreamService.TypeWholesale:    return UIStyles.EvWholesale;
+                case EventStreamService.TypeEraGolden:    return UIStyles.EvGolden;
+                case EventStreamService.TypeEraRevival:   return UIStyles.EvRevival;
+                case EventStreamService.TypeEraFlourish:  return UIStyles.EvFlourish;
+                case EventStreamService.TypeCollapse:     return UIStyles.EvCollapse;
+                case EventStreamService.TypeUnrestPeace:  return UIStyles.Positive;
+                case EventStreamService.TypeUnrestResolved: return UIStyles.Positive;
+                case EventStreamService.TypePolicyFail:   return UIStyles.Danger;
+                case EventStreamService.TypeKingInherit:  return UIStyles.GoldDeep;
+                case EventStreamService.TypeDisaster:     return UIStyles.EvDisaster;
+                case EventStreamService.TypeBanking:      return UIStyles.EvBanking;
+                case EventStreamService.TypeBubbleBurst:  return UIStyles.EvBubble;
                 default:                                return TextColor;
             }
         }

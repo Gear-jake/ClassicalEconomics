@@ -8,6 +8,11 @@ icon.original.png
 # 发布包
 *.zip
 
+# 编译诊断
+build_diag.txt
+build_output.txt
+errors.txt
+
 # IDE / 系统
 .vs/
 .idea/

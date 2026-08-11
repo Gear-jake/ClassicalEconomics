@@ -1,9 +1,9 @@
 {
   "economy_general": [
     {
-      "Id": "use_chinese_ui",
-      "Type": "SWITCH",
-      "BoolVal": true,
+      "Id": "ui_language",
+      "Type": "TEXT",
+      "TextVal": "zh",
       "Callback": "EconomyConfigCallbacks:OnLanguageChanged"
     },
     {
@@ -263,6 +263,60 @@
       "Type": "TEXT",
       "TextVal": "5",
       "Callback": "EconomyConfigCallbacks:OnRealTimeIntervalChanged"
+    },
+    {
+      "Id": "money_velocity",
+      "Type": "TEXT",
+      "TextVal": "0.5",
+      "Callback": "EconomyConfigCallbacks:OnMoneyVelocityChanged"
+    },
+    {
+      "Id": "inflation_bubble_boost",
+      "Type": "TEXT",
+      "TextVal": "0.1",
+      "Callback": "EconomyConfigCallbacks:OnInflationBubbleBoostChanged"
+    },
+    {
+      "Id": "disaster_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnDisasterEnabledChanged"
+    },
+    {
+      "Id": "disaster_wealth_loss",
+      "Type": "TEXT",
+      "TextVal": "0.5",
+      "Callback": "EconomyConfigCallbacks:OnDisasterWealthLossChanged"
+    },
+    {
+      "Id": "disaster_mine_bonus",
+      "Type": "TEXT",
+      "TextVal": "0.3",
+      "Callback": "EconomyConfigCallbacks:OnDisasterMineBonusChanged"
+    },
+    {
+      "Id": "banking_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnBankingEnabledChanged"
+    },
+    {
+      "Id": "credit_rate",
+      "Type": "TEXT",
+      "TextVal": "0.1",
+      "Callback": "EconomyConfigCallbacks:OnCreditRateChanged"
+    },
+    {
+      "Id": "default_rate_depression",
+      "Type": "TEXT",
+      "TextVal": "0.3",
+      "Callback": "EconomyConfigCallbacks:OnDefaultRateDepressionChanged"
+    },
+    {
+      "Id": "crisis_contagion_threshold",
+      "Type": "TEXT",
+      "TextVal": "0.2",
+      "Callback": "EconomyConfigCallbacks:OnCrisisContagionThresholdChanged"
     }
   ]
 }

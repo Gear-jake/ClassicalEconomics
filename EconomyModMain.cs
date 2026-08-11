@@ -4,11 +4,12 @@ using EconomyMod.Models;
 using EconomyMod.Services;
 using EconomyMod.UI;
 using NeoModLoader.api;
+using NeoModLoader.api.attributes;
 using UnityEngine;
 
 namespace EconomyMod
 {
-    public class EconomyModMain : BasicMod<EconomyModMain>
+    public class EconomyModMain : BasicMod<EconomyModMain>, IReloadable
     {
         private static EconomyTickRunner _tickRunner;
 
@@ -28,6 +29,33 @@ namespace EconomyMod
             // 每次打开游戏都清空历史，图表从本局从头绘制（避免残留上局数据）
             HistoryService.ClearHistory();
             EconomyUI.Initialize();
+        }
+
+        /// <summary>
+        /// NML 热重载：模组列表点击重载按钮后调用（需 NML editor 模式）。
+        /// 函数热更新已完成，此处重置经济状态 + 重新同步配置，使修改立即生效。
+        /// </summary>
+        [Hotfixable]
+        public void Reload()
+        {
+            Debug.Log("[ClassicalEconomics] === 开始热重载 ===");
+            // 重置全部经济引擎状态（新代码从干净状态运行）
+            TradeSimulationWorker.Reset();
+            EconomyEngine.ResetCycle();
+            EconomyCycleModulator.Reset();
+            SocialCrisisEngine.Reset();
+            EraEngine.Reset();
+            KingdomMonitorEngine.Reset();
+            InheritanceEngine.Reset();
+            DisasterEngine.Reset();
+            BankingEngine.Reset();
+            HistoryService.ClearHistory();
+            EventStreamService.Clear();
+            // 重新同步配置（可能修改了默认值）
+            Services.EconomyConfigCallbacks.SyncFromModConfig();
+            // 刷新 UI
+            EconomyUI.RefreshOverview();
+            Debug.Log("[ClassicalEconomics] === 热重载完成 ===");
         }
 
         // ===== 时代事件国民特质注册（EraEngine 国民加成用，替换原 cultural_awakening）=====
@@ -238,6 +266,14 @@ namespace EconomyMod
         /// </summary>
         public static void RealTimeRefresh()
         {
+            // 熔断：超大地图时跳过实时全量重算（O(n log n) 基尼排序），避免卡顿
+            var aliveList = World.world != null && World.world.units != null
+                ? World.world.units.units_only_alive : null;
+            if (aliveList != null && aliveList.Count > 5000)
+            {
+                EconomyUI.RefreshOverview(); // 仅刷新UI，不重算
+                return;
+            }
             DataCollector.Collect(applySideEffects: false);
             TradeSimulationWorker.ComputeAndConsumeSync(advanceCycle: false);
             EconomyUI.RefreshOverview();
@@ -314,6 +350,9 @@ namespace EconomyMod
                         SocialCrisisEngine.Reset();
                         EraEngine.Reset();
                         KingdomMonitorEngine.Reset();
+                        DisasterEngine.Reset();
+                        BankingEngine.Reset();
+                        BiomeEconomy.ClearCache();
                         Debug.Log("[ClassicalEconomics] 检测到新地图/新游戏，历史已清空，周期从 #1 重新开始");
                     }
                     else
@@ -361,6 +400,10 @@ namespace EconomyMod
                 // 时代事件：先自动评估触发（含花钱触发的状态），再同步国民特质与到期移除
                 EraEngine.Evaluate();
                 EraEngine.Tick(year);
+                // 灾害经济冲击：检测城市人口骤降，施加财富蒸发（火山矿产加成）
+                DisasterEngine.Evaluate();
+                // 银行信贷：放贷/偿还/违约/危机传染
+                BankingEngine.Evaluate();
 
                 // 周期/王国检测日志：默认关闭，需在配置页开启 LogToWorldLog
                 bool logOut = UnrestConfig.Instance.LogToWorldLog;
@@ -388,7 +431,9 @@ namespace EconomyMod
                     AvgWealth = EconomyEngine.AvgWealth,
                     AliveActorCount = EconomyEngine.AliveActorCount,
                     GiniCoefficient = EconomyEngine.GiniCoefficient,
-                    Phase = (int)EconomyCycleModulator.CurrentPhase
+                    Phase = (int)EconomyCycleModulator.CurrentPhase,
+                    TotalProduction = EconomyEngine.TotalProduction,
+                    PriceIndex = EconomyCycleModulator.CurrentCPI
                 };
                 snapshot.Kingdoms = new List<KingdomStats>(EconomyEngine.KingdomStats.Values);
                 HistoryService.AppendSnapshot(snapshot);

@@ -30,15 +30,15 @@ namespace EconomyMod.UI
         private enum Section { Overview, Chart, PickTarget }
         private Section _currentSection = Section.Overview;
 
-        private static readonly Color Bg           = new Color(0f, 0f, 0f, 0.72f);
-        private static readonly Color BtnNormal = new Color(0.18f, 0.18f, 0.22f, 0.85f);
-        private static readonly Color BtnActive = new Color(0.9f, 0.75f, 0.2f, 0.95f);
-        private static readonly Color TextColor = Color.white;
-        private static readonly Color HeaderColor = new Color(1f, 0.9f, 0.4f);
-        private static readonly Color DividerColor = new Color(0.5f, 0.5f, 0.5f, 0.6f);
+        private static readonly Color Bg           = UIStyles.PanelBg;
+        private static readonly Color BtnNormal    = UIStyles.CardBgAlt;
+        private static readonly Color BtnActive    = UIStyles.Gold;
+        private static readonly Color TextColor    = UIStyles.TextPrimary;
+        private static readonly Color HeaderColor  = UIStyles.Gold;
+        private static readonly Color DividerColor = UIStyles.Divider;
 
-        private const float PanelWidth = 340f;
-        private const float PanelHeight = 520f;
+        private const float PanelWidth = UIStyles.HudWidth;
+        private const float PanelHeight = UIStyles.HudHeight;
         private const float LineHeight = 22f;
         private const float HeaderSize = 14f;
         private const float TextSize = 12f;
@@ -884,75 +884,91 @@ namespace EconomyMod.UI
 
         private void BuildOverview()
         {
+            float contentW = Mathf.Max(150f, _panelRect.rect.width - Padding * 2f - 16f);
+            var phase = EconomyCycleModulator.CurrentPhase;
+
+            // 周期 + 阶段徽章
             AddLine(UIHelpers.Lf("overview_cycle", EconomyEngine.CycleIndex), true);
-            AddLine("");
-            // 经济周期状态（Phase 4 周期调制器）
-            AddLine(UIHelpers.Lf("cycle_phase", PhaseName(EconomyCycleModulator.CurrentPhase)), true);
+            _lines.Add(UIComponents.CreatePhaseBadge(_content.transform, phase,
+                PhaseName(phase), _gameFont, contentW * 0.5f));
             AddLine(UIHelpers.Lf("cycle_detail",
                 EconomyCycleModulator.PhaseDuration,
                 EconomyCycleModulator.GrowthRate.ToString("+0.0%;-0.0%"),
                 EconomyCycleModulator.BubbleValue.ToString("F0")),
                 color: new Color(0.8f, 0.9f, 0.7f));
             AddLine("");
-            AddLine(UIHelpers.Lf("overview_gdp", EconomyEngine.GlobalGDP.ToString("F0")));
-            AddLine(UIHelpers.Lf("overview_avg", EconomyEngine.AvgWealth.ToString("F2")));
-            AddLine(UIHelpers.Lf("overview_pop", EconomyEngine.AliveActorCount));
-            AddLine(UIHelpers.Lf("overview_gini", EconomyEngine.GiniCoefficient.ToString("F3")));
-            AddLine(UIHelpers.Lf("overview_trade", EconomyEngine.TotalTradeVolume.ToString("F0")));
-            AddDivider(DividerColor);
-            AddLine(UIHelpers.L("overview_kingdoms"), true);
 
+            // 核心指标卡网格（3列）
+            var stats = new (string, string, Color)[]
+            {
+                ("GDP", EconomyEngine.GlobalGDP.ToString("F0"), UIStyles.Gold),
+                ("人均", EconomyEngine.AvgWealth.ToString("F1"), UIStyles.Info),
+                ("人口", EconomyEngine.AliveActorCount.ToString(), UIStyles.TextPrimary),
+                ("基尼", EconomyEngine.GiniCoefficient.ToString("F3"), GiniColor(EconomyEngine.GiniCoefficient)),
+                ("贸易", EconomyEngine.TotalTradeVolume.ToString("F0"), UIStyles.Positive),
+                ("泡沫", EconomyCycleModulator.BubbleValue.ToString("F0"), UIStyles.Warning)
+            };
+            _lines.Add(UIComponents.CreateStatGrid(_content.transform, stats, _gameFont, contentW, 3));
+
+            // 王国排行
+            _lines.Add(UIComponents.CreateSectionHeader(_content.transform,
+                UIHelpers.L("overview_kingdoms"), _gameFont, contentW));
+            _lines.Add(UIComponents.CreateKingdomHeader(_content.transform, _gameFont, contentW));
             var top = EconomyEngine.TopKingdoms(8);
             if (top.Count == 0)
             {
-                AddLine(UIHelpers.L("overview_no_kingdom"), color: new Color(0.7f, 0.7f, 0.7f));
+                AddLine(UIHelpers.L("overview_no_kingdom"), color: UIStyles.TextMuted);
             }
             int rank = 1;
             foreach (var k in top)
             {
-                AddLine(UIHelpers.Lf("overview_kingdom_name", rank, k.KingdomName));
-                string trade = (k.TradeBalance > 0 ? "+" : "") + k.TradeBalance.ToString("F0");
-                string pressure = k.PopulationCapacity > 0
-                    ? (k.Population * 100 / k.PopulationCapacity) + "%"
-                    : "-";
-                AddLine(UIHelpers.Lf("overview_kingdom_detail",
-                    k.GDP.ToString("F0"), k.AvgWealth.ToString("F1"),
-                    k.GiniCoefficient.ToString("F2"), k.ActorCount, trade, pressure));
+                _lines.Add(UIComponents.CreateKingdomRow(_content.transform, rank, k.KingdomName,
+                    k.GDP.ToString("F0"), k.AvgWealth.ToString("F1"), k.GiniCoefficient.ToString("F2"),
+                    _gameFont, contentW, rank == 1));
                 rank++;
             }
 
-            // 社会震荡状态（用状态表示：高基尼累积 X/10 年 / 暴动中）
-            AddDivider(DividerColor);
-            AddLine(UIHelpers.L("unrest_state_title"), true);
+            // 社会动荡状态
+            _lines.Add(UIComponents.CreateSectionHeader(_content.transform,
+                UIHelpers.L("unrest_state_title"), _gameFont, contentW));
             int stateCount = 0;
             foreach (var k in top)
             {
                 int st = UnrestEngine.GetState(k.KingdomId, out int elapsed);
                 if (st == 1)
                 {
-                    AddLine(UIHelpers.Lf("unrest_state_accum", k.KingdomName, elapsed),
-                        color: new Color(1f, 0.8f, 0.3f));
+                    _lines.Add(UIComponents.CreateStatusRow(_content.transform,
+                        UIHelpers.Lf("unrest_state_accum", k.KingdomName, elapsed),
+                        UIStyles.Warning, _gameFont, contentW));
                     stateCount++;
                 }
                 else if (st == 2)
                 {
-                    AddLine(UIHelpers.Lf("unrest_state_active", k.KingdomName),
-                        color: new Color(1f, 0.4f, 0.2f));
+                    _lines.Add(UIComponents.CreateStatusRow(_content.transform,
+                        UIHelpers.Lf("unrest_state_active", k.KingdomName),
+                        UIStyles.Danger, _gameFont, contentW));
                     stateCount++;
                 }
                 else if (st == 3)
                 {
-                    AddLine(UIHelpers.Lf("unrest_state_uprising", k.KingdomName),
-                        color: new Color(0.9f, 0.15f, 0.1f));
+                    _lines.Add(UIComponents.CreateStatusRow(_content.transform,
+                        UIHelpers.Lf("unrest_state_uprising", k.KingdomName),
+                        UIStyles.Negative, _gameFont, contentW));
                     stateCount++;
                 }
             }
             if (stateCount == 0)
             {
-                AddLine(UIHelpers.L("unrest_state_none"), color: new Color(0.7f, 0.7f, 0.7f));
+                AddLine(UIHelpers.L("unrest_state_none"), color: UIStyles.TextMuted);
             }
             AddLine(UIHelpers.Lf("unrest_state_threshold", UnrestConfig.Instance.GiniThreshold.ToString("F3")),
                 color: new Color(0.7f, 0.85f, 0.7f));
+        }
+
+        /// <summary>基尼语义色（≥0.7 红 / ≥0.55 琥珀 / 其他弱色）。</summary>
+        private static Color GiniColor(float gini)
+        {
+            return gini >= 0.7f ? UIStyles.Danger : gini >= 0.55f ? UIStyles.Warning : UIStyles.TextSecondary;
         }
 
         /// <summary>
@@ -1006,7 +1022,7 @@ namespace EconomyMod.UI
 
                 // 煽动按钮（红）
                 var btnIncite = UIHelpers.CreateButton(UIHelpers.L("picker_incite"), _content.transform, -1, 30,
-                    _gameFont, new Color(0.7f, 0.25f, 0.15f, 0.9f));
+                    _gameFont, UIStyles.Danger);
                 var inciteTarget = kingdom;
                 btnIncite.onClick.AddListener(() =>
                 {
@@ -1022,7 +1038,7 @@ namespace EconomyMod.UI
 
                 // 镇压按钮（蓝）
                 var btnSuppress = UIHelpers.CreateButton(UIHelpers.L("picker_suppress"), _content.transform, -1, 30,
-                    _gameFont, new Color(0.2f, 0.4f, 0.7f, 0.9f));
+                    _gameFont, UIStyles.Info);
                 var suppressTarget = kingdom;
                 btnSuppress.onClick.AddListener(() =>
                 {
