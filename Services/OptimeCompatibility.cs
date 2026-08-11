@@ -130,7 +130,10 @@ namespace EconomyMod.Services
                 int actorVar;
                 if (stlocOp == OpCodes.Stloc || stlocOp == OpCodes.Stloc_S)
                 {
-                    actorVar = (int)matcher.Operand;
+                    // Harmony 反编译的 stloc operand 可能是 LocalBuilder/LocalVariableInfo/int，
+                    // 不能用 (int) 硬转（会抛 InvalidCastException）
+                    actorVar = ExtractLocalIndex(matcher.Operand);
+                    if (actorVar < 0) return codes; // operand 类型无法解析，模式不匹配
                 }
                 else if (stlocOp == OpCodes.Stloc_0) actorVar = 0;
                 else if (stlocOp == OpCodes.Stloc_1) actorVar = 1;
@@ -185,6 +188,23 @@ namespace EconomyMod.Services
             byte v = (byte)c.opcode.Value;
             return c.opcode == OpCodes.Stloc || c.opcode == OpCodes.Stloc_S ||
                    (v >= OpCodes.Stloc_0.Value && v <= OpCodes.Stloc_3.Value);
+        }
+
+        /// <summary>
+        /// 从 Harmony 指令 operand 中安全提取局部变量索引。
+        /// Harmony 反编译的 ldloc/stloc operand 可能是 LocalBuilder（最常）、
+        /// LocalVariableInfo、int、short 或 byte；直接 (int) 强转会抛
+        /// InvalidCastException，这里统一走类型分支，无法识别时返回 -1。
+        /// </summary>
+        private static int ExtractLocalIndex(object operand)
+        {
+            if (operand == null) return -1;
+            if (operand is LocalBuilder lb) return lb.LocalIndex;
+            if (operand is LocalVariableInfo lvi) return lvi.LocalIndex;
+            if (operand is int i) return i;
+            if (operand is short s) return s;
+            if (operand is byte b) return b;
+            return -1;
         }
 
         /// <summary>
