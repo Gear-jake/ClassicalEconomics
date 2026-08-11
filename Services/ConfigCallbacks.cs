@@ -134,6 +134,13 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("cycle_enabled", out var cy))      u.CycleEnabled = cy.BoolVal;
                 if (group.TryGetValue("cycle_gini_high", out var gh))    u.CycleGiniHigh = ParseFloat(gh.TextVal, u.CycleGiniHigh, 0.3f, 0.9f);
                 if (group.TryGetValue("cycle_gini_low", out var gl))     u.CycleGiniLow = ParseFloat(gl.TextVal, u.CycleGiniLow, 0.2f, 0.7f);
+                // M6：批量导入同样保持 high > low 不变量（与 OnGiniHigh/LowChanged 单个回调路径一致），
+                // 防止配置异常值（含 NaN/Infinity 被拒绝后走 fallback）破坏周期状态机
+                if (u.CycleGiniHigh <= u.CycleGiniLow)
+                {
+                    u.CycleGiniHigh = UnityEngine.Mathf.Clamp(u.CycleGiniLow + 0.05f, 0.3f, 0.9f);
+                    if (u.CycleGiniHigh > 0.9f) u.CycleGiniLow = u.CycleGiniHigh - 0.05f;
+                }
                 if (group.TryGetValue("cycle_gini_periods", out var gp)) u.CycleGiniPeriods = ParseInt(gp.TextVal, u.CycleGiniPeriods, 1, 5);
                 if (group.TryGetValue("boom_stimulus_ratio", out var bs)) u.BoomStimulusRatio = ParseFloat(bs.TextVal, u.BoomStimulusRatio, 0f, 0.1f);
                 if (group.TryGetValue("boom_bubble_factor", out var bf)) u.BoomBubbleFactor = ParseFloat(bf.TextVal, u.BoomBubbleFactor, 0.05f, 0.5f);
@@ -199,8 +206,11 @@ namespace EconomyMod.Services
         private static float ParseFloat(string text, float fallback, float min, float max)
         {
             float v;
+            // M6：float.TryParse 对 "NaN"/"Infinity" 会成功，且 Mathf.Clamp(NaN,...) 原样返回 NaN，
+            // 会污染所有下游数值计算；此处显式拒绝 NaN/Infinity，回退 fallback。
             if (float.TryParse(text, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out v))
+                System.Globalization.CultureInfo.InvariantCulture, out v)
+                && !float.IsNaN(v) && !float.IsInfinity(v))
                 return UnityEngine.Mathf.Clamp(v, min, max);
             return fallback;
         }

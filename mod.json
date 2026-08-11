@@ -1,7 +1,7 @@
 {
   "name": "古典经济学",
   "author": "Jake",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "古典经济学 WorldBox Mod - 采集开智种族财富、计算 GDP/基尼系数、按王国拆分指标、经济周期、王国贸易金流、社会动荡、劳动价值、灾害冲击与银行信贷；经济面板趋势页重制：动态 Top5 王国财富折线（入榜出现/跌出断裂/再入榜续线）、阶段色带与宏观指标摘要，支持简中/繁中/English/Русский 四语言",
   "targetGameBuild": 719,
   "iconPath": "icon.png",

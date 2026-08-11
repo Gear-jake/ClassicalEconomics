@@ -269,6 +269,7 @@ namespace EconomyMod.Core
             }
 
             // 均分给最穷成员（余数补第一名）
+            if (poor.Count == 0) return 0L; // 防御：无穷人候选时避免除零（正常路径 count>0 时池必非空）
             long per = totalTax / poor.Count;
             if (per > 0)
             {

@@ -45,6 +45,8 @@ namespace EconomyMod
             EconomyCycleModulator.Reset();
             SocialCrisisEngine.Reset();
             EraEngine.Reset();
+            UnrestEngine.Reset();   // M7：新地图/热重载清空震荡状态与收复战争跟踪
+            PolicyEngine.Reset();   // M7：新地图/热重载清空改革冷却
             KingdomMonitorEngine.Reset();
             InheritanceEngine.Reset();
             DisasterEngine.Reset();
@@ -248,9 +250,13 @@ namespace EconomyMod
         {
             try
             {
-                DataCollector.Collect();                          // 采集纯数据
-                TradeSimulationWorker.ComputeAndConsumeSync();    // 同步计算并发布
-                DataCollector.ApplyWealthTax();
+                // 在途周期存在时跳过同步计算（否则 _generation++ 会作废在途年度周期，S2 防护）
+                if (!TradeSimulationWorker.IsBusy())
+                {
+                    DataCollector.Collect(postCycle: false);              // 采集纯数据（含年度副作用，不投后台）
+                    TradeSimulationWorker.ComputeAndConsumeSync();        // 同步计算并发布（推进周期号）
+                    DataCollector.ApplyWealthTax();
+                }
                 EconomyUI.RefreshOverview();
             }
             catch (System.Exception e)
@@ -274,7 +280,9 @@ namespace EconomyMod
                 EconomyUI.RefreshOverview(); // 仅刷新UI，不重算
                 return;
             }
-            DataCollector.Collect(applySideEffects: false);
+            // 在途周期存在时跳过（同步计算会作废在途任务；年度周期收尾后自会刷新 UI，S2 防护）
+            if (TradeSimulationWorker.IsBusy()) return;
+            DataCollector.Collect(applySideEffects: false, postCycle: false);
             TradeSimulationWorker.ComputeAndConsumeSync(advanceCycle: false);
             EconomyUI.RefreshOverview();
         }
@@ -302,6 +310,12 @@ namespace EconomyMod
                 {
                     _cyclePending = false;
                     FinishCycle();
+                }
+                // 自愈：后台结果已就绪但 _cyclePending 未置位（历史遗留/工具按钮路径遗漏的 PostCycle），
+                // 兜底置位走正常消费分支，避免 _posting 永久滞留导致年度周期停摆（S2）。
+                else if (!_cyclePending && TradeSimulationWorker.HasPendingResult())
+                {
+                    _cyclePending = true;
                 }
 
                 // 实时数据感：配置开启且无年度周期在途时，按秒做轻量采集+同步计算+刷 HUD
@@ -349,6 +363,8 @@ namespace EconomyMod
                         EconomyCycleModulator.Reset();
                         SocialCrisisEngine.Reset();
                         EraEngine.Reset();
+                        UnrestEngine.Reset();   // M7：新地图清空震荡状态与收复战争跟踪
+                        PolicyEngine.Reset();   // M7：新地图清空改革冷却
                         KingdomMonitorEngine.Reset();
                         DisasterEngine.Reset();
                         BankingEngine.Reset();

@@ -192,6 +192,9 @@ namespace EconomyMod.Core
             CurrentPhase = next;
             PhaseDuration = 1;
             BubbleValue = 0f;
+            // 重置基尼连续期数：否则切阶段后旧 streak 立即满足下一跳条件，造成阶段双跳（M1 修复）
+            _highGiniStreak = 0;
+            _lowGiniStreak = 0;
             GameHelpers.Log($"[ClassicalEconomics] 经济周期 → {logName}（贫富差距 {EconomyEngine.GiniCoefficient:F2}，增长率 {GrowthRate.ToString("+0.0%;-0.0%")}，人均 {EconomyEngine.AvgWealth:F1}）");
         }
 
@@ -266,7 +269,10 @@ namespace EconomyMod.Core
                     if (coins <= 0) continue;
                     try
                     {
-                        int evap = Mathf.Max(1, Mathf.RoundToInt(coins * crashRatio));
+                        // M9：保底 1 金币仅对持有 ≥10 金币者生效；小额持有者按比例（可能为 0），
+                        // 避免最穷者被 1 金币保底按 100% 比例蒸发（比富人受害更重）。
+                        int evap = Mathf.RoundToInt(coins * crashRatio);
+                        if (evap < 1 && coins >= 10) evap = 1;
                         actor.addMoney(-evap);
                         victims++;
                         totalEvaporated += evap;
@@ -276,7 +282,8 @@ namespace EconomyMod.Core
             }
 
             // 货币供给追踪：蒸发减少 M（通缩压力，下期 CPI 下降）
-            MoneySupply -= totalEvaporated;
+            // M2：钳制下限为 0，避免蒸发（含 M9 保底取整）导致 MoneySupply 变负
+            MoneySupply = Mathf.Max(0f, MoneySupply - totalEvaporated);
 
             GameHelpers.Log($"[ClassicalEconomics] 经济泡沫破裂！蒸发比例 {crashRatio.ToString("P0")}，波及 {victims} 人（泡沫值 {BubbleValue:F0}，CPI 将下降）");
             GameHelpers.Notify($"[经济] 泡沫破裂！{crashRatio.ToString("P0")} 财富蒸发，波及 {victims} 人");

@@ -1086,7 +1086,13 @@ namespace EconomyMod.UI
                 btnIncite.onClick.AddListener(() =>
                 {
                     int n = UnrestEngine.Incite(inciteTarget);
-                    DataCollector.Collect(); // 内部已含统计累积
+                    // 同步刷新统计：仅当无在途周期时执行。直接调 Collect() 会投递后台周期但无人消费
+                    // （_cyclePending 未置位），导致 _posting 永久滞留、年度周期停摆（S2 根因）。
+                    if (!TradeSimulationWorker.IsBusy())
+                    {
+                        DataCollector.Collect(applySideEffects: false, postCycle: false);
+                        TradeSimulationWorker.ComputeAndConsumeSync(advanceCycle: false);
+                    }
                     string nName = (inciteTarget.data != null && inciteTarget.data.name != null) ? inciteTarget.data.name : "?";
                     AddLine(n > 0
                             ? UIHelpers.Lf("picker_done", nName)
@@ -1102,7 +1108,12 @@ namespace EconomyMod.UI
                 btnSuppress.onClick.AddListener(() =>
                 {
                     int n = UnrestEngine.Suppress(suppressTarget);
-                    DataCollector.Collect(); // 内部已含统计累积
+                    // 同步刷新统计：仅当无在途周期时执行（同煽动按钮，S2 修复）
+                    if (!TradeSimulationWorker.IsBusy())
+                    {
+                        DataCollector.Collect(applySideEffects: false, postCycle: false);
+                        TradeSimulationWorker.ComputeAndConsumeSync(advanceCycle: false);
+                    }
                     string nName = (suppressTarget.data != null && suppressTarget.data.name != null) ? suppressTarget.data.name : "?";
                     AddLine(n > 0
                             ? UIHelpers.Lf("picker_done_suppress", nName)

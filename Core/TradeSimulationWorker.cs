@@ -37,6 +37,7 @@ namespace EconomyMod.Core
             public long Food;
             public int Cities;
             public int Boats;
+            public int Specialty; // BiomeSpecialty（主线程采集阶段读取，后台线程只读，避免后台访问 Unity 对象）
         }
 
         /// <summary>王国级模拟结果（后台计算，主线程只读消费）。</summary>
@@ -58,6 +59,7 @@ namespace EconomyMod.Core
             public int Workers;       // 有职业人口
             public float Productivity; // 平均劳动生产率（职业倍率均值）
             public float Production;  // 年产出 = Workers × Productivity × CapitalFactor（生产函数）
+            public int Specialty;     // BiomeSpecialty（主线程采集阶段读取的纯数据）
         }
 
         /// <summary>一轮周期模拟结果。</summary>
@@ -123,12 +125,12 @@ namespace EconomyMod.Core
         }
 
         public static void AddKingdom(long id, string name, int population, int capacity,
-            long food, int cities, int boats)
+            long food, int cities, int boats, int specialty)
         {
             _collectKingdoms.Add(new KingdomFacts
             {
                 Id = id, Name = name, Population = population, Capacity = capacity,
-                Food = food, Cities = cities, Boats = boats
+                Food = food, Cities = cities, Boats = boats, Specialty = specialty
             });
         }
 
@@ -205,6 +207,12 @@ namespace EconomyMod.Core
             Publish(res);
             return true;
         }
+
+        /// <summary>是否已有周期在途（已提交未消费 / 后台计算中）。调用方在发起新周期或同步计算前应检查。</summary>
+        public static bool IsBusy() => _posting || _computing;
+
+        /// <summary>后台结果是否已就绪但尚未被消费（供周期驱动器自愈：_posting 遗留但无人消费时兜底置位）。</summary>
+        public static bool HasPendingResult() => _posting && !_computing;
 
         /// <summary>
         /// 手动采集/实时刷新：同步计算并立即发布（按钮触发，不等后台线程）。
@@ -313,7 +321,8 @@ namespace EconomyMod.Core
                     Food = f.Food,
                     Boats = f.Boats,
                     FoodPerCapita = f.Population > 0 ? (float)f.Food / f.Population : 0f,
-                    Pressure = f.Capacity > 0 ? (float)f.Population / f.Capacity : 0f
+                    Pressure = f.Capacity > 0 ? (float)f.Population / f.Capacity : 0f,
+                    Specialty = f.Specialty
                 };
                 if (acc.TryGetValue(f.Id, out var a))
                 {
@@ -365,7 +374,8 @@ namespace EconomyMod.Core
             foreach (var ks in res.Kingdoms)
             {
                 if (ks.KingdomId == 0 || ks.ActorCount <= 0) continue;
-                var specialty = BiomeEconomy.GetSpecialty(ks.KingdomId);
+                // 特长在采集阶段（主线程）读取，后台只读纯数据，绝不访问 Unity 对象（S4 修复）
+                var specialty = (BiomeSpecialty)ks.Specialty;
                 float bonus = BiomeEconomy.GetBonus(specialty);
                 // 贸易余额 = 特长产出加成 - 基础需求（3%）
                 double balance = (bonus - 0.03d) * ks.GDP;

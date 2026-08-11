@@ -251,7 +251,8 @@ namespace EconomyMod.Core
                 int assigned = 0;
                 foreach (var kv in civ)
                 {
-                    int amount = Mathf.Max(1, Mathf.RoundToInt(total * (kv.Value / totalDmg)));
+                    int amount = Mathf.RoundToInt(total * (kv.Value / totalDmg));
+                    if (amount < 1 && total >= civ.Count) amount = 1; // 保底 1（仅当金币足够覆盖全员，避免因保底超额）
                     aliveMap[kv.Key].addMoney(amount);
                     assigned += amount;
                 }
@@ -263,8 +264,15 @@ namespace EconomyMod.Core
                     {
                         if (kv.Value > maxD) { maxD = kv.Value; topId = kv.Key; }
                     }
-                    aliveMap[topId].addMoney(total - assigned);
-                    assigned = total;
+                    int delta = total - assigned;
+                    if (delta > 0)
+                    {
+                        // 正残差补给伤害最高者（Σ 严格 ≤ total）
+                        aliveMap[topId].addMoney(delta);
+                        assigned = total;
+                    }
+                    // delta < 0（保底取整导致的微小超额）不再扣回：
+                    // 原代码 addMoney(负值) 会掠夺伤害最高者（M4 负补偿修复）
                 }
             }
             catch (System.Exception) { return false; }

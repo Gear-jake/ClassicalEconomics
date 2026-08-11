@@ -36,6 +36,14 @@ namespace EconomyMod.Core
 
         private static readonly Dictionary<long, UnrestState> _states = new Dictionary<long, UnrestState>();
 
+        /// <summary>重置（新地图/新游戏）：清空震荡状态与收复战争跟踪，避免旧世界残留泄漏进新地图（M7）。</summary>
+        public static void Reset()
+        {
+            _states.Clear();
+            _rebelWars.Clear();
+            _sustainTimer = 0f;
+        }
+
         // ===== 持续收复战争：原王国 id → 叛乱王国 id =====
         // 暴动后原王国必须持续与叛乱王国交战（不停战），直到收回城市（叛乱王国消失）。
         private static readonly Dictionary<long, long> _rebelWars = new Dictionary<long, long>();
@@ -371,7 +379,12 @@ namespace EconomyMod.Core
                     elapsedYears = st.UprisingStartYear >= 0 ? EconomyModMain.GetCurrentGameYear() - st.UprisingStartYear : 0;
                     return 3;
                 }
-                if (st.HasRebelled) return 2;
+                if (st.HasRebelled)
+                {
+                    // M8：补写 elapsedYears（此前 return 2 分支漏写，UI 进度始终显示 0 年）
+                    elapsedYears = st.StartYear >= 0 ? EconomyModMain.GetCurrentGameYear() - st.StartYear : 0;
+                    return 2;
+                }
                 if (st.StartYear >= 0)
                 {
                     elapsedYears = EconomyModMain.GetCurrentGameYear() - st.StartYear;

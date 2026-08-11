@@ -40,10 +40,14 @@ namespace EconomyMod.Core
         /// 全部统计计算在后台线程完成；富豪榜/富池等需 Actor 引用的池仍在主线程维护。
         /// 仅采集开智文明种族（actor.asset.civ == true），排除野兽动物。
         /// applySideEffects=false 用于实时刷新（跳过工资发放等年度副作用，只做统计）。
+        /// postCycle=false 用于按钮同步路径（采集后由调用方 ComputeAndConsumeSync 同步计算，不投递后台任务）。
         /// 返回后台统计是否提交成功（false = 已有周期在途，调用方应稍后重试）。
         /// </summary>
-        public static bool Collect(bool applySideEffects = true)
+        public static bool Collect(bool applySideEffects = true, bool postCycle = true)
         {
+            // 在途周期存在时拒绝本次采集：PostCycle 会被拒（数据滞留缓冲被下轮 BeginCycle 清空），
+            // 且调用方随后的同步计算会以 _generation++ 作废在途任务，破坏年度周期（S2 根因防护）。
+            if (postCycle && TradeSimulationWorker.IsBusy()) return false;
             // 将上一轮富豪榜条目归还对象池，避免每年新建
             for (int i = 0; i < TopRich.Count; i++) ReturnEntry(TopRich[i]);
             TopRich.Clear();
@@ -104,11 +108,13 @@ namespace EconomyMod.Core
                     try { foreach (var c in k.getCities()) cities++; } catch (System.Exception) { }
                     try { boats = k.countBoats(); } catch (System.Exception) { }
                     TradeSimulationWorker.AddKingdom(k.data.id, GameHelpers.SafeKingdomName(k),
-                        pop, cap, food, cities, boats);
+                        pop, cap, food, cities, boats, (int)BiomeEconomy.GetSpecialty(k.data.id));
                 }
             }
 
-            // 提交后台计算（主线程零计算；结果由 EconomyTickRunner 轮询消费）
+            // 提交后台计算（主线程零计算；结果由 EconomyTickRunner 轮询消费）。
+            // postCycle=false（按钮同步路径）时不投递后台任务，交由调用方同步计算。
+            if (!postCycle) return true;
             return TradeSimulationWorker.PostCycle();
         }
 

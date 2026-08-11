@@ -39,6 +39,12 @@ namespace EconomyMod.Core
         // 冷却清理复用缓冲（避免每年分配）
         private static readonly List<long> _cooldownExpired = new List<long>();
 
+        /// <summary>重置（新地图/新游戏）：清空改革冷却记录，避免旧世界冷却泄漏进新地图（M7）。</summary>
+        public static void Reset()
+        {
+            _cooldown.Clear();
+        }
+
         /// <summary>
         /// 每年在 UnrestEngine.Evaluate 之后调用：对所有基尼超阈值且不在冷却的王国，
         /// 按概率尝试一次政策；成功则财富再分配降基尼，失败则统治者退位/驾崩或陷入内战

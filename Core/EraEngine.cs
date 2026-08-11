@@ -224,7 +224,8 @@ namespace EconomyMod.Core
                         }
                     }
                     // 复兴：复苏期 + 人均环比回升
-                    else if (phase == EconomyPhase.Recovery && ks.AvgWealth >= prev)
+                    // M5：要求上一周期有正基线（prev > 0），否则首轮评估 prev=0 恒满足 >=，引发第一年假复苏
+                    else if (phase == EconomyPhase.Recovery && prev > 0f && ks.AvgWealth >= prev)
                     {
                         if (byId.TryGetValue(kid, out var k2))
                         {
