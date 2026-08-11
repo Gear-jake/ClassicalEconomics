@@ -81,7 +81,6 @@ $refArgs = $refs | ForEach-Object { "/reference:$_" }
     /noconfig `
     /langversion:latest `
     /nowarn:CS0436 `
-    /nowarn:CS8019 `
     /lib:$libsDir `
     $refArgs `
     $src *> 'e:\code\new\2026-08-11-16-45-00\ClassicalEconomics\errors.txt'

@@ -225,10 +225,11 @@ namespace EconomyMod.UI
 
         /// <summary>
         /// 在内容区追加 GDP 多线折线图（平面直角坐标系）：
-        /// 全球财富 + 前三王国财富折线，左侧数值尺（0~峰值），底部年份坐标尺。
+        /// 全球财富 + 动态 TopN 王国财富折线（入榜显示、跌出断裂、再入榜续线），
+        /// 背景为经济阶段色带，左侧数值尺（0~峰值），底部年份坐标尺。
         /// 一次显示最近 50 条记录（历史缓冲容量 100，足够支撑）。
         /// </summary>
-        private void AddGdpChart(int maxPoints = 50)
+        private void AddGdpChart(int maxPoints = 50, int topN = 5)
         {
             var snaps = HistoryService.GetRecent(maxPoints);
             if (snaps.Count < 2)
@@ -237,12 +238,25 @@ namespace EconomyMod.UI
                 return;
             }
 
-            // 构建系列：全球 GDP + Top3 王国（按最近快照 GDP 排名）
-            var seriesList = BuildChartSeries(snaps);
+            // 构建系列：全球 GDP + 动态 TopN 王国（按每期快照 GDP 排名，折线随排名出现/断裂）
+            var seriesList = BuildDynamicSeries(snaps, topN);
 
             int lastYear = snaps[snaps.Count - 1].GameYear;
-            AddLine(UIHelpers.Lf("chart_title", lastYear, snaps.Count), true);
+            AddLine(UIHelpers.Lf("chart_title_dyn", topN, lastYear, snaps.Count), true);
             AddChartLegend(_content.transform, seriesList);
+
+            // 宏观指标摘要（最新快照）
+            var lastSnap = snaps[snaps.Count - 1];
+            AddLine(UIHelpers.Lf("chart_macro",
+                    lastSnap.TotalProduction.ToString("F0"),
+                    lastSnap.PriceIndex.ToString("F2"),
+                    lastSnap.AliveActorCount),
+                color: new Color(0.7f, 0.85f, 1f));
+            AddLine(UIHelpers.Lf("chart_macro_avg",
+                    lastSnap.AvgWealth.ToString("F1"),
+                    lastSnap.GiniCoefficient.ToString("F3")),
+                color: new Color(0.7f, 0.85f, 1f));
+            AddLine(UIHelpers.L("chart_legend_hint"), color: new Color(0.7f, 0.7f, 0.7f));
 
             // 尺寸：宽自适应面板，高固定扁平（平面直角坐标系观感）
             float chartW = Mathf.Round(Mathf.Max(150f, _panelRect.rect.width - Padding * 2f - 20f));
@@ -251,11 +265,14 @@ namespace EconomyMod.UI
             const float bottomH = 22f;  // 底部年份坐标尺高度
             float boxH = chartH + bottomH + 4f;
 
-            // Y 轴范围：0 ~ 所有系列最大值
+            // Y 轴范围：0 ~ 所有系列最大值（NaN = 不在榜，跳过）
             float maxVal = 0f;
             foreach (var s in seriesList)
-                foreach (var v in s.Values)
-                    if (v > maxVal) maxVal = v;
+                for (int i = 0; i < s.Values.Count; i++)
+                {
+                    float v = s.Values[i];
+                    if (!float.IsNaN(v) && v > maxVal) maxVal = v;
+                }
             if (maxVal <= 0f) maxVal = 1f;
 
             // 容器：加 LayoutElement 固定首选尺寸，防止 VerticalLayoutGroup 布局错位导致与下方内容重叠
@@ -454,20 +471,31 @@ namespace EconomyMod.UI
             AddLine(UIHelpers.L("gini_legend_health"), color: new Color(0.5f, 0.85f, 0.5f));
         }
 
-        // ===== BuildChartSeries 复用缓冲（每次刷新图表时复用，避免 GC）=====
+        // ===== BuildDynamicSeries 复用缓冲（每次刷新图表时复用，避免 GC）=====
         private static readonly List<ChartSeries> _seriesPool = new List<ChartSeries>(4);
-        private static readonly List<KingdomStats> _top3Pool = new List<KingdomStats>(3);
-        // KingdomId -> 每个 snap 的 GDP 数组（缺失记为 -1，沿用前值）；KeyDictionary 避免重复构造
-        private static readonly Dictionary<long, long[]> _gdpIndex = new Dictionary<long, long[]>();
+        // ChartSeries 对象池（与 _seriesPool 配合，Values 列表也复用）
+        private static readonly List<ChartSeries> _chartSeriesEntryPool = new List<ChartSeries>(4);
+        // 每期排名用临时缓冲 + 系列索引（KingdomId -> 系列）
+        private static readonly List<KingdomStats> _rankBuf = new List<KingdomStats>(8);
+        private static readonly Dictionary<long, ChartSeries> _dynIndex = new Dictionary<long, ChartSeries>(8);
+        // 动态王国折线色板（最多展示 topN=5 条，预留充足区分度）
+        private static readonly Color[] _dynColors = new[]
+        {
+            new Color(0.30f, 0.80f, 1.00f), // 青
+            new Color(0.45f, 0.90f, 0.45f), // 绿
+            new Color(0.95f, 0.55f, 0.80f), // 品红
+            new Color(1.00f, 0.70f, 0.30f), // 橙
+            new Color(0.75f, 0.60f, 1.00f)  // 紫
+        };
 
         /// <summary>
-        /// 构建图表系列：全球 GDP + Top3 王国 GDP（按最近快照排名）。
-        /// 王国在某次快照缺失时沿用前一值，保持折线连续。
-        /// 算法优化：原实现为 O(snaps × top3 × kingdomsPerSnap)（每条 snap 都 Find 一遍），
-        /// 改为一次遍历所有 snap 构建索引 O(snaps × kingdomsPerSnap)，再 O(snaps × top3) 填充，
-        /// 消除 List.Find 的 O(N) 线性查找。复用静态缓冲避免每次刷新分配。
+        /// 构建图表系列：全球 GDP + 动态 TopN 王国 GDP（按每期快照的 GDP 排名）。
+        /// 国家在当期排名 ≤ topN 才绘制该点（否则记 NaN → 折线断裂）；
+        /// 因此：入榜即出现，跌出即断裂消失，再入榜则重新续线。
+        /// 算法：对每条 snap 的 Kingdoms 排序取前 topN，O(snaps × kingdomsLogN)；
+        /// 通过 _dynIndex 字典把 KingdomId 映射到系列，复用静态缓冲避免 GC。
         /// </summary>
-        private static List<ChartSeries> BuildChartSeries(List<EconomySnapshot> snaps)
+        private static List<ChartSeries> BuildDynamicSeries(List<EconomySnapshot> snaps, int topN)
         {
             var result = _seriesPool;
             // 归还上一轮的 ChartSeries 对象（Values 列表也复用，避免新建）
@@ -477,6 +505,7 @@ namespace EconomyMod.UI
                 _chartSeriesEntryPool.Add(result[i]);
             }
             result.Clear();
+            _dynIndex.Clear();
 
             ChartSeries global;
             if (_chartSeriesEntryPool.Count > 0)
@@ -493,79 +522,62 @@ namespace EconomyMod.UI
             for (int i = 0; i < snaps.Count; i++) global.Values.Add(snaps[i].GlobalGDP);
             result.Add(global);
 
-            var lastK = snaps[snaps.Count - 1].Kingdoms;
-            var top3 = _top3Pool;
-            top3.Clear();
-            top3.AddRange(lastK);
-            top3.Sort((a, b) => b.GDP.CompareTo(a.GDP));
-            if (top3.Count > 3) top3.RemoveRange(3, top3.Count - 3);
-
-            var kColors = new[]
-            {
-                new Color(0.3f, 0.8f, 1f),     // 青
-                new Color(0.45f, 0.9f, 0.45f), // 绿
-                new Color(0.95f, 0.55f, 0.8f)  // 品红
-            };
-
-            // 预建索引：KingdomId -> 每个 snap 的 GDP 数组（缺失记为 -1）
-            // 只收集 top3 出现的 KingdomId，避免为所有历史王国分配数组
-            var gdpIndex = _gdpIndex;
-            gdpIndex.Clear();
-            // 先为 top3 分配数组（清空旧条目并标记为 -1）
-            for (int i = 0; i < top3.Count; i++)
-            {
-                var arr = new long[snaps.Count];
-                for (int j = 0; j < snaps.Count; j++) arr[j] = -1L;
-                gdpIndex[top3[i].KingdomId] = arr;
-            }
-            // 一次遍历所有 snap 填充索引
+            // 第一轮：收集出现在任意快照 TopN 中的王国，建立 KingdomId -> 系列（颜色按入榜顺序分配）
             for (int j = 0; j < snaps.Count; j++)
             {
                 var kingdoms = snaps[j].Kingdoms;
-                if (kingdoms == null) continue;
-                for (int i = 0; i < kingdoms.Count; i++)
+                if (kingdoms == null || kingdoms.Count == 0) continue;
+
+                var buf = _rankBuf;
+                buf.Clear();
+                buf.AddRange(kingdoms);
+                buf.Sort((a, b) => b.GDP.CompareTo(a.GDP));
+                int take = buf.Count < topN ? buf.Count : topN;
+                for (int i = 0; i < take; i++)
                 {
-                    var k = kingdoms[i];
-                    if (gdpIndex.TryGetValue(k.KingdomId, out var arr))
-                        arr[j] = k.GDP;
+                    var ks = buf[i];
+                    if (_dynIndex.ContainsKey(ks.KingdomId)) continue;
+                    ChartSeries series;
+                    if (_chartSeriesEntryPool.Count > 0)
+                    {
+                        series = _chartSeriesEntryPool[_chartSeriesEntryPool.Count - 1];
+                        _chartSeriesEntryPool.RemoveAt(_chartSeriesEntryPool.Count - 1);
+                    }
+                    else
+                    {
+                        series = new ChartSeries();
+                    }
+                    series.Name = ks.KingdomName;
+                    series.Color = _dynColors[result.Count % _dynColors.Length];
+                    for (int k = 0; k < snaps.Count; k++) series.Values.Add(float.NaN); // 默认不在榜
+                    _dynIndex[ks.KingdomId] = series;
+                    result.Add(series);
                 }
             }
 
-            // 填充 top3 系列（缺失沿用前值，保持折线连续）
-            for (int i = 0; i < top3.Count; i++)
+            // 第二轮：按每期排名填入 TopN 王国的 GDP（不在榜保持 NaN，折线断裂）
+            for (int j = 0; j < snaps.Count; j++)
             {
-                var ks = top3[i];
-                ChartSeries series;
-                if (_chartSeriesEntryPool.Count > 0)
-                {
-                    series = _chartSeriesEntryPool[_chartSeriesEntryPool.Count - 1];
-                    _chartSeriesEntryPool.RemoveAt(_chartSeriesEntryPool.Count - 1);
-                }
-                else
-                {
-                    series = new ChartSeries();
-                }
-                series.Name = ks.KingdomName;
-                series.Color = kColors[i % kColors.Length];
+                var kingdoms = snaps[j].Kingdoms;
+                if (kingdoms == null || kingdoms.Count == 0) continue;
 
-                long[] arr = gdpIndex[ks.KingdomId];
-                float prev = 0f;
-                for (int j = 0; j < snaps.Count; j++)
+                var buf = _rankBuf;
+                buf.Clear();
+                buf.AddRange(kingdoms);
+                buf.Sort((a, b) => b.GDP.CompareTo(a.GDP));
+                int take = buf.Count < topN ? buf.Count : topN;
+                for (int i = 0; i < take; i++)
                 {
-                    long v = arr[j];
-                    if (v >= 0L) prev = v;
-                    series.Values.Add(prev);
+                    var ks = buf[i];
+                    if (_dynIndex.TryGetValue(ks.KingdomId, out var series))
+                        series.Values[j] = ks.GDP;
                 }
-                result.Add(series);
             }
             return result;
         }
 
-        // ChartSeries 对象池（与 _seriesPool 配合，Values 列表也复用）
-        private static readonly List<ChartSeries> _chartSeriesEntryPool = new List<ChartSeries>(4);
-
         /// <summary>
-        /// 计算 GDP 图表内容指纹：全球 GDP 序列 + 各系列（Top3 王国）名称与数值序列。
+        /// 计算 GDP 图表内容指纹：全球 GDP 序列 + 各系列（动态王国）名称与数值序列（含 NaN 标记）。
         /// 数据变化（含王国变更）→ 指纹变化 → 纹理重建；数据未变 → 复用缓存纹理。
         /// </summary>
         private static int ComputeSeriesSignature(List<EconomySnapshot> snaps, List<ChartSeries> seriesList)
@@ -578,7 +590,10 @@ namespace EconomyMod.UI
                 var ser = seriesList[s];
                 h = h * 31 + (ser.Name != null ? ser.Name.GetHashCode() : 0);
                 for (int i = 0; i < ser.Values.Count; i++)
-                    h = h * 31 + (int)ser.Values[i];
+                {
+                    float v = ser.Values[i];
+                    h = h * 31 + (float.IsNaN(v) ? int.MinValue : (int)v);
+                }
             }
             return h;
         }
@@ -593,62 +608,72 @@ namespace EconomyMod.UI
         }
 
         /// <summary>
-        /// 图例行：色条 + 名称，HorizontalLayoutGroup 自动排布。
+        /// 图例（竖直行列表）：色条 + 名称 + 最新值（在榜）/ 已跌出（不在榜）。
+        /// 每个系列独立一行，行内色条 + 名称 + 尾部数值，信息比横向图例更丰富。
         /// </summary>
         private void AddChartLegend(Transform parent, List<ChartSeries> series)
         {
-            var row = new GameObject("ChartLegend", typeof(RectTransform),
-                typeof(HorizontalLayoutGroup), typeof(LayoutElement));
-            row.transform.SetParent(parent, false);
-            var rowLg = row.GetComponent<HorizontalLayoutGroup>();
-            rowLg.spacing = 12f;
-            rowLg.childAlignment = TextAnchor.MiddleLeft;
-            rowLg.childControlWidth = false;
-            rowLg.childControlHeight = true;
-            rowLg.childForceExpandWidth = false;
-            rowLg.childForceExpandHeight = false;
-            var rowRt = row.GetComponent<RectTransform>();
-            rowRt.sizeDelta = new Vector2(0, 20f);
-            row.GetComponent<LayoutElement>().preferredHeight = 20f;
-            _lines.Add(row);
-
             foreach (var s in series)
             {
-                var item = new GameObject("LegendItem", typeof(RectTransform), typeof(HorizontalLayoutGroup));
-                item.transform.SetParent(row.transform, false);
-                var itemLg = item.GetComponent<HorizontalLayoutGroup>();
-                itemLg.spacing = 4f;
-                itemLg.childAlignment = TextAnchor.MiddleLeft;
-                itemLg.childControlWidth = false;
-                itemLg.childControlHeight = true;
-                itemLg.childForceExpandWidth = false;
-                itemLg.childForceExpandHeight = false;
+                var row = new GameObject("LegendRow", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+                row.transform.SetParent(parent, false);
+                var rowLg = row.GetComponent<HorizontalLayoutGroup>();
+                rowLg.spacing = 6f;
+                rowLg.childAlignment = TextAnchor.MiddleLeft;
+                rowLg.childControlWidth = false;
+                rowLg.childControlHeight = true;
+                rowLg.childForceExpandWidth = false;
+                rowLg.childForceExpandHeight = false;
+                var rowRt = row.GetComponent<RectTransform>();
+                rowRt.sizeDelta = new Vector2(0, 18f);
+                row.GetComponent<LayoutElement>().preferredHeight = 18f;
+                _lines.Add(row);
 
                 // 色条
-                var sw = new GameObject("Swatch", typeof(RectTransform), typeof(Image));
-                sw.transform.SetParent(item.transform, false);
+                var sw = new GameObject("Swatch", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+                sw.transform.SetParent(row.transform, false);
                 sw.GetComponent<Image>().color = s.Color;
                 sw.GetComponent<Image>().raycastTarget = false;
-                sw.GetComponent<RectTransform>().sizeDelta = new Vector2(18f, 5f);
-                var swEl = sw.AddComponent<LayoutElement>();
-                swEl.preferredWidth = 18f;
-                swEl.preferredHeight = 5f;
+                var swRt = sw.GetComponent<RectTransform>();
+                swRt.sizeDelta = new Vector2(20f, 6f);
+                sw.GetComponent<LayoutElement>().preferredWidth = 20f;
+                sw.GetComponent<LayoutElement>().preferredHeight = 6f;
 
-                // 名称
-                var nm = UIHelpers.CreateText(s.Name, item.transform, 10f, TextColor, _gameFont, 18f);
+                // 名称（固定宽，超出省略号）
+                var nm = UIHelpers.CreateText(s.Name, row.transform, 10f, TextColor, _gameFont, 18f);
                 var nmT = nm.GetComponent<Text>();
                 nmT.alignment = TextAnchor.MiddleLeft;
-                float nameW = nmT.preferredWidth + 2f;
-                nm.GetComponent<RectTransform>().sizeDelta = new Vector2(nameW, 18f);
+                nmT.horizontalOverflow = HorizontalWrapMode.Overflow;
+                nm.GetComponent<RectTransform>().sizeDelta = new Vector2(150f, 18f);
                 var nmEl = nm.AddComponent<LayoutElement>();
-                nmEl.preferredWidth = nameW;
+                nmEl.preferredWidth = 150f;
                 nmEl.preferredHeight = 18f;
 
-                // 图例项
-                var itemEl = item.AddComponent<LayoutElement>();
-                itemEl.preferredWidth = 18f + 4f + nameW;
-                itemEl.preferredHeight = 18f;
-                item.GetComponent<RectTransform>().sizeDelta = new Vector2(itemEl.preferredWidth, 18f);
+                // 最新值 / 已跌出状态
+                float last = float.NaN;
+                for (int i = s.Values.Count - 1; i >= 0; i--)
+                {
+                    if (!float.IsNaN(s.Values[i])) { last = s.Values[i]; break; }
+                }
+                bool inRank = !float.IsNaN(last);
+                string valueStr = inRank ? last.ToString("F0")
+                    : (s.Values.Count > 0 ? UIHelpers.L("chart_dropped") : "");
+                var vGo = UIHelpers.CreateText(valueStr, row.transform, 10f,
+                    inRank ? new Color(0.95f, 0.85f, 0.5f) : new Color(0.55f, 0.55f, 0.6f),
+                    _gameFont, 18f);
+                var vT = vGo.GetComponent<Text>();
+                vT.alignment = TextAnchor.MiddleRight;
+                vT.horizontalOverflow = HorizontalWrapMode.Overflow;
+                var vRt = vGo.GetComponent<RectTransform>();
+                vRt.anchorMin = new Vector2(1, 0); vRt.anchorMax = new Vector2(1, 0);
+                vRt.pivot = new Vector2(1, 0.5f);
+                vRt.anchoredPosition = new Vector2(0, 9f);
+                vRt.sizeDelta = new Vector2(70f, 18f);
+                var vEl = vGo.AddComponent<LayoutElement>();
+                vEl.preferredWidth = 70f;
+                vEl.preferredHeight = 18f;
+
+                row.GetComponent<LayoutElement>().preferredWidth = 250f;
             }
         }
 
@@ -682,8 +707,9 @@ namespace EconomyMod.UI
         }
 
         /// <summary>
-        /// 绘制多线折线图纹理：暗色底、横向网格、每个系列一条折线，
-        /// 首个系列（全球 GDP）附加半透明面积填充。y=0 在底部，显示时天然正向。
+        /// 绘制多线折线图纹理：暗色底、经济阶段背景色带、横向网格、每个系列一条折线，
+        /// 首个系列（全球 GDP）附加半透明面积填充；系列值为 NaN 的点不连线（王国跌出排名即断裂）。
+        /// y=0 在底部，显示时天然正向。
         /// </summary>
         private static Texture2D GenerateMultiLineChartTexture(
             List<EconomySnapshot> snaps, int w, int h, int yAxisW,
@@ -703,6 +729,17 @@ namespace EconomyMod.UI
             int cw = w - mL - mR;
             int ch = h - mT - mB;
 
+            // 阶段背景色带（按每个快照的阶段，半透明叠加在背景上）
+            for (int i = 0; i < n - 1; i++)
+            {
+                int x0 = mL + Mathf.RoundToInt(cw * i / (float)(n - 1));
+                int x1 = mL + Mathf.RoundToInt(cw * (i + 1) / (float)(n - 1));
+                var band = PhaseBandColor(snaps[i].Phase);
+                for (int x = x0; x <= x1; x++)
+                    for (int y = mB; y <= mT + ch; y++)
+                        BlendChartPx(px, w, h, x, y, band);
+            }
+
             // 横向网格线（含底部坐标轴），从数值尺右缘开始
             var grid = new Color(0.35f, 0.35f, 0.4f, 0.45f);
             for (int gi = 0; gi <= 4; gi++)
@@ -711,29 +748,51 @@ namespace EconomyMod.UI
                 for (int x = mL; x < w - mR; x++) px[y * w + x] = grid;
             }
 
-            // 每个系列绘制折线
+            // 每个系列绘制折线（NaN = 断裂，跳过该段）
             for (int si = 0; si < series.Count; si++)
             {
                 var s = series[si];
                 var pts = new Vector2Int[n];
                 for (int i = 0; i < n; i++)
                 {
-                    float v = i < s.Values.Count ? s.Values[i] : 0f;
+                    float v = i < s.Values.Count ? s.Values[i] : float.NaN;
                     pts[i].x = mL + Mathf.RoundToInt(cw * i / (float)(n - 1));
-                    pts[i].y = mB + Mathf.RoundToInt(ch * (v / maxVal));
+                    if (!float.IsNaN(v))
+                        pts[i].y = mB + Mathf.RoundToInt(ch * (v / maxVal));
+                    else
+                        pts[i].y = int.MinValue; // 断裂标记
                 }
-                // 首个系列（全球）附加面积填充
+                // 首个系列（全球）附加面积填充（仅连续段）
                 if (si == 0)
                 {
                     var fill = s.Color;
                     fill.a = 0.14f;
                     for (int i = 0; i < n - 1; i++)
-                        FillAreaSegment(px, w, h, pts[i], pts[i + 1], mB, fill);
+                        if (pts[i].y != int.MinValue && pts[i + 1].y != int.MinValue)
+                            FillAreaSegment(px, w, h, pts[i], pts[i + 1], mB, fill);
                 }
-                // 折线 + 末端高亮点
+                // 折线 + 末端高亮点（断裂段跳过）
+                bool lineActive = false;
                 for (int i = 0; i < n - 1; i++)
-                    DrawLine(px, w, h, pts[i], pts[i + 1], s.Color);
-                DrawDot(px, w, h, pts[n - 1], s.Color, 2);
+                {
+                    if (pts[i].y != int.MinValue && pts[i + 1].y != int.MinValue)
+                    {
+                        DrawLine(px, w, h, pts[i], pts[i + 1], s.Color);
+                        lineActive = true;
+                    }
+                }
+                if (lineActive)
+                {
+                    // 末端高亮点：取最后一个有效点
+                    for (int i = n - 1; i >= 0; i--)
+                    {
+                        if (pts[i].y != int.MinValue)
+                        {
+                            DrawDot(px, w, h, pts[i], s.Color, 2);
+                            break;
+                        }
+                    }
+                }
             }
 
             // 复用缓冲可能大于 w*h，必须用 SetPixels(x,y,w,h,px) 仅写入前 w*h 个像素
