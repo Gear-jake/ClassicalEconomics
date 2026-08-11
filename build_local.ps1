@@ -35,6 +35,7 @@ $src = @(
     'Services\LocalizationService.cs',
     'Services\EventStreamService.cs',
     'Services\ConfigCallbacks.cs',
+    'Services\OptimeCompatibility.cs',
     'UI\EconomyUI.cs',
     'UI\EconomyHUD.cs',
     'UI\EventWindow.cs',
@@ -69,7 +70,8 @@ $refs = @(
     "$libsDir\System.dll",
     "$libsDir\System.Core.dll",
     "$libsDir\netstandard.dll",
-    "$libsDir\Newtonsoft.Json.dll"
+    "$libsDir\Newtonsoft.Json.dll",
+    "$libsDir\0Harmony.dll"
 )
 
 $refArgs = $refs | ForEach-Object { "/reference:$_" }

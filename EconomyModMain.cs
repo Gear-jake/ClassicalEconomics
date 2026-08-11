@@ -298,9 +298,17 @@ namespace EconomyMod
             private float _yearCheckTimer;   // 反射读取年份的节流计时（年份粒度为年，无需每帧）
             private float _realtimeTimer;    // 实时刷新节流计时（配置开启时按秒轻量刷新 HUD 数据）
             private bool _cyclePending;      // 后台统计进行中/待消费
+            private bool _optimeGuardChecked; // 首帧执行一次 Optime 兼容兜底安装
 
             private void Update()
             {
+                // Optime 兼容兜底：首帧安装（此时所有模组已加载，能可靠检测到 Optime）
+                if (!_optimeGuardChecked)
+                {
+                    _optimeGuardChecked = true;
+                    Services.OptimeCompatibility.TryInstall();
+                }
+
                 InheritanceEngine.Tick(Time.deltaTime);
                 // 每帧维持收复战争（内部 1 秒节流）：和谈后立即重新宣战，直到收回叛乱城市
                 UnrestEngine.SustainRebelWars();
