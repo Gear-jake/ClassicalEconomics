@@ -7,6 +7,7 @@ icon.original.png
 
 # 发布包
 *.zip
+release/
 
 # 编译诊断
 build_diag.txt
