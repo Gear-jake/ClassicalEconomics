@@ -228,6 +228,7 @@ namespace EconomyMod.UI
         /// 全球财富 + 动态 TopN 王国财富折线（入榜显示、跌出断裂、再入榜续线），
         /// 背景为经济阶段色带，左侧数值尺（0~峰值），底部年份坐标尺。
         /// 一次显示最近 50 条记录（历史缓冲容量 100，足够支撑）。
+        /// 王国折线仅保留最近 15 期内进过 Top5 的国家（图例上限 10 条），防止历史累计膨胀。
         /// </summary>
         private void AddGdpChart(int maxPoints = 50, int topN = 5)
         {
@@ -478,6 +479,11 @@ namespace EconomyMod.UI
         // 每期排名用临时缓冲 + 系列索引（KingdomId -> 系列）
         private static readonly List<KingdomStats> _rankBuf = new List<KingdomStats>(8);
         private static readonly Dictionary<long, ChartSeries> _dynIndex = new Dictionary<long, ChartSeries>(8);
+        // 王国最后上榜期索引（KingdomId -> 快照序号，用于图例膨胀保护排序）
+        private static readonly Dictionary<long, int> _dynLastSeen = new Dictionary<long, int>(8);
+        // 图例膨胀保护排序缓冲 + 保留集合
+        private static readonly List<KeyValuePair<long, ChartSeries>> _dynSeenBuf = new List<KeyValuePair<long, ChartSeries>>(8);
+        private static readonly HashSet<long> _keepIds = new HashSet<long>(8);
         // 动态王国折线色板（最多展示 topN=5 条，预留充足区分度）
         private static readonly Color[] _dynColors = new[]
         {
@@ -492,11 +498,16 @@ namespace EconomyMod.UI
         /// 构建图表系列：全球 GDP + 动态 TopN 王国 GDP（按每期快照的 GDP 排名）。
         /// 国家在当期排名 ≤ topN 才绘制该点（否则记 NaN → 折线断裂）；
         /// 因此：入榜即出现，跌出即断裂消失，再入榜则重新续线。
+        /// 王国集合只统计"最近 collectWindow 期"内进过 TopN 的王国（超出窗口自动滑出图例），
+        /// 且数量有硬上限 maxSeries（按最后上榜期保留最近者），避免历史累计导致图例无限膨胀。
         /// 算法：对每条 snap 的 Kingdoms 排序取前 topN，O(snaps × kingdomsLogN)；
         /// 通过 _dynIndex 字典把 KingdomId 映射到系列，复用静态缓冲避免 GC。
         /// </summary>
         private static List<ChartSeries> BuildDynamicSeries(List<EconomySnapshot> snaps, int topN)
         {
+            const int collectWindow = 15; // 只统计最近 15 期内的 TopN，更早的王国自动滑出
+            const int maxSeries = 10;     // 王国折线硬上限（防极端换榜导致图例膨胀）
+
             var result = _seriesPool;
             // 归还上一轮的 ChartSeries 对象（Values 列表也复用，避免新建）
             for (int i = 0; i < result.Count; i++)
@@ -506,6 +517,7 @@ namespace EconomyMod.UI
             }
             result.Clear();
             _dynIndex.Clear();
+            _dynLastSeen.Clear();
 
             ChartSeries global;
             if (_chartSeriesEntryPool.Count > 0)
@@ -522,8 +534,10 @@ namespace EconomyMod.UI
             for (int i = 0; i < snaps.Count; i++) global.Values.Add(snaps[i].GlobalGDP);
             result.Add(global);
 
-            // 第一轮：收集出现在任意快照 TopN 中的王国，建立 KingdomId -> 系列（颜色按入榜顺序分配）
-            for (int j = 0; j < snaps.Count; j++)
+            // 第一轮：收集出现在"最近 collectWindow 期"内 TopN 的王国，建立 KingdomId -> 系列（颜色按入榜顺序分配）。
+            // 只统计滑动窗口而非全部快照：超出窗口未再上榜的旧王国自动滑出，图例数量有界。
+            int windowStart = snaps.Count > collectWindow ? snaps.Count - collectWindow : 0;
+            for (int j = windowStart; j < snaps.Count; j++)
             {
                 var kingdoms = snaps[j].Kingdoms;
                 if (kingdoms == null || kingdoms.Count == 0) continue;
@@ -536,7 +550,11 @@ namespace EconomyMod.UI
                 for (int i = 0; i < take; i++)
                 {
                     var ks = buf[i];
-                    if (_dynIndex.ContainsKey(ks.KingdomId)) continue;
+                    if (_dynIndex.TryGetValue(ks.KingdomId, out var existing))
+                    {
+                        _dynLastSeen[ks.KingdomId] = j; // 更新最后上榜期
+                        continue;
+                    }
                     ChartSeries series;
                     if (_chartSeriesEntryPool.Count > 0)
                     {
@@ -551,7 +569,35 @@ namespace EconomyMod.UI
                     series.Color = _dynColors[result.Count % _dynColors.Length];
                     for (int k = 0; k < snaps.Count; k++) series.Values.Add(float.NaN); // 默认不在榜
                     _dynIndex[ks.KingdomId] = series;
+                    _dynLastSeen[ks.KingdomId] = j;
                     result.Add(series);
+                }
+            }
+
+            // 图例膨胀保护：王国系列超过上限时，按最后上榜期保留最近 maxSeries 条，其余归还对象池
+            if (result.Count - 1 > maxSeries)
+            {
+                var seen = _dynSeenBuf;
+                seen.Clear();
+                foreach (var kv in _dynIndex) seen.Add(kv);
+                seen.Sort((a, b) => _dynLastSeen[b.Key].CompareTo(_dynLastSeen[a.Key])); // 最近上榜在前
+                int keepCount = seen.Count < maxSeries ? seen.Count : maxSeries;
+                var keep = _keepIds;
+                keep.Clear();
+                for (int i = 0; i < keepCount; i++) keep.Add(seen[i].Key);
+                for (int i = result.Count - 1; i >= 1; i--)
+                {
+                    var ser = result[i];
+                    long id = -1;
+                    for (int k = 0; k < seen.Count; k++)
+                        if (seen[k].Value == ser) { id = seen[k].Key; break; }
+                    if (id < 0 || !keep.Contains(id))
+                    {
+                        ser.Values.Clear();
+                        _chartSeriesEntryPool.Add(ser);
+                        if (id >= 0) _dynIndex.Remove(id);
+                        result.RemoveAt(i);
+                    }
                 }
             }
 
