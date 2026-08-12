@@ -272,22 +272,24 @@ namespace EconomyMod.Core
                 return;
             }
 
-            // 3) 内战（30%）
-            if (UnrestEngine.GetState(kingdom.data.id, out _) == 2 || UnrestEngine.TriggerCivilWar(kingdom) == 0)
+            // 3) 内战（30%）：王国尚未在内战中 → 触发内战；已在内战或内战无法爆发（无人口/城市）→ 回退国王退位。
+            // 注：显式拆开判断，避免原 `A || B == 0` 的短路歧义（A 为真时 B 完全不执行）。
+            bool alreadyRebelling = UnrestEngine.GetState(kingdom.data.id, out _) == 2;
+            if (!alreadyRebelling && UnrestEngine.TriggerCivilWar(kingdom) > 0)
             {
-                if (kingdom.hasKing() && GameHelpers.TryRemoveKing(kingdom))
-                {
-                    GameHelpers.Notify($"[政策] <{kName}> 改革失败！国王退位");
-                    EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 1);
-                    if (UnrestConfig.Instance.LogToWorldLog)
-                        Debug.Log($"[ClassicalEconomics] 政策失败 王国<{kName}> 国王退位（内战触发失败回退，基尼={stats.GiniCoefficient:F2}）");
-                }
+                GameHelpers.Notify($"[政策] <{kName}> 改革失败！王国陷入内战");
+                EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 3);
+                if (UnrestConfig.Instance.LogToWorldLog)
+                    Debug.Log($"[ClassicalEconomics] 政策失败 王国<{kName}> 内战爆发（基尼={stats.GiniCoefficient:F2}）");
                 return;
             }
-            GameHelpers.Notify($"[政策] <{kName}> 改革失败！王国陷入内战");
-            EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 3);
-            if (UnrestConfig.Instance.LogToWorldLog)
-                Debug.Log($"[ClassicalEconomics] 政策失败 王国<{kName}> 内战爆发（基尼={stats.GiniCoefficient:F2}）");
+            if (kingdom.hasKing() && GameHelpers.TryRemoveKing(kingdom))
+            {
+                GameHelpers.Notify($"[政策] <{kName}> 改革失败！国王退位");
+                EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 1);
+                if (UnrestConfig.Instance.LogToWorldLog)
+                    Debug.Log($"[ClassicalEconomics] 政策失败 王国<{kName}> 国王退位（内战触发失败回退，基尼={stats.GiniCoefficient:F2}）");
+            }
         }
     }
 }

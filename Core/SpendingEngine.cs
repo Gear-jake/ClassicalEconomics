@@ -188,12 +188,12 @@ namespace EconomyMod.Core
             catch (System.Exception) { return false; }
         }
 
-        /// <summary>购买武器：反射造真实武器，金币转给城市领袖（军械收入）。</summary>
+        /// <summary>购买武器：金币先转给城市领袖（军械收入），再反射造真实武器（先付款后交货，杜绝免费武器）。</summary>
         private static bool TryBuyWeapon(Actor actor, int spend, out string note)
         {
             note = "购买武器";
-            if (!CraftRandomWeapon(actor)) return false;
             if (!TransferToCity(actor, spend)) return false;
+            CraftRandomWeapon(actor); // 锻造失败不退款（交易已成交，钱已入城）
             note = "购买武器（军械入城）";
             return true;
         }
@@ -220,7 +220,8 @@ namespace EconomyMod.Core
             return true;
         }
 
-        /// <summary>建造投资：放置瞭望塔建筑；混合流向 50% 消耗（材料费）+ 50% 转移城主。</summary>
+        /// <summary>建造投资：先扣款（50% 转城主材料人工 + 50% 材料损耗），再放置瞭望塔建筑。
+        /// 先付款后动工，杜绝"免费造楼"；建楼失败不退款（投资失败，资金已投）。</summary>
         private static bool TryBuildInvestment(Actor actor, int spend, out string note)
         {
             note = "建造投资";
@@ -230,14 +231,17 @@ namespace EconomyMod.Core
             {
                 if (_towerAsset == null) _towerAsset = AssetManager.buildings.get("watch_tower_human");
                 if (_towerAsset == null) return false;
-                // addBuilding 为 internal 方法，用反射调用
-                Building b = AddBuildingViaReflection(_towerAsset, actor.current_tile);
-                if (b == null) return false;
-                if (actor.kingdom != null) b.setKingdom(actor.kingdom);
-                // 混合流向：一半转移城主（材料人工），一半消耗（材料损耗）
                 int toCity = spend / 2;
                 if (!TransferToCity(actor, toCity)) return false;
                 actor.addMoney(-(spend - toCity));
+                // addBuilding 为 internal 方法，用反射调用
+                Building b = AddBuildingViaReflection(_towerAsset, actor.current_tile);
+                if (b == null)
+                {
+                    note = "建造投资（工程失败，资金已投）";
+                    return true; // 资金已扣，消费成立（不回退造成双重扣款）
+                }
+                if (actor.kingdom != null) b.setKingdom(actor.kingdom);
                 EventStreamService.Record(EventStreamService.TypeBuildInv, GameHelpers.SafeKingdomName(actor.kingdom), spend);
                 note = "建造投资（矗立瞭望塔）";
                 return true;
@@ -245,49 +249,49 @@ namespace EconomyMod.Core
             catch (System.Exception) { return false; }
         }
 
-        /// <summary>打造军械：批量锻造 3-5 件武器；30% 转城主军械费 + 70% 锻造消耗。</summary>
+        /// <summary>打造军械：先扣款（30% 转城主军械费 + 70% 锻造消耗），再批量锻造 3-5 件武器。
+        /// 先付款后交货，杜绝"免费武器"；锻造失败不退款（钱已成交）。</summary>
         private static bool TryCraftArsenal(Actor actor, int spend, out string note)
         {
             note = "打造军械";
             if (actor.city == null) return false;
             spend = Mathf.Clamp(spend, 60, 300);
-            int craftCount = Mathf.Clamp(spend / 30, 3, 5);
-            int success = 0;
-            for (int i = 0; i < craftCount; i++)
-            {
-                if (CraftRandomWeapon(actor)) success++;
-            }
-            if (success == 0) return false;
             try
             {
                 if (!TransferToCity(actor, Mathf.RoundToInt(spend * 0.3f))) return false;
                 actor.addMoney(-Mathf.RoundToInt(spend * 0.7f));
             }
             catch (System.Exception) { return false; }
-            EventStreamService.Record(EventStreamService.TypeCraftArsenal, GameHelpers.SafeKingdomName(actor.kingdom), success);
-            note = "打造军械（" + success + "件装备入城）";
-            return true;
-        }
-
-        /// <summary>武器批发：大量锻造 6-10 件武器；20% 转城主 + 80% 锻造消耗。</summary>
-        private static bool TryWholesaleWeapons(Actor actor, int spend, out string note)
-        {
-            note = "武器批发";
-            if (actor.city == null) return false;
-            spend = Mathf.Clamp(spend, 120, 500);
-            int craftCount = Mathf.Clamp(spend / 40, 6, 10);
+            int craftCount = Mathf.Clamp(spend / 30, 3, 5);
             int success = 0;
             for (int i = 0; i < craftCount; i++)
             {
                 if (CraftRandomWeapon(actor)) success++;
             }
-            if (success == 0) return false;
+            EventStreamService.Record(EventStreamService.TypeCraftArsenal, GameHelpers.SafeKingdomName(actor.kingdom), success);
+            note = "打造军械（" + success + "件装备入城）";
+            return true;
+        }
+
+        /// <summary>武器批发：先扣款（20% 转城主 + 80% 锻造消耗），再批量锻造 6-10 件武器。
+        /// 先付款后交货，杜绝"免费武器"；锻造失败不退款（钱已成交）。</summary>
+        private static bool TryWholesaleWeapons(Actor actor, int spend, out string note)
+        {
+            note = "武器批发";
+            if (actor.city == null) return false;
+            spend = Mathf.Clamp(spend, 120, 500);
             try
             {
                 if (!TransferToCity(actor, Mathf.RoundToInt(spend * 0.2f))) return false;
                 actor.addMoney(-Mathf.RoundToInt(spend * 0.8f));
             }
             catch (System.Exception) { return false; }
+            int craftCount = Mathf.Clamp(spend / 40, 6, 10);
+            int success = 0;
+            for (int i = 0; i < craftCount; i++)
+            {
+                if (CraftRandomWeapon(actor)) success++;
+            }
             EventStreamService.Record(EventStreamService.TypeWholesale, GameHelpers.SafeKingdomName(actor.kingdom), success);
             note = "武器批发（" + success + "件装备入城）";
             return true;
@@ -307,7 +311,13 @@ namespace EconomyMod.Core
             try
             {
                 actor.addMoney(-spend);
-                EraEngine.Start(kingdom, kingdomTrait, EconomyModMain.GetCurrentGameYear());
+                try { EraEngine.Start(kingdom, kingdomTrait, EconomyModMain.GetCurrentGameYear()); }
+                catch (System.Exception)
+                {
+                    // 资金已扣但时代未开启：消费成立（投资失败不退款，避免回退缴税双重扣款）
+                    note = "时代赞助（资金已投，活动未举办）";
+                    return true;
+                }
                 note = "时代赞助（" + EraEngine.EventName(kingdomTrait) + "，国民加成生效）";
                 return true;
             }

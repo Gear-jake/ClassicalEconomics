@@ -52,9 +52,6 @@ namespace EconomyMod.Core
         private static readonly Dictionary<long, Kingdom> _kingdomById = new Dictionary<long, Kingdom>(32);
         private static readonly List<Actor> _memberPool = new List<Actor>(64);
 
-        /// <summary>当前是否有活跃时代事件（Tick 的 O(1) 早退依据）。</summary>
-        public static bool HasActive => _kingdomTrait.Count > 0;
-
         /// <summary>触发时代事件（SpendingEngine 花钱与 Evaluate 自动触发共用）。</summary>
         public static void Start(Kingdom kingdom, string kingdomTrait, int year)
         {
@@ -269,7 +266,11 @@ namespace EconomyMod.Core
             _stale.Clear();
             foreach (var kv in _prevAvg)
                 if (!curIds.Contains(kv.Key)) _stale.Add(kv.Key);
-            foreach (long id in _stale) _prevAvg.Remove(id);
+            foreach (long id in _stale)
+            {
+                _prevAvg.Remove(id);
+                _flourishStreak.Remove(id); // 已消失王国的强盛防抖计数一并清理，防字典缓慢膨胀
+            }
         }
 
         /// <summary>
@@ -394,11 +395,7 @@ namespace EconomyMod.Core
             }
             if (pool.Count == 0) return;
 
-            for (int i = pool.Count - 1; i > 0; i--) // Fisher-Yates
-            {
-                int j = Random.Range(0, i + 1);
-                var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
-            }
+            GameHelpers.Shuffle(pool); // Fisher-Yates（GameHelpers 公共实现）
             int limit = Mathf.Min(max, pool.Count);
             for (int i = 0; i < limit; i++)
             {

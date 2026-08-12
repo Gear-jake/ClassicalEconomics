@@ -21,6 +21,7 @@ namespace EconomyMod.Core
 
         /// <summary>
         /// 王国震荡状态：StartYear=高基尼起始年（-1=无），HasRebelled=是否已开始暴动，
+        /// RebelYear=叛乱实际触发年份（-1=无；供革命时序门计算"叛乱持续年数"），
         /// UprisingStartYear=街头起义起始年（-1=无），HasUprising=是否已触发街头起义。
         /// 基尼 ≥ 阈值持续 UnrestDelayYears 年后触发暴动；
         /// 暴动后基尼仍 ≥ UprisingGiniThreshold 持续 UprisingDelayYears 年 → 街头起义（政权崩塌）。
@@ -30,6 +31,7 @@ namespace EconomyMod.Core
         {
             public int StartYear = -1;
             public bool HasRebelled;
+            public int RebelYear = -1;
             public int UprisingStartYear = -1;
             public bool HasUprising;
         }
@@ -102,6 +104,7 @@ namespace EconomyMod.Core
                         if (affected > 0)
                         {
                             st.HasRebelled = true;
+                            st.RebelYear = currentYear; // 记录叛乱触发年：革命延迟从此年起算（非高基尼起始年）
                             EventStreamService.Record(EventStreamService.TypeUnrest, stats.KingdomName, affected);
                             GameHelpers.Notify($"[动荡] <{stats.KingdomName}> 社会动荡爆发，{affected} 座城市暴动");
                             if (cfg.LogToWorldLog)
@@ -118,16 +121,17 @@ namespace EconomyMod.Core
                         int uElapsed = currentYear - st.UprisingStartYear;
                         if (uElapsed >= cfg.UprisingDelayYears)
                         {
-                            int killed = TriggerUprising(kingdom, stats);
-                            if (killed > 0)
+                            // 返回值 = 处决富豪数或全城暴动数（任一 > 0 即起义实质爆发）
+                            int result = TriggerUprising(kingdom, stats);
+                            if (result > 0)
                             {
                                 st.HasUprising = true;
-                                EventStreamService.Record(EventStreamService.TypeUprising, stats.KingdomName, killed);
-                                GameHelpers.Notify($"[起义] <{stats.KingdomName}> 街头起义爆发！{killed} 名富豪被处决，国王被推翻");
+                                EventStreamService.Record(EventStreamService.TypeUprising, stats.KingdomName, result);
+                                GameHelpers.Notify($"[起义] <{stats.KingdomName}> 街头起义爆发！{result} 名富豪被处决，国王被推翻");
                                 if (cfg.LogToWorldLog)
                                 {
                                     Debug.Log($"[ClassicalEconomics] 街头起义 王国<{stats.KingdomName}> " +
-                                              $"叛乱后基尼仍超起义阈值{uElapsed}年 基尼={stats.GiniCoefficient:F2} 处决富豪={killed}");
+                                              $"叛乱后基尼仍超起义阈值{uElapsed}年 基尼={stats.GiniCoefficient:F2} 处决富豪={result}");
                                 }
                             }
                         }
@@ -381,8 +385,8 @@ namespace EconomyMod.Core
                 }
                 if (st.HasRebelled)
                 {
-                    // M8：补写 elapsedYears（此前 return 2 分支漏写，UI 进度始终显示 0 年）
-                    elapsedYears = st.StartYear >= 0 ? EconomyModMain.GetCurrentGameYear() - st.StartYear : 0;
+                    // elapsedYears = 叛乱持续年数（自 RebelYear 起算，供革命时序门与 UI 展示）
+                    elapsedYears = st.RebelYear >= 0 ? EconomyModMain.GetCurrentGameYear() - st.RebelYear : 0;
                     return 2;
                 }
                 if (st.StartYear >= 0)
@@ -404,16 +408,9 @@ namespace EconomyMod.Core
             {
                 stats = new KingdomStats { KingdomName = kingdom.data.name };
             }
-            int affected = TriggerUnrest(kingdom, stats);
+            int affected = TriggerAndMark(kingdom, stats);
             if (affected > 0)
             {
-                if (!_states.TryGetValue(kingdom.data.id, out var st))
-                {
-                    st = new UnrestState();
-                    _states[kingdom.data.id] = st;
-                }
-                st.StartYear = EconomyModMain.GetCurrentGameYear();
-                st.HasRebelled = true;
                 EventStreamService.Record(EventStreamService.TypeIncite, stats.KingdomName, affected);
                 if (UnrestConfig.Instance.LogToWorldLog)
                 {
@@ -436,6 +433,20 @@ namespace EconomyMod.Core
             {
                 stats = new KingdomStats { KingdomName = kingdom.data.name };
             }
+            int affected = TriggerAndMark(kingdom, stats);
+            if (affected > 0 && UnrestConfig.Instance.LogToWorldLog)
+            {
+                Debug.Log($"[ClassicalEconomics] 内战爆发 王国<{stats.KingdomName}> 影响={affected}");
+            }
+            return affected;
+        }
+
+        /// <summary>
+        /// 触发叛乱并登记震荡状态（供手动煽动/内战复用；仅在实质爆发时登记）。
+        /// 返回受影响城市数。
+        /// </summary>
+        private static int TriggerAndMark(Kingdom kingdom, KingdomStats stats)
+        {
             int affected = TriggerUnrest(kingdom, stats);
             if (affected > 0)
             {
@@ -445,11 +456,8 @@ namespace EconomyMod.Core
                     _states[kingdom.data.id] = st;
                 }
                 st.StartYear = EconomyModMain.GetCurrentGameYear();
+                st.RebelYear = EconomyModMain.GetCurrentGameYear();
                 st.HasRebelled = true;
-                if (UnrestConfig.Instance.LogToWorldLog)
-                {
-                    Debug.Log($"[ClassicalEconomics] 内战爆发 王国<{stats.KingdomName}> 影响={affected}");
-                }
             }
             return affected;
         }
@@ -620,6 +628,13 @@ namespace EconomyMod.Core
                 }
             }
 
+            // 5. 完全无效果（无城市/无成员可煽动）：撤销刚施加的国家特质，
+            //    避免"特质残留但无暴动"的状态不一致（起义判据依据 HasRebelled 而非特质）。
+            if (affected == 0)
+            {
+                try { if (kingdom.hasTrait(UnrestTraitId)) kingdom.removeTrait(UnrestTraitId); } catch (System.Exception) { }
+            }
+
             return affected;
         }
 
@@ -653,12 +668,7 @@ namespace EconomyMod.Core
             }
             if (candidates.Count == 0) return 0;
 
-            // Fisher-Yates 洗牌
-            for (int i = candidates.Count - 1; i > 0; i--)
-            {
-                int j = Random.Range(0, i + 1);
-                var tmp = candidates[i]; candidates[i] = candidates[j]; candidates[j] = tmp;
-            }
+            GameHelpers.Shuffle(candidates); // Fisher-Yates（GameHelpers 公共实现）
 
             int max = cfg.MaxAffectedPerKingdom;
             int affected = 0;

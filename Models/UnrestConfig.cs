@@ -205,7 +205,7 @@ namespace EconomyMod.Models
                 if (_instance == null) _instance = new UnrestConfig();
                 return _instance;
             }
-            set { _instance = value; }
+            private set { _instance = value; } // 全项目零外部赋值，收紧为私有 set
         }
     }
 }

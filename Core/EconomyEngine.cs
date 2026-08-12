@@ -65,11 +65,7 @@ namespace EconomyMod.Core
                     ActorCount = ks.ActorCount,
                     GiniCoefficient = ks.Gini,
                     Population = ks.Population,
-                    PopulationCapacity = ks.Capacity,
-                    FoodPerCapita = ks.FoodPerCapita,
-                    TradeBalance = ks.TradeBalance,
-                    Workers = ks.Workers,
-                    Productivity = ks.Productivity
+                    TradeBalance = ks.TradeBalance
                 };
             }
         }

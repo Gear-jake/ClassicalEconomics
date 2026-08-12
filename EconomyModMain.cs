@@ -11,8 +11,6 @@ namespace EconomyMod
 {
     public class EconomyModMain : BasicMod<EconomyModMain>, IReloadable
     {
-        private static EconomyTickRunner _tickRunner;
-
         protected override void OnModLoad()
         {
             // 游戏启动：清空 Unity 日志，便于只看本次会话内容（调试辅助）
@@ -25,7 +23,7 @@ namespace EconomyMod
             // 注册时代事件国民特质（盛世/复兴/强盛期/经济崩溃），供 EraEngine 国民加成使用
             RegisterEraTraits();
 
-            _tickRunner = gameObject.AddComponent<EconomyTickRunner>();
+            gameObject.AddComponent<EconomyTickRunner>();
             // 每次打开游戏都清空历史，图表从本局从头绘制（避免残留上局数据）
             HistoryService.ClearHistory();
             EconomyUI.Initialize();
@@ -40,24 +38,38 @@ namespace EconomyMod
         {
             Debug.Log("[ClassicalEconomics] === 开始热重载 ===");
             // 重置全部经济引擎状态（新代码从干净状态运行）
+            ResetAllEngines(full: false);
+            // 重新同步配置（可能修改了默认值）
+            Services.EconomyConfigCallbacks.SyncFromModConfig();
+            // 刷新 UI
+            EconomyUI.RefreshOverview();
+            Debug.Log("[ClassicalEconomics] === 热重载完成 ===");
+        }
+
+        /// <summary>
+        /// 重置全部经济引擎状态（热重载 / 新地图共用序列）。
+        /// full=true 时额外执行新地图专属清理：清空日志、清 biome 缓存。
+        /// </summary>
+        private static void ResetAllEngines(bool full)
+        {
             TradeSimulationWorker.Reset();
             EconomyEngine.ResetCycle();
             EconomyCycleModulator.Reset();
             SocialCrisisEngine.Reset();
             EraEngine.Reset();
-            UnrestEngine.Reset();   // M7：新地图/热重载清空震荡状态与收复战争跟踪
-            PolicyEngine.Reset();   // M7：新地图/热重载清空改革冷却
+            UnrestEngine.Reset();   // M7：清空震荡状态与收复战争跟踪
+            PolicyEngine.Reset();   // M7：清空改革冷却
             KingdomMonitorEngine.Reset();
             InheritanceEngine.Reset();
             DisasterEngine.Reset();
             BankingEngine.Reset();
             HistoryService.ClearHistory();
             EventStreamService.Clear();
-            // 重新同步配置（可能修改了默认值）
-            Services.EconomyConfigCallbacks.SyncFromModConfig();
-            // 刷新 UI
-            EconomyUI.RefreshOverview();
-            Debug.Log("[ClassicalEconomics] === 热重载完成 ===");
+            if (full)
+            {
+                ClearPlayerLog(); // 打开新地图：清空日志，只看本局内容（调试辅助）
+                BiomeEconomy.ClearCache();
+            }
         }
 
         // ===== 时代事件国民特质注册（EraEngine 国民加成用，替换原 cultural_awakening）=====
@@ -363,20 +375,7 @@ namespace EconomyMod
                     if (currentYear <= 1)
                     {
                         // 新地图/新游戏：年份归零，全部状态重置
-                        ClearPlayerLog(); // 打开新地图：清空日志，只看本局内容（调试辅助）
-                        HistoryService.ClearHistory();
-                        EventStreamService.Clear();
-                        EconomyEngine.ResetCycle();
-                        InheritanceEngine.Reset();
-                        EconomyCycleModulator.Reset();
-                        SocialCrisisEngine.Reset();
-                        EraEngine.Reset();
-                        UnrestEngine.Reset();   // M7：新地图清空震荡状态与收复战争跟踪
-                        PolicyEngine.Reset();   // M7：新地图清空改革冷却
-                        KingdomMonitorEngine.Reset();
-                        DisasterEngine.Reset();
-                        BankingEngine.Reset();
-                        BiomeEconomy.ClearCache();
+                        ResetAllEngines(full: true);
                         Debug.Log("[ClassicalEconomics] 检测到新地图/新游戏，历史已清空，周期从 #1 重新开始");
                     }
                     else

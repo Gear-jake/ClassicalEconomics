@@ -12,11 +12,10 @@ namespace EconomyMod.Core
     /// </summary>
     public static class KingdomMonitorEngine
     {
-        /// <summary>王国跟踪记录：KingId=最近一次观察到的国王 id（0=无王），Seen=是否已建立基线。</summary>
+        /// <summary>王国跟踪记录：KingId=最近一次观察到的国王 id（0=无王）。字典 key 存在即已建立基线。</summary>
         private struct KingTrack
         {
             public long KingId;
-            public bool Seen;
         }
 
         private static readonly Dictionary<long, KingTrack> _known = new Dictionary<long, KingTrack>();
@@ -71,7 +70,7 @@ namespace EconomyMod.Core
                         Debug.Log($"[ClassicalEconomics] 王位继承 王国<{kName}> 新王即位");
                     }
                 }
-                _known[kid] = new KingTrack { KingId = currentKingId, Seen = true };
+                _known[kid] = new KingTrack { KingId = currentKingId };
             }
 
             // 清理已消失王国的记录

@@ -72,7 +72,9 @@ namespace EconomyMod.Core
                 {
                     attackerId = (long)_attackerProp.GetValue(war);
                     defenderId = (long)_defenderProp.GetValue(war);
-                    winner = (int)_winnerField.GetValue(war);
+                    // 反射返回的 boxed 枚举不能直接 (int) unbox（抛 InvalidCastException 被 catch 吞掉
+                    // → 战争掠夺对所有战争静默失效），必须经 Convert.ToInt32 转换。
+                    winner = System.Convert.ToInt32(_winnerField.GetValue(war));
                 }
                 catch (System.Exception) { continue; }
                 if (attackerId == 0L || defenderId == 0L) continue;

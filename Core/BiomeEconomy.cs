@@ -33,18 +33,6 @@ namespace EconomyMod.Core
             0.10f  // Trade
         };
 
-        /// <summary>特长 → 中文名称。</summary>
-        private static readonly string[] SpecialtyNameZh =
-        {
-            "无", "矿产", "木材", "粮食", "贸易品"
-        };
-
-        /// <summary>特长 → 英文名称。</summary>
-        private static readonly string[] SpecialtyNameEn =
-        {
-            "None", "Mining", "Wood", "Food", "Trade"
-        };
-
         // 王国特长缓存（kingdomId → specialty；王国领土变化小，缓存避免每周期反射）
         private static readonly Dictionary<long, BiomeSpecialty> _cache = new Dictionary<long, BiomeSpecialty>(32);
 
@@ -140,22 +128,6 @@ namespace EconomyMod.Core
         {
             int idx = (int)specialty;
             return idx < SpecialtyBonus.Length ? SpecialtyBonus[idx] : 0f;
-        }
-
-        /// <summary>特长名称（中/英文）。</summary>
-        public static string GetName(BiomeSpecialty specialty, bool chinese)
-        {
-            int idx = (int)specialty;
-            if (idx < 0 || idx >= SpecialtyNameZh.Length) idx = 0;
-            return chinese ? SpecialtyNameZh[idx] : SpecialtyNameEn[idx];
-        }
-
-        /// <summary>两王国是否特长互补（不同特长 = 可贸易）。</summary>
-        public static bool IsComplementary(long kingdomA, long kingdomB)
-        {
-            var sa = GetSpecialty(kingdomA);
-            var sb = GetSpecialty(kingdomB);
-            return sa != BiomeSpecialty.None && sb != BiomeSpecialty.None && sa != sb;
         }
     }
 }

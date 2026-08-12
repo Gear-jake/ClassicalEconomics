@@ -15,14 +15,8 @@ namespace EconomyMod.Core
     /// </summary>
     public static class BankingEngine
     {
-        // 各王国信贷规模快照（kingdomId → 信贷总额）
-        private static readonly Dictionary<long, long> _kingdomCredit = new Dictionary<long, long>(32);
-
         // 复用缓冲（避免每年 GC 分配）
         private static readonly List<Actor> _richPool = new List<Actor>(16);
-
-        /// <summary>本期违约人数（统计）。</summary>
-        public static int LastDefaults { get; private set; }
 
         /// <summary>本期违约导致的财富损失总量。</summary>
         public static long LastDefaultLoss { get; private set; }
@@ -33,8 +27,6 @@ namespace EconomyMod.Core
         /// <summary>世界重置时清空信贷数据。</summary>
         public static void Reset()
         {
-            _kingdomCredit.Clear();
-            LastDefaults = 0;
             LastDefaultLoss = 0;
             LastContagions = 0;
         }
@@ -53,7 +45,6 @@ namespace EconomyMod.Core
             var cfg = UnrestConfig.Instance;
             if (cfg == null || !cfg.BankingEnabled) return;
 
-            LastDefaults = 0;
             LastDefaultLoss = 0;
             LastContagions = 0;
 
@@ -101,7 +92,6 @@ namespace EconomyMod.Core
                 // 信贷规模 = 富人财富 × 信贷率
                 long creditAmount = (long)(richWealthTotal * creditRate);
                 if (creditAmount <= 0) continue;
-                _kingdomCredit[kingdomId] = creditAmount;
 
                 // 违约：信贷规模 × 违约率
                 long defaultAmount = (long)(creditAmount * defaultRate);
@@ -111,9 +101,9 @@ namespace EconomyMod.Core
                     foreach (var rich in _richPool)
                     {
                         if (rich == null || !rich.isAlive()) continue;
-                        try { rich.addMoney(-(int)lossPerRich); } catch { }
+                        // long 直接 (int) 强转可能溢出为负 → 反而"加钱"；先钳制到 int 上限
+                        try { rich.addMoney(-(int)Mathf.Min(lossPerRich, int.MaxValue)); } catch { }
                     }
-                    LastDefaults += Mathf.Max(1, Mathf.RoundToInt(defaultRate * 100));
                     LastDefaultLoss += defaultAmount;
                 }
 

@@ -94,7 +94,8 @@ namespace EconomyMod.Services
         private static readonly List<EventEntry> _recentPool = new List<EventEntry>(Capacity);
         private static readonly List<EventEntry> _majorRecentPool = new List<EventEntry>(MajorCapacity);
 
-        // 事件条目对象池：环形覆盖丢弃的条目回收复用，消除每年几十次 new 的 GC 分配
+        // 事件条目对象池：Clear() 时回收全部条目复用（消除每年几十次 new 的 GC 分配）。
+        // 注意：环形覆盖时旧条目直接丢弃不还池（条目最终由 GC 回收），注释与实现保持一致。
         private static readonly List<EventEntry> _entryPool = new List<EventEntry>(Capacity + MajorCapacity);
 
         /// <summary>记录一条事件：按类型分流到重大/普通环形缓冲。</summary>
@@ -166,15 +167,6 @@ namespace EconomyMod.Services
                 return e;
             }
             return new EventEntry();
-        }
-
-        /// <summary>
-        /// [兼容入口] 取最近 count 条普通事件（时间正序）。
-        /// 等价于 GetMinorRecent(count)。v0.8.3 起 UI 应显式区分重大/普通。
-        /// </summary>
-        public static List<EventEntry> GetRecent(int count)
-        {
-            return GetMinorRecent(count);
         }
 
         /// <summary>取最近 count 条普通事件（时间正序）。返回复用缓冲，调用方不可跨周期持有引用。</summary>

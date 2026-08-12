@@ -15,11 +15,5 @@
 
         // ===== 人口约束（马尔萨斯）=====
         public int Population;          // 原版人口（Kingdom.getPopulationTotal）
-        public int PopulationCapacity;  // 原版承载（Kingdom.getPopulationTotalPossible）
-        public float FoodPerCapita;     // 人均食物
-
-        // ===== 劳动分工 =====
-        public int Workers;             // 有职业人口
-        public float Productivity;      // 平均劳动生产率（职业倍率均值）
     }
 }

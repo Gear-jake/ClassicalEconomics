@@ -44,8 +44,8 @@ namespace EconomyMod.Core
         /// <summary>当前价格指数 CPI（= 货币供给 / 总产出×流通速度，1.0=基准）。</summary>
         public static float CurrentCPI { get; private set; } = 1f;
 
-        /// <summary>当前货币供给 M（繁荣注金+/泡沫蒸发- 追踪）。</summary>
-        public static float MoneySupply { get; private set; }
+        /// <summary>当前货币供给 M（繁荣注金+/泡沫蒸发- 追踪，仅供本类内部计算 CPI）。</summary>
+        private static float MoneySupply { get; set; }
 
         /// <summary>玩家手动设置经济阶段（立即生效，重置持续期与泡沫值，并应用对应政策）。</summary>
         public static void SetPhaseManual(EconomyPhase phase)
@@ -76,10 +76,8 @@ namespace EconomyMod.Core
         private static int _highGiniStreak; // 基尼 ≥ 危险线的连续期数
         private static int _lowGiniStreak;  // 基尼 ≤ 健康线的连续期数
 
-        // 游戏原生王国税率特质 id
+        // 游戏原生王国税率特质 id（高税率/高供奉已不再使用，避免基尼集中死循环，见类注释）
         private const string TaxLocalLow = "tax_rate_local_low";       // 低税率 20%
-        private const string TaxLocalHigh = "tax_rate_local_high";     // 高税率 70%
-        private const string TaxTributeHigh = "tax_rate_tribute_high"; // 高供奉 70%
 
         // 调制范围：只对财富前 N 的王国施加税率特质，避免干扰小国
         private const int ModulateKingdoms = 5;
@@ -243,7 +241,7 @@ namespace EconomyMod.Core
             BubbleValue += stimulus * cfg.BoomBubbleFactor + inflationBoost;
 
             // 3. 低税率刺激消费（繁荣期政策）
-            ApplyTaxPolicy(localLow: true, localHigh: false, tributeHigh: false);
+            ApplyTaxPolicy(true);
         }
 
         /// <summary>泡沫破裂：全体文明硬币按比例蒸发（最多 50%），推日志并清零泡沫。
@@ -295,11 +293,11 @@ namespace EconomyMod.Core
         /// <summary>衰退/复苏/萧条期：清除全部税率特质，回到原生默认 50%（萧条不主动集中财富）。</summary>
         private static void ApplyDefaultTaxPolicy()
         {
-            ApplyTaxPolicy(localLow: false, localHigh: false, tributeHigh: false);
+            ApplyTaxPolicy(false);
         }
 
-        /// <summary>对财富前 N 的王国统一设置税率特质（先移除旧的再添加新的，幂等）。</summary>
-        private static void ApplyTaxPolicy(bool localLow, bool localHigh, bool tributeHigh)
+        /// <summary>对财富前 N 的王国统一设置低税率特质（先移除旧的再添加新的，幂等）。</summary>
+        private static void ApplyTaxPolicy(bool localLow)
         {
             var top = EconomyEngine.TopKingdoms(ModulateKingdoms);
             foreach (var stats in top)
@@ -310,8 +308,6 @@ namespace EconomyMod.Core
                 try
                 {
                     SetTrait(kingdom, TaxLocalLow, localLow);
-                    SetTrait(kingdom, TaxLocalHigh, localHigh);
-                    SetTrait(kingdom, TaxTributeHigh, tributeHigh);
                 }
                 catch (System.Exception) { }
             }

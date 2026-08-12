@@ -185,6 +185,19 @@ namespace EconomyMod.Core
             catch (System.Exception) { return false; }
         }
 
+        // ===== 集合洗牌（EraEngine / UnrestEngine 原 Fisher-Yates 重复实现合并）=====
+
+        /// <summary>Fisher-Yates 原地洗牌（UnityEngine.Random）；null 或元素不足 2 时静默返回。</summary>
+        public static void Shuffle<T>(List<T> list)
+        {
+            if (list == null || list.Count < 2) return;
+            for (int i = list.Count - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                T tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+            }
+        }
+
         // ===== 批量扣款（SocialCrisisEngine 战争掠夺/革命抽取原重复实现合并）=====
         /// <summary>从 units 快照中按上限逐人扣减金币，返回实际扣除总额。</summary>
         public static long DeductCoins(List<Actor> units, long limit)

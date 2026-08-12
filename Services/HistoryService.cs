@@ -50,7 +50,9 @@ namespace EconomyMod.Services
 
         public static void ClearHistory()
         {
-            for (int i = 0; i < _count; i++) _buffer[i] = null;
+            // 环形清空：真实条目位于 (start+i)%Capacity，按线性下标置空会残留旧快照引用
+            int start = (_head - _count + Capacity) % Capacity;
+            for (int i = 0; i < _count; i++) _buffer[(start + i) % Capacity] = null;
             _head = 0;
             _count = 0;
             _recentPool.Clear();

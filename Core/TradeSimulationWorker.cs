@@ -51,10 +51,8 @@ namespace EconomyMod.Core
             public int ActorCount;
             public int Population;
             public int Capacity;
-            public long Food;
             public float FoodPerCapita;
             public float Pressure;    // 人口/承载（超载 &gt;1）
-            public int Boats;
             public long TradeBalance; // 净贸易顺差（正=出口盈余，负=逆差）
             public int Workers;       // 有职业人口
             public float Productivity; // 平均劳动生产率（职业倍率均值）
@@ -264,7 +262,6 @@ namespace EconomyMod.Core
 
         private class Accum
         {
-            public long Id;
             public double Gdp;
             public int Count;
             public int Workers;
@@ -280,14 +277,16 @@ namespace EconomyMod.Core
             double gdp = 0d;
             int count = 0;
             var acc = new Dictionary<long, Accum>(32);
+            var globalWealths = new List<float>(actors.Count); // 全局基尼样本（同遍收集，避免二次遍历）
             foreach (var r in actors)
             {
                 double w = r.Wealth;
                 gdp += w;
                 count++;
+                globalWealths.Add(r.Wealth);
                 if (!acc.TryGetValue(r.KingdomId, out var a))
                 {
-                    a = new Accum { Id = r.KingdomId };
+                    a = new Accum();
                     acc[r.KingdomId] = a;
                 }
                 a.Gdp += w;
@@ -304,8 +303,6 @@ namespace EconomyMod.Core
             res.AvgWealth = count > 0 ? (float)(gdp / count) : 0f;
 
             // 全局基尼（升序排序，O(N log N)）
-            var globalWealths = new List<float>(count);
-            foreach (var r in actors) globalWealths.Add(r.Wealth);
             res.GiniCoefficient = ComputeGini(globalWealths, (float)gdp);
 
             // --- 王国结果（含生产函数：产出 = Workers × Productivity × CapitalFactor）---
@@ -318,8 +315,6 @@ namespace EconomyMod.Core
                     Name = f.Name,
                     Population = f.Population,
                     Capacity = f.Capacity,
-                    Food = f.Food,
-                    Boats = f.Boats,
                     FoodPerCapita = f.Population > 0 ? (float)f.Food / f.Population : 0f,
                     Pressure = f.Capacity > 0 ? (float)f.Population / f.Capacity : 0f,
                     Specialty = f.Specialty

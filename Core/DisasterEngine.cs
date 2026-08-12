@@ -149,7 +149,10 @@ namespace EconomyMod.Core
                             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     }
                     if (_tileTypeField == null) return false;
-                    string type = _tileTypeField.GetValue(tile) as string;
+                    // 字段类型可能是 string 或 enum：`as string` 在非 string 时恒 null → 检测静默失效，
+                    // 统一经 ToString 取值（enum 得到枚举名，string 得到原文）。
+                    object typeObj = _tileTypeField.GetValue(tile);
+                    string type = typeObj == null ? null : typeObj.ToString();
                     if (string.IsNullOrEmpty(type)) continue;
                     // 灾害/资源地形：火山、陨石坑、燃烧地面
                     if (type.Contains("volcano") || type.Contains("meteor") || type.Contains("burn"))

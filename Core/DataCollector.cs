@@ -172,9 +172,10 @@ namespace EconomyMod.Core
             }
             if (poorCount <= 0) return;
 
-            // 第三遍：税款均分给贫困线以下公民（余数补给第一个）
+            // 第三遍：税款均分给贫困线以下公民（余数补给第一个）。
+            // 注意：per==0（税款总额 < 贫困人口数）时仍须分发——余数=totalTax 全部补给第一个穷人，
+            // 保证收上来的税款绝不凭空消失（金币守恒）。
             long per = totalTax / poorCount;
-            if (per <= 0) return;
             bool first = true;
             foreach (var actor in aliveList)
             {
