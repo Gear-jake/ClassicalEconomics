@@ -1,0 +1,29 @@
+[h1]Classical Economics[/h1]
+[b]A macroeconomic simulation mod for WorldBox | v0.8.4[/b]
+[b]Requires:[/b] WorldBox 0.51.2+ and NeoModLoader (NML)
+
+Gives your world a real economy. The mod tracks the wealth of ALL sapient species (including aliens and dragons), then simulates a full macroeconomic system on top of it:
+
+[list]
+[*]Macro statistics: global GDP, average wealth, Gini coefficient, price index (CPI), per-kingdom breakdown
+[*]Economic cycle: Boom / Recession / Depression / Recovery with bubble buildup and bursts; famine in depression
+[*]Unrest & revolution: inequality triggers rebellions, uprisings and revolutions; war plunder transfers loot to winners (actually working since v0.8.4)
+[*]Kingdom trade: zero-sum trade flows (surplus = deficit, no coins created from nothing) + biome specialties for comparative-advantage trade
+[*]Labor division: employed population creates wages through a production function
+[*]Sapient spending: the rich spend yearly in 7 ways (weapons, building investment, arsenal, wholesale, era events, charity, taxes) — coins never vanish
+[*]Era events: Golden Age / Revival / Flourishing / Economic Collapse
+[*]Banking credit: the rich lend to the poor; defaults soar in depressions; crises spread along trade routes
+[*]Disaster shocks: volcanoes and meteors evaporate affected city wealth; volcanoes temporarily boost mining
+[*]Inheritance: wealth passes parents → spouse → children; mayors collect inheritance tax
+[*]Policy & governance: redistribution, fiscal policy, tariffs; failed rulers abdicate
+[/list]
+
+[b]UI:[/b] Economy tab in the toolbar with 7 buttons; overview panel, wealth & inequality trend charts, event stream window (major events are kept permanently, never pushed out by frequent ones).
+
+[b]Installation:[/b] Install NML first, then put the EconomyMod folder into WorldBox/Mods/ and enable it in-game.
+
+[b]Compatibility:[/b] Built entirely on vanilla mechanics, no external resources; all statistics computed on a background thread (zero main-thread cost). Fully compatible with the Optime optimization mod — the compatibility layer injects null-guards at runtime and never modifies Optime.
+
+UI languages: 简体中文 / 繁體中文 / English / Русский
+
+Author: Jake
