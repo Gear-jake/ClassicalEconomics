@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using EconomyMod.Services;
 
@@ -6,7 +7,10 @@ namespace EconomyMod.UI
     /// <summary>
     /// 经济事件流悬浮窗：独立于经济概览窗口的非模态窗口。
     /// 与富豪榜同款交互——标题栏拖拽、四边/四角缩放、右上角 × 关闭、可滚动内容。
-    /// 展示：按类型统计行（形似主页人口/死亡数据行）+ 最近事件时间线。
+    /// 展示（v0.8.3 双区块 + 统计行）：
+    ///   1) 关键类型统计行（革命×N·起义×N·泡沫×N…仅发生过才显示，历史累计次数）；
+    ///   2) 重大事件区块（史书级，容量 100 防覆盖，倒序最新在上）；
+    ///   3) 普通事件区块（最近 60 条，倒序最新在上）。
     /// 由 EconomyUI 的"事件"工具按钮切换显隐，周期刷新时同步刷新。
     /// </summary>
     public class EventWindow : FloatingWindow
@@ -64,17 +68,85 @@ namespace EconomyMod.UI
                 return;
             }
 
-            // 瀑布流：全部事件按时间倒序（最新在上），每条 = 时间 · 地点：事件描述
-            AddLine(UIHelpers.L("events_recent"), HeaderColor, 13f);
-            var all = EventStreamService.GetRecent(EventStreamService.Capacity);
-            for (int i = all.Count - 1; i >= 0; i--)
+            // 关键类型统计行：历史累计次数，仅显示发生过的事件（革命/起义/泡沫/灾害/银行/崩溃/改革失败/王位/掠夺/时代）
+            if (AddTypeStats() > 0)
             {
-                var e = all[i];
-                string desc = EventDesc(e);
-                string kingdomPart = string.IsNullOrEmpty(e.KingdomName) ? "" : " · " + e.KingdomName;
-                AddLine(UIHelpers.Lf("events_row", e.GameYear, kingdomPart, desc),
-                    EventColor(e.TypeKey), 12f);
+                AddDivider(DividerColor);
             }
+
+            // 重大事件区块（史书级，容量 100 防覆盖，倒序最新在上）
+            if (EventStreamService.MajorCount > 0)
+            {
+                AddLine(UIHelpers.L("events_major"), HeaderColor, 13f);
+                var major = EventStreamService.GetMajorRecent(EventStreamService.MajorCapacity);
+                for (int i = major.Count - 1; i >= 0; i--)
+                {
+                    var e = major[i];
+                    AddEventRow(e);
+                }
+                AddDivider(DividerColor);
+            }
+
+            // 普通事件区块（最近 60 条，倒序最新在上）
+            if (EventStreamService.Count > 0)
+            {
+                AddLine(UIHelpers.L("events_recent"), HeaderColor, 13f);
+                var minor = EventStreamService.GetMinorRecent(EventStreamService.Capacity);
+                for (int i = minor.Count - 1; i >= 0; i--)
+                {
+                    var e = minor[i];
+                    AddEventRow(e);
+                }
+            }
+        }
+
+        private void AddEventRow(EventStreamService.EventEntry e)
+        {
+            string desc = EventDesc(e);
+            string kingdomPart = string.IsNullOrEmpty(e.KingdomName) ? "" : " · " + e.KingdomName;
+            AddLine(UIHelpers.Lf("events_row", e.GameYear, kingdomPart, desc),
+                EventColor(e.TypeKey), 12f);
+        }
+
+        /// <summary>渲染关键类型统计行（仅发生过才显示，每行最多 3 项）。返回渲染行数。</summary>
+        private int AddTypeStats()
+        {
+            var parts = new List<string>();
+            PushStat(parts, EventStreamService.TypeRevolution);
+            PushStat(parts, EventStreamService.TypeUprising);
+            PushStat(parts, EventStreamService.TypeBubbleBurst);
+            PushStat(parts, EventStreamService.TypeDisaster);
+            PushStat(parts, EventStreamService.TypeBanking);
+            PushStat(parts, EventStreamService.TypeCollapse);
+            PushStat(parts, EventStreamService.TypePolicyFail);
+            PushStat(parts, EventStreamService.TypeKingInherit);
+            PushStat(parts, EventStreamService.TypePlunder);
+            int era = EventStreamService.GetTypeCount(EventStreamService.TypeEraGolden)
+                    + EventStreamService.GetTypeCount(EventStreamService.TypeEraRevival)
+                    + EventStreamService.GetTypeCount(EventStreamService.TypeEraFlourish);
+            if (era > 0) parts.Add(UIHelpers.L("ev_era_combined") + "×" + era);
+
+            if (parts.Count == 0) return 0;
+            int lines = 0;
+            for (int i = 0; i < parts.Count; i += 3)
+            {
+                int end = System.Math.Min(i + 3, parts.Count);
+                var sb = new System.Text.StringBuilder();
+                for (int j = i; j < end; j++)
+                {
+                    if (j > i) sb.Append("   ");
+                    sb.Append(parts[j]);
+                }
+                AddLine(sb.ToString(), SubColor, 11f);
+                lines++;
+            }
+            return lines;
+        }
+
+        private static void PushStat(List<string> parts, string typeKey)
+        {
+            int c = EventStreamService.GetTypeCount(typeKey);
+            if (c > 0) parts.Add(UIHelpers.L(typeKey) + "×" + c);
         }
 
         /// <summary>事件描述（含数值，如"饥荒蔓延（34 人饿死）"）。</summary>
