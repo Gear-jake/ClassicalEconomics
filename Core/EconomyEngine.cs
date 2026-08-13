@@ -35,6 +35,20 @@ namespace EconomyMod.Core
         /// <summary>区域价格离散度（本地价格变异系数 CV，0=各地同价，越高区域套利空间越大）。</summary>
         public static float PriceDispersion { get; private set; }
 
+        // ===== 地理贸易特征（v0.9.1：由 TradeSimulationWorker 后台计算并暴露）=====
+
+        /// <summary>平均距离衰减因子（1=无衰减，越低远程贸易越弱、经济越地方化）。</summary>
+        public static float AvgDistanceFactor { get; private set; }
+
+        /// <summary>实际生效的距离衰减系数（clamp 后配置值）。</summary>
+        public static float DistanceDecay { get; private set; }
+
+        /// <summary>实际生效的运输成本比例（clamp 后配置值，0~0.3）。</summary>
+        public static float TransportCost { get; private set; }
+
+        /// <summary>实际生效的价格差（区域套利）权重（clamp 后配置值，0~1）。</summary>
+        public static float PriceDiffWeight { get; private set; }
+
         /// <summary>按王国 ID 聚合的经济统计（id=0 表示无王国桶）。</summary>
         public static Dictionary<long, KingdomStats> KingdomStats { get; private set; } = new Dictionary<long, KingdomStats>();
 
@@ -56,6 +70,10 @@ namespace EconomyMod.Core
             TotalTradeVolume = res.TotalTradeVolume;
             TotalProduction = res.TotalProduction;
             PriceDispersion = res.PriceDispersion;
+            AvgDistanceFactor = res.AvgDistanceFactor;
+            DistanceDecay = res.DistanceDecay;
+            TransportCost = res.TransportCost;
+            PriceDiffWeight = res.PriceDiffWeight;
 
             KingdomStats.Clear();
             foreach (var ks in res.Kingdoms)

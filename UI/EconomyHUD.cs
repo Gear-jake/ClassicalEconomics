@@ -23,6 +23,11 @@ namespace EconomyMod.UI
         private Texture2D _giniTexture;
         private Sprite _giniSprite;
 
+        // 图表超采样倍率：纹理按 ss× 像素生成再缩小显示，Bilinear 过滤 → 任意分辨率/DPI 下保持锐利（4K 下 2× 即 1:1）
+        private const int ChartSupersample = 2;
+        // 图表纹理内边距（像素，对应 UI 单位 = ChartMargin / ss）
+        private const int ChartMargin = 4 * ChartSupersample;
+
         // 图表纹理缓存键（数据条数×10000 + 面板宽度）；一致则复用纹理，避免每次刷新重建/上传 GPU
         private int _chartCacheKey = -1;
         private int _giniCacheKey = -1;
@@ -259,10 +264,10 @@ namespace EconomyMod.UI
                 color: new Color(0.7f, 0.85f, 1f));
             AddLine(UIHelpers.L("chart_legend_hint"), color: new Color(0.7f, 0.7f, 0.7f));
 
-            // 尺寸：宽自适应面板，高固定扁平（平面直角坐标系观感）
+            // 尺寸：宽自适应面板，高随宽度等比（窄窗不高耸、宽窗不扁平，任何分辨率观感一致）
             float chartW = Mathf.Round(Mathf.Max(150f, _panelRect.rect.width - Padding * 2f - 20f));
-            const float chartH = 120f;
-            const float yAxisW = 44f;   // 左侧 GDP 数值尺宽度
+            float chartH = Mathf.Clamp(chartW * 0.24f, 110f, 260f);
+            const float yAxisW = 44f;   // 左侧 GDP 数值尺宽度（UI 单位）
             const float bottomH = 22f;  // 底部年份坐标尺高度
             float boxH = chartH + bottomH + 4f;
 
@@ -297,8 +302,11 @@ namespace EconomyMod.UI
                 _chartCacheKey = cacheKey;
                 if (_chartSprite != null) { Destroy(_chartSprite); _chartSprite = null; }
                 if (_chartTexture != null) { Destroy(_chartTexture); _chartTexture = null; }
-                _chartTexture = GenerateMultiLineChartTexture(snaps, (int)chartW, (int)chartH,
-                    (int)yAxisW, seriesList, maxVal);
+                _chartTexture = GenerateMultiLineChartTexture(snaps,
+                    Mathf.RoundToInt(chartW * ChartSupersample),
+                    Mathf.RoundToInt(chartH * ChartSupersample),
+                    Mathf.RoundToInt(yAxisW * ChartSupersample),
+                    seriesList, maxVal);
                 if (_chartTexture == null)
                 {
                     AddLine(UIHelpers.L("chart_fail"), color: new Color(0.7f, 0.7f, 0.7f));
@@ -320,15 +328,21 @@ namespace EconomyMod.UI
             img.sprite = _chartSprite;
             img.raycastTarget = false;
 
+            // 悬停交互层（透明接收射线）+ 悬停竖线 + 数值 Tooltip（CE 式数据悬停查看）
+            var hover = AddChartHover(box.transform, chartW, chartH, yAxisW, snaps, seriesList);
+            _lines.Add(hover);
+
             // 左侧 GDP 数值尺（5 档刻度，与网格线对齐：底部=0 顶部=maxVal）
-            // 网格线在纹理内 y=mB+ch*frac（mB=4, ch=112）；imgRt 底部相对 box 底部 = boxH-chartH = 26
+            // 网格线在纹理内 y = ChartMargin + ch*frac（纹理已 ss 超采样，UI 换算统一除以 ss）
             float chartBottom = boxH - chartH;
+            float uiMargin = ChartMargin / (float)ChartSupersample; // = 4（UI 单位）
+            float plotH = chartH - uiMargin * 2f;
             var scaleCol = new Color(0.92f, 0.92f, 0.92f);
             for (int gi = 0; gi <= 4; gi++)
             {
                 float frac = gi / 4f;
                 float val = maxVal * frac;
-                float yPos = chartBottom + 4f + 112f * frac;
+                float yPos = chartBottom + uiMargin + plotH * frac;
                 var tGo = UIHelpers.CreateText(val.ToString("F0"), box.transform, 10f, scaleCol, _gameFont, 13f);
                 var tRt = tGo.GetComponent<RectTransform>();
                 tRt.anchorMin = Vector2.zero; tRt.anchorMax = Vector2.zero;
@@ -348,7 +362,7 @@ namespace EconomyMod.UI
                 float frac = gi / 4f;
                 int idx = Mathf.RoundToInt((snaps.Count - 1) * frac);
                 // 纹理内折线 x：mL + cw*frac（mL=yAxisW, cw=chartW-yAxisW-mR, mR=4）
-                float xPos = yAxisW + (chartW - yAxisW - 4f) * frac;
+                float xPos = yAxisW + (chartW - yAxisW - uiMargin) * frac;
                 float pivotX = gi == 0 ? 0f : (gi == 4 ? 1f : 0.5f);
                 var xGo = UIHelpers.CreateText(UIHelpers.Lf("chart_year", snaps[idx].GameYear), box.transform, 9f, xCol, _gameFont, 14f);
                 var xRt = xGo.GetComponent<RectTransform>();
@@ -379,7 +393,7 @@ namespace EconomyMod.UI
             AddLine(UIHelpers.L("gini_legend_phase"), color: new Color(0.7f, 0.7f, 0.7f));
 
             float chartW = Mathf.Round(Mathf.Max(150f, _panelRect.rect.width - Padding * 2f - 20f));
-            const float chartH = 120f;
+            float chartH = Mathf.Clamp(chartW * 0.24f, 110f, 260f);
             const float yAxisW = 40f;
             const float bottomH = 22f;
             float boxH = chartH + bottomH + 4f;
@@ -407,8 +421,11 @@ namespace EconomyMod.UI
                 _giniCacheKey = cacheKey;
                 if (_giniSprite != null) { Destroy(_giniSprite); _giniSprite = null; }
                 if (_giniTexture != null) { Destroy(_giniTexture); _giniTexture = null; }
-                _giniTexture = GenerateGiniChartTexture(snaps, (int)chartW, (int)chartH,
-                    (int)yAxisW, cfg.CycleGiniHigh, cfg.CycleGiniLow, maxVal);
+                _giniTexture = GenerateGiniChartTexture(snaps,
+                    Mathf.RoundToInt(chartW * ChartSupersample),
+                    Mathf.RoundToInt(chartH * ChartSupersample),
+                    Mathf.RoundToInt(yAxisW * ChartSupersample),
+                    cfg.CycleGiniHigh, cfg.CycleGiniLow, maxVal);
                 if (_giniTexture == null)
                 {
                     AddLine(UIHelpers.L("chart_fail"), color: new Color(0.7f, 0.7f, 0.7f));
@@ -430,14 +447,20 @@ namespace EconomyMod.UI
             img.sprite = _giniSprite;
             img.raycastTarget = false;
 
+            // 悬停交互层 + 悬停竖线 + Tooltip（基尼图无多系列，悬停显示年份/基尼/阶段）
+            var hover = AddChartHover(box.transform, chartW, chartH, yAxisW, snaps, null);
+            _lines.Add(hover);
+
             // 左侧基尼数值尺（0~maxVal，5 档，与纹理网格对齐）
             float chartBottom = boxH - chartH;
+            float uiMargin = ChartMargin / (float)ChartSupersample; // = 4（UI 单位）
+            float plotH = chartH - uiMargin * 2f;
             var scaleCol = new Color(0.92f, 0.92f, 0.92f);
             for (int gi = 0; gi <= 4; gi++)
             {
                 float frac = gi / 4f;
                 float val = maxVal * frac;
-                float yPos = chartBottom + 4f + 112f * frac;
+                float yPos = chartBottom + uiMargin + plotH * frac;
                 var tGo = UIHelpers.CreateText(val.ToString("F2"), box.transform, 10f, scaleCol, _gameFont, 13f);
                 var tRt = tGo.GetComponent<RectTransform>();
                 tRt.anchorMin = Vector2.zero; tRt.anchorMax = Vector2.zero;
@@ -456,7 +479,7 @@ namespace EconomyMod.UI
             {
                 float frac = gi / 4f;
                 int idx = Mathf.RoundToInt((snaps.Count - 1) * frac);
-                float xPos = yAxisW + (chartW - yAxisW - 4f) * frac;
+                float xPos = yAxisW + (chartW - yAxisW - uiMargin) * frac;
                 float pivotX = gi == 0 ? 0f : (gi == 4 ? 1f : 0.5f);
                 var xGo = UIHelpers.CreateText(UIHelpers.Lf("chart_year", snaps[idx].GameYear), box.transform, 9f, xCol, _gameFont, 14f);
                 var xRt = xGo.GetComponent<RectTransform>();
@@ -470,6 +493,100 @@ namespace EconomyMod.UI
             // 参考线说明
             AddLine(UIHelpers.L("gini_legend_danger"), color: new Color(1f, 0.5f, 0.45f));
             AddLine(UIHelpers.L("gini_legend_health"), color: new Color(0.5f, 0.85f, 0.5f));
+        }
+
+        /// <summary>
+        /// 为图表添加 CE 式悬停交互：透明接收层 + 跟随鼠标的数值竖线 + Tooltip 面板。
+        /// 鼠标 x 经 InverseLerp 映射到快照索引，实时显示该期游戏年/全球值/各王国值（或基尼与阶段）。
+        /// 返回交互层 GameObject（由调用方加入 _lines 以便清理）。
+        /// </summary>
+        private GameObject AddChartHover(Transform boxParent,
+            float chartW, float chartH, float yAxisW,
+            List<EconomySnapshot> snaps, List<ChartSeries> seriesList)
+        {
+            int n = snaps.Count;
+            float uiMargin = ChartMargin / (float)ChartSupersample;
+
+            // 悬停接收层：覆盖折线区域（左起数值尺右缘，右至图右缘），透明但仍接收射线
+            var hoverGo = new GameObject("ChartHover", typeof(RectTransform), typeof(Image));
+            hoverGo.transform.SetParent(boxParent, false);
+            var hoverRt = hoverGo.GetComponent<RectTransform>();
+            hoverRt.anchorMin = new Vector2(0, 1); hoverRt.anchorMax = new Vector2(1, 1);
+            hoverRt.pivot = new Vector2(0.5f, 1f);
+            hoverRt.anchoredPosition = Vector2.zero;
+            hoverRt.offsetMin = new Vector2(yAxisW, -chartH);
+            hoverRt.offsetMax = new Vector2(-uiMargin, 0);
+            var hoverImg = hoverGo.GetComponent<Image>();
+            hoverImg.color = new Color(0, 0, 0, 0.001f);
+            hoverImg.raycastTarget = true;
+
+            // 悬停竖线（跟随鼠标 x，初始隐藏）
+            var lineGo = new GameObject("HoverLine", typeof(RectTransform), typeof(Image));
+            lineGo.transform.SetParent(hoverRt, false);
+            var lineRt = lineGo.GetComponent<RectTransform>();
+            lineRt.anchorMin = new Vector2(0, 1); lineRt.anchorMax = new Vector2(0, 1);
+            lineRt.pivot = new Vector2(0.5f, 1f);
+            lineRt.anchoredPosition = Vector2.zero;
+            lineRt.sizeDelta = new Vector2(2f, chartH);
+            lineGo.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.65f);
+            lineGo.SetActive(false);
+
+            // Tooltip 面板：半透明深底 + 多行富文本（初始隐藏，ContentSizeFitter 自动贴合内容）
+            var tipGo = new GameObject("ChartTooltip", typeof(RectTransform), typeof(Image), typeof(ContentSizeFitter));
+            tipGo.transform.SetParent(hoverRt, false);
+            var tipRt = tipGo.GetComponent<RectTransform>();
+            tipRt.anchorMin = new Vector2(0, 1); tipRt.anchorMax = new Vector2(0, 1);
+            tipRt.pivot = new Vector2(0.5f, 1f);
+            tipRt.anchoredPosition = Vector2.zero;
+            tipGo.GetComponent<Image>().color = new Color(0.04f, 0.05f, 0.07f, 0.94f);
+            var tipFit = tipGo.GetComponent<ContentSizeFitter>();
+            tipFit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            tipFit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var tipText = UIHelpers.CreateText("", tipGo.transform, 11f, Color.white, _gameFont, 17f);
+            var tipTextRt = tipText.GetComponent<RectTransform>();
+            tipTextRt.anchorMin = Vector2.zero; tipTextRt.anchorMax = Vector2.one;
+            tipTextRt.offsetMin = new Vector2(8, 5); tipTextRt.offsetMax = new Vector2(-8, -5);
+            var tipT = tipText.GetComponent<Text>();
+            tipT.alignment = TextAnchor.UpperLeft;
+            tipT.horizontalOverflow = HorizontalWrapMode.Overflow;
+            tipGo.SetActive(false);
+
+            var handler = hoverGo.AddComponent<ChartHoverHandler>();
+            handler.Init(hoverRt, lineRt, tipRt, tipT,
+                n,
+                seriesList != null
+                    ? (System.Func<int, string>)(idx => BuildGdpTooltip(snaps, seriesList, idx))
+                    : (System.Func<int, string>)(idx => BuildGiniTooltip(snaps, idx)));
+            return hoverGo;
+        }
+
+        /// <summary>构建 GDP 图悬停 Tooltip 文本：年份 + 全球 + 各在榜王国（富文本色条）。</summary>
+        private static string BuildGdpTooltip(List<EconomySnapshot> snaps, List<ChartSeries> seriesList, int idx)
+        {
+            if (idx < 0 || idx >= snaps.Count) return "";
+            var sb = new System.Text.StringBuilder(96);
+            sb.Append("<b>").Append(UIHelpers.Lf("chart_year", snaps[idx].GameYear)).Append("</b>\n");
+            sb.Append("<color=#FFD95A>").Append(UIHelpers.L("chart_global")).Append(" ")
+              .Append(snaps[idx].GlobalGDP.ToString("F0")).Append("</color>");
+            foreach (var s in seriesList)
+            {
+                if (s == null) continue;
+                float v = idx < s.Values.Count ? s.Values[idx] : float.NaN;
+                if (float.IsNaN(v)) continue; // 不在榜不显示
+                sb.Append('\n').Append("<color=#").Append(ColorUtility.ToHtmlStringRGB(s.Color))
+                  .Append(">■ ").Append(s.Name).Append(" ").Append(v.ToString("F0")).Append("</color>");
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>构建基尼图悬停 Tooltip 文本：年份 + 基尼 + 周期阶段。</summary>
+        private static string BuildGiniTooltip(List<EconomySnapshot> snaps, int idx)
+        {
+            if (idx < 0 || idx >= snaps.Count) return "";
+            var snap = snaps[idx];
+            return "<b>" + UIHelpers.Lf("chart_year", snap.GameYear) + "</b>\n" +
+                   "<color=#FF9E2E>" + UIHelpers.L("gini_chart_gini") + " " + snap.GiniCoefficient.ToString("F3") + "</color>\n" +
+                   "<color=#8FC7FF>" + UIHelpers.L("gini_chart_phase") + " " + PhaseName((EconomyPhase)snap.Phase) + "</color>";
         }
 
         // ===== BuildDynamicSeries 复用缓冲（每次刷新图表时复用，避免 GC）=====
@@ -770,8 +887,8 @@ namespace EconomyMod.UI
             var bg = new Color(0.06f, 0.07f, 0.09f, 0.95f);
             var px = RentPixelBuffer(w, h, bg);
 
-            int mL = yAxisW > 4 ? yAxisW : 4;
-            const int mR = 4, mT = 4, mB = 4;
+            int mL = yAxisW > ChartMargin ? yAxisW : ChartMargin;
+            int mR = ChartMargin, mT = ChartMargin, mB = ChartMargin;
             int cw = w - mL - mR;
             int ch = h - mT - mB;
 
@@ -863,8 +980,8 @@ namespace EconomyMod.UI
             var bg = new Color(0.06f, 0.07f, 0.09f, 0.95f);
             var px = RentPixelBuffer(w, h, bg);
 
-            int mL = yAxisW > 4 ? yAxisW : 4;
-            const int mR = 4, mT = 4, mB = 4;
+            int mL = yAxisW > ChartMargin ? yAxisW : ChartMargin;
+            int mR = ChartMargin, mT = ChartMargin, mB = ChartMargin;
             int cw = w - mL - mR;
             int ch = h - mT - mB;
 
@@ -1003,7 +1120,7 @@ namespace EconomyMod.UI
                 color: new Color(0.8f, 0.9f, 0.7f));
             AddLine("");
 
-            // 核心指标卡网格（3列，v0.9 新增价格离散度）
+            // 核心指标卡（单行，窗口缩放保证不溢出；v0.9.1 恢复单行布局）
             var stats = new (string, string, Color)[]
             {
                 ("GDP", EconomyEngine.GlobalGDP.ToString("F0"), UIStyles.Gold),
@@ -1011,10 +1128,25 @@ namespace EconomyMod.UI
                 ("人口", EconomyEngine.AliveActorCount.ToString(), UIStyles.TextPrimary),
                 ("基尼", EconomyEngine.GiniCoefficient.ToString("F3"), GiniColor(EconomyEngine.GiniCoefficient)),
                 ("贸易", EconomyEngine.TotalTradeVolume.ToString("F0"), UIStyles.Positive),
-                ("泡沫", EconomyCycleModulator.BubbleValue.ToString("F0"), UIStyles.Warning),
-                ("价格离散", EconomyEngine.PriceDispersion.ToString("F3"), PriceDispersionColor(EconomyEngine.PriceDispersion))
+                ("泡沫", EconomyCycleModulator.BubbleValue.ToString("F0"), UIStyles.Warning)
             };
-            _lines.Add(UIComponents.CreateStatGrid(_content.transform, stats, _gameFont, contentW, 3));
+            _lines.Add(UIComponents.CreateStatGrid(_content.transform, stats, _gameFont, contentW));
+
+            // 地理贸易特征（v0.9.1：距离衰减/运输成本/区域套利实际生效值可视化）
+            _lines.Add(UIComponents.CreateSectionHeader(_content.transform,
+                UIHelpers.L("overview_geo_trade"), _gameFont, contentW));
+            var geoStats = new (string, string, Color)[]
+            {
+                ("距离衰减", "×" + EconomyEngine.AvgDistanceFactor.ToString("F2"),
+                    DistanceFactorColor(EconomyEngine.AvgDistanceFactor)),
+                ("运输成本", (EconomyEngine.TransportCost * 100f).ToString("F0") + "%",
+                    UIStyles.Warning),
+                ("套利权重", (EconomyEngine.PriceDiffWeight * 100f).ToString("F0") + "%",
+                    UIStyles.Info),
+                ("价格离散", EconomyEngine.PriceDispersion.ToString("F3"),
+                    PriceDispersionColor(EconomyEngine.PriceDispersion))
+            };
+            _lines.Add(UIComponents.CreateStatGrid(_content.transform, geoStats, _gameFont, contentW));
 
             // 王国排行
             _lines.Add(UIComponents.CreateSectionHeader(_content.transform,
@@ -1082,6 +1214,12 @@ namespace EconomyMod.UI
         private static Color PriceDispersionColor(float pd)
         {
             return pd >= 0.2f ? UIStyles.Warning : pd >= 0.1f ? UIStyles.Info : UIStyles.TextSecondary;
+        }
+
+        /// <summary>距离衰减因子语义色（≥0.9 几乎无衰减 → 绿；≥0.7 中等 → 信息蓝；更低远程贸易弱 → 琥珀）。</summary>
+        private static Color DistanceFactorColor(float f)
+        {
+            return f >= 0.9f ? UIStyles.Positive : f >= 0.7f ? UIStyles.Info : UIStyles.Warning;
         }
 
         /// <summary>
@@ -1205,6 +1343,80 @@ namespace EconomyMod.UI
             txt.color = TextColor;
             txt.alignment = TextAnchor.MiddleCenter;
             return btn;
+        }
+    }
+
+    /// <summary>
+    /// 图表悬停交互（借鉴 ECONOMYBOX CE 的 GDPMultiGraph）：透明接收层捕获鼠标，
+    /// 把鼠标 x 归一化为数据索引（InverseLerp），实时更新悬停竖线与数值 Tooltip。
+    /// 图表区域高度/宽度任意变化均自动适配（只依赖 rect 的 xMin/xMax）。
+    /// </summary>
+    public class ChartHoverHandler : MonoBehaviour, IPointerEnterHandler, IPointerMoveHandler, IPointerExitHandler
+    {
+        private RectTransform _hoverRt;
+        private RectTransform _lineRt;
+        private RectTransform _tipRt;
+        private Text _tipText;
+        private int _pointCount;
+        private System.Func<int, string> _textProvider;
+
+        public void Init(RectTransform hoverRt, RectTransform lineRt, RectTransform tipRt, Text tipText,
+            int pointCount, System.Func<int, string> textProvider)
+        {
+            _hoverRt = hoverRt;
+            _lineRt = lineRt;
+            _tipRt = tipRt;
+            _tipText = tipText;
+            _pointCount = pointCount;
+            _textProvider = textProvider;
+        }
+
+        public void OnPointerEnter(PointerEventData eventData) { SetVisible(true); OnPointerMove(eventData); }
+
+        public void OnPointerExit(PointerEventData eventData) => SetVisible(false);
+
+        public void OnPointerMove(PointerEventData eventData)
+        {
+            if (_hoverRt == null || _lineRt == null || _tipRt == null || _pointCount < 2) return;
+            Vector2 localPoint;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_hoverRt, eventData.position,
+                    eventData.pressEventCamera, out localPoint))
+                return;
+            Rect rect = _hoverRt.rect;
+            // CE 核心：局部坐标 → InverseLerp → 数据索引
+            float normalized = Mathf.InverseLerp(rect.xMin, rect.xMax, localPoint.x);
+            int index = Mathf.Clamp(Mathf.RoundToInt(normalized * (_pointCount - 1)), 0, _pointCount - 1);
+
+            // 竖线：anchor 在父左上角(pivot 0.5,1)，局部坐标原点在父中心(pivot 0.5,1)
+            // 竖线 anchoredPosition.x = localPoint.x + rect.width/2（相对父左上角）
+            _lineRt.anchoredPosition = new Vector2(localPoint.x + rect.width * 0.5f, 0f);
+
+            // Tooltip 内容 + 定位（水平跟随鼠标并 clamp，垂直固定在图表顶部下方 6px）
+            if (_tipText != null && _textProvider != null)
+            {
+                _tipText.text = _textProvider(index);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(_tipRt); // 文本长度变化 → 刷新面板宽
+            }
+            float tipW = _tipRt != null ? _tipRt.rect.width : 120f;
+            float maxX = rect.width - tipW * 0.5f - 2f;
+            float tipX = Mathf.Clamp(localPoint.x + rect.width * 0.5f, tipW * 0.5f + 2f, maxX);
+            if (maxX < tipW * 0.5f + 2f) tipX = rect.width * 0.5f; // 面板太窄时居中
+            _tipRt.anchoredPosition = new Vector2(tipX, -6f);
+        }
+
+        private void SetVisible(bool visible)
+        {
+            if (_lineRt != null) _lineRt.gameObject.SetActive(visible);
+            if (_tipRt != null)
+            {
+                _tipRt.gameObject.SetActive(visible);
+                // 首次显示时强制重算布局，保证 _tipRt.rect 宽度可用（clamp 定位依赖它）
+                if (visible && _tipText != null)
+                {
+                    _tipText.text = _textProvider != null ? _textProvider(0) : "";
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(_tipRt);
+                }
+            }
         }
     }
 

@@ -78,6 +78,13 @@ namespace EconomyMod.Core
             public long TotalTradeVolume; // 全王国出口总额（顺差之和）
             public float TotalProduction; // 全球年总产出（生产函数供给侧）
             public float PriceDispersion; // 区域价格离散度（本地价格变异系数 CV，0=各地同价）
+
+            // ===== 地理贸易实际生效值（v0.9.1：暴露给 HUD 展示）=====
+            public float AvgDistanceFactor; // 参与贸易王国的平均距离衰减因子（1=无衰减，越低远程贸易越弱）
+            public float DistanceDecay;     // 实际生效的距离衰减系数（clamp 后）
+            public float TransportCost;     // 实际生效的运输成本比例（clamp 后）
+            public float PriceDiffWeight;   // 实际生效的价格差（套利）权重（clamp 后）
+
             public readonly List<KingdomSim> Kingdoms = new List<KingdomSim>(16);
         }
 
@@ -450,12 +457,27 @@ namespace EconomyMod.Core
                 }
             }
 
+            // --- 地理贸易特征汇总（v0.9.1：供 HUD 概览页展示实际生效值）---
+            // 平均距离衰减因子 = 所有参与贸易王国距离因子的均值（无王国/无坐标时回退 1=无衰减）
+            float factorSum = 0f;
+            int factorCount = 0;
+            for (int i = 0; i < kingdomCount; i++)
+            {
+                if (res.Kingdoms[i].KingdomId == 0) continue;
+                factorSum += distanceFactor[i];
+                factorCount++;
+            }
+            res.AvgDistanceFactor = factorCount > 0 ? factorSum / factorCount : 1f;
+            res.DistanceDecay = distanceDecay;
+            float transportCost = cfg != null ? Mathf.Clamp(cfg.TransportCost, 0f, 0.3f) : 0f;
+            float priceDiffWeight = cfg != null ? Mathf.Clamp(cfg.PriceDiffWeight, 0f, 1f) : 0f;
+            res.TransportCost = transportCost;
+            res.PriceDiffWeight = priceDiffWeight;
+
             // --- 贸易金流模拟（零和：顺差总额 = 逆差总额）---
             // 比较优势（特长王国出口）+ 地理（距离衰减/运输成本）+ 区域套利（价格差）三者叠加。
             // 有 biome 特长（矿产/木材/粮食/贸易品）的王国生产特长产品 → 贸易顺差（金币流入）；
             // 无特长或特长弱、或本地价高的王国需进口 → 贸易逆差（金币流出）。按王国 GDP ±10% 限幅防极端。
-            float transportCost = cfg != null ? Mathf.Clamp(cfg.TransportCost, 0f, 0.3f) : 0f;
-            float priceDiffWeight = cfg != null ? Mathf.Clamp(cfg.PriceDiffWeight, 0f, 1f) : 0f;
             double totalExport = 0d;
             for (int i = 0; i < kingdomCount; i++)
             {

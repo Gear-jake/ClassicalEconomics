@@ -73,7 +73,7 @@ namespace EconomyMod.UI
             el.preferredWidth = w;
             el.preferredHeight = h;
 
-            // 标签（顶部，弱色）
+            // 标签（顶部，弱色；BestFit 自动缩小字号，窄卡不溢出）
             var lbl = UIHelpers.CreateText(label, card.transform, UIStyles.StatLabelSize,
                 UIStyles.TextMuted, font, 16f, "Label");
             var lrt = lbl.GetComponent<RectTransform>();
@@ -81,9 +81,13 @@ namespace EconomyMod.UI
             lrt.pivot = new Vector2(0.5f, 1);
             lrt.anchoredPosition = new Vector2(0, -4);
             lrt.sizeDelta = new Vector2(-8, 16f);
-            lbl.GetComponent<Text>().alignment = TextAnchor.UpperCenter;
+            var lText = lbl.GetComponent<Text>();
+            lText.alignment = TextAnchor.UpperCenter;
+            lText.resizeTextForBestFit = true;
+            lText.resizeTextMinSize = 7;
+            lText.resizeTextMaxSize = Mathf.RoundToInt(UIStyles.StatLabelSize);
 
-            // 数值（底部，强调色，粗体）
+            // 数值（底部，强调色，粗体；BestFit 自动缩小字号）
             var val = UIHelpers.CreateText(value, card.transform, UIStyles.StatValueSize,
                 valueColor, font, 22f, "Value");
             var vrt = val.GetComponent<RectTransform>();
@@ -95,50 +99,37 @@ namespace EconomyMod.UI
             vt.alignment = TextAnchor.LowerCenter;
             vt.fontStyle = FontStyle.Bold;
             vt.horizontalOverflow = HorizontalWrapMode.Overflow;
+            vt.resizeTextForBestFit = true;
+            vt.resizeTextMinSize = 9;
+            vt.resizeTextMaxSize = Mathf.RoundToInt(UIStyles.StatValueSize);
             return card;
         }
 
-        /// <summary>创建指标卡网格（每行 cols 张卡的多行网格，卡片按 stats 顺序逐行填充）。</summary>
+        /// <summary>
+        /// 创建指标卡单行（所有卡片横向均分填满 width，不换行）。
+        /// 卡片数较多时单卡变窄，由窗口缩放（拖拽边角拉宽）保证内容不溢出；
+        /// 不再采用 v0.9.0 的多行网格，恢复 v0.8.x 单行观感。
+        /// </summary>
         public static GameObject CreateStatGrid(Transform parent,
-            (string label, string value, Color color)[] stats, Font font, float width, int cols = 3)
+            (string label, string value, Color color)[] stats, Font font, float width)
         {
-            var grid = new GameObject("StatGrid", typeof(RectTransform), typeof(VerticalLayoutGroup));
-            grid.transform.SetParent(parent, false);
-            var vlg = grid.GetComponent<VerticalLayoutGroup>();
-            vlg.spacing = UIStyles.RowGap;
-            vlg.childControlWidth = true; vlg.childControlHeight = true;
-            vlg.childForceExpandWidth = false; vlg.childForceExpandHeight = false;
-            vlg.childAlignment = TextAnchor.UpperLeft;
-            var gridRt = grid.GetComponent<RectTransform>();
-            gridRt.sizeDelta = new Vector2(width, 0);
+            var rowGo = new GameObject("StatRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            rowGo.transform.SetParent(parent, false);
+            var hlg = rowGo.GetComponent<HorizontalLayoutGroup>();
+            hlg.spacing = UIStyles.CardGap;
+            hlg.childControlWidth = true; hlg.childControlHeight = true;
+            hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = false;
+            hlg.childAlignment = TextAnchor.UpperLeft;
+            var rowRt = rowGo.GetComponent<RectTransform>();
+            rowRt.sizeDelta = new Vector2(width, 0);
             float cardH = 52f;
-            float gap = UIStyles.RowGap;
             int n = stats.Length;
-            int rows = (n + cols - 1) / cols;
-            float cardW = (width - gap * (cols - 1)) / cols;
-
-            // 每行一个 HorizontalLayoutGroup，卡片按 cols 分组（修复：原单行布局在卡片数>cols 时横向溢出）
-            for (int r = 0; r < rows; r++)
-            {
-                var rowGo = new GameObject("StatRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
-                rowGo.transform.SetParent(grid.transform, false);
-                var hlg = rowGo.GetComponent<HorizontalLayoutGroup>();
-                hlg.spacing = gap;
-                hlg.childControlWidth = true; hlg.childControlHeight = true;
-                hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = false;
-                hlg.childAlignment = TextAnchor.UpperLeft;
-                rowGo.GetComponent<RectTransform>().sizeDelta = new Vector2(width, cardH);
-                rowGo.AddComponent<LayoutElement>().preferredHeight = cardH;
-                for (int c = 0; c < cols; c++)
-                {
-                    int i = r * cols + c;
-                    if (i >= n) break;
-                    var s = stats[i];
-                    CreateStatCard(rowGo.transform, s.label, s.value, s.color, font, cardW, cardH);
-                }
-            }
-            grid.AddComponent<LayoutElement>().preferredHeight = rows * cardH + Mathf.Max(0, rows - 1) * gap;
-            return grid;
+            float gap = UIStyles.CardGap;
+            float cardW = n > 1 ? (width - gap * (n - 1)) / n : width;
+            foreach (var s in stats)
+                CreateStatCard(rowGo.transform, s.label, s.value, s.color, font, cardW, cardH);
+            rowGo.AddComponent<LayoutElement>().preferredHeight = cardH;
+            return rowGo;
         }
 
         // ===== 徽章（胶囊背景 + 文本）=====
