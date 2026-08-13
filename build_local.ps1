@@ -38,6 +38,7 @@ $src = @(
     'Services\OptimeCompatibility.cs',
     'UI\EconomyUI.cs',
     'UI\EconomyHUD.cs',
+    'UI\ChartMeshGraphic.cs',
     'UI\EventWindow.cs',
     'UI\RichListWindow.cs',
     'UI\FloatingWindow.cs',

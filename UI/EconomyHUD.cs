@@ -18,19 +18,8 @@ namespace EconomyMod.UI
         private Image _btnOverviewImg, _btnChartImg;
         private Text _titleText;
 
-        private Texture2D _chartTexture;
-        private Sprite _chartSprite;
-        private Texture2D _giniTexture;
-        private Sprite _giniSprite;
-
-        // 图表超采样倍率：纹理按 ss× 像素生成再缩小显示，Bilinear 过滤 → 任意分辨率/DPI 下保持锐利（4K 下 2× 即 1:1）
-        private const int ChartSupersample = 2;
-        // 图表纹理内边距（像素，对应 UI 单位 = ChartMargin / ss）
-        private const int ChartMargin = 4 * ChartSupersample;
-
-        // 图表纹理缓存键（数据条数×10000 + 面板宽度）；一致则复用纹理，避免每次刷新重建/上传 GPU
-        private int _chartCacheKey = -1;
-        private int _giniCacheKey = -1;
+        // 图表网格内边距（UI 单位，与 ChartMeshGraphic.margin 及刻度 Text 对齐）
+        private const float ChartUiMargin = 4f;
 
         private enum Section { Overview, Chart, PickTarget }
         private Section _currentSection = Section.Overview;
@@ -204,7 +193,7 @@ namespace EconomyMod.UI
         protected override void ClearContent()
         {
             base.ClearContent();
-            // 图表纹理保留为缓存（数据条数/宽度变化时在 AddXxxChart 中重建），避免每次刷新重建
+            // 图表对象已随 _lines 清空；ChartMeshGraphic 组件自身不持有跨刷新资源，无需额外清理
         }
 
         /// <summary>内容行（带标题样式）。</summary>
@@ -291,51 +280,48 @@ namespace EconomyMod.UI
             boxEl.preferredHeight = boxH;
             _lines.Add(box);
 
-            // 图表纹理（左侧留数值尺空白）；缓存复用：
-            // 键 = 条数×10000 + 宽度 + 内容指纹。原实现不含指纹，
-            // 历史条数达上限（GetRecent 固定 50）后快照数量不再增长，
-            // 王国变更（新王国入榜/旧王国灭亡）时图例已更新但纹理未重建 → 图表卡住错乱。
-            int cacheKey = snaps.Count * 10000 + (int)chartW;
-            cacheKey = cacheKey * 31 + ComputeSeriesSignature(snaps, seriesList);
-            if (_chartCacheKey != cacheKey)
-            {
-                _chartCacheKey = cacheKey;
-                if (_chartSprite != null) { Destroy(_chartSprite); _chartSprite = null; }
-                if (_chartTexture != null) { Destroy(_chartTexture); _chartTexture = null; }
-                _chartTexture = GenerateMultiLineChartTexture(snaps,
-                    Mathf.RoundToInt(chartW * ChartSupersample),
-                    Mathf.RoundToInt(chartH * ChartSupersample),
-                    Mathf.RoundToInt(yAxisW * ChartSupersample),
-                    seriesList, maxVal);
-                if (_chartTexture == null)
-                {
-                    AddLine(UIHelpers.L("chart_fail"), color: new Color(0.7f, 0.7f, 0.7f));
-                    return;
-                }
-                _chartSprite = Sprite.Create(_chartTexture,
-                    new Rect(0, 0, _chartTexture.width, _chartTexture.height),
-                    new Vector2(0.5f, 0.5f), 1f);
-            }
+            // 图表主体（顶点渲染组件）：锚定 box 左下角、pivot=(0,0)，本地原点与刻度 Text 坐标系对齐
+            var meshGo = new GameObject("GdpChartMesh", typeof(RectTransform), typeof(ChartMeshGraphic));
+            meshGo.transform.SetParent(box.transform, false);
+            var meshRt = meshGo.GetComponent<RectTransform>();
+            meshRt.anchorMin = Vector2.zero; meshRt.anchorMax = Vector2.zero;
+            meshRt.pivot = Vector2.zero;
+            float chartBottom = boxH - chartH;
+            meshRt.anchoredPosition = new Vector2(0f, chartBottom);
+            meshRt.sizeDelta = new Vector2(chartW, chartH);
+            var graph = meshGo.GetComponent<ChartMeshGraphic>();
+            graph.raycastTarget = false;   // 射线由悬停层接收，图表自身不拦截
+            graph.yAxisWidth = yAxisW;
+            graph.margin = ChartUiMargin;
 
-            var imgGo = new GameObject("GdpChartImg", typeof(RectTransform), typeof(Image));
-            imgGo.transform.SetParent(box.transform, false);
-            var imgRt = imgGo.GetComponent<RectTransform>();
-            imgRt.anchorMin = new Vector2(0, 1); imgRt.anchorMax = new Vector2(1, 1);
-            imgRt.pivot = new Vector2(0.5f, 1f);
-            imgRt.anchoredPosition = Vector2.zero;
-            imgRt.sizeDelta = new Vector2(0, chartH);
-            var img = imgGo.GetComponent<Image>();
-            img.sprite = _chartSprite;
-            img.raycastTarget = false;
+            // 组装顶点数据：vals[s][i]（NaN=王国不在榜，折线断裂）；phases 驱动阶段色带
+            int sc = seriesList.Count;
+            var vals = new float[sc][];
+            var colors = new Color[sc];
+            var areaColors = new Color[sc];
+            for (int s = 0; s < sc; s++)
+            {
+                var ser = seriesList[s];
+                var arr = new float[snaps.Count];
+                for (int i = 0; i < snaps.Count; i++)
+                    arr[i] = i < ser.Values.Count ? ser.Values[i] : float.NaN;
+                vals[s] = arr;
+                colors[s] = ser.Color;
+                // 仅全球 GDP（首系列）做半透明面积填充；*0.5 后与原纹理版 0.14 一致
+                areaColors[s] = s == 0 ? new Color(ser.Color.r, ser.Color.g, ser.Color.b, 0.28f) : Color.clear;
+            }
+            var phases = new int[snaps.Count];
+            for (int i = 0; i < snaps.Count; i++) phases[i] = snaps[i].Phase;
+            graph.SetChartData(vals, colors, areaColors, phases, sc, 0f, maxVal,
+                drawArea: true, drawRefs: false, refHigh: 0f, refLow: 0f);
 
             // 悬停交互层（透明接收射线）+ 悬停竖线 + 数值 Tooltip（CE 式数据悬停查看）
             var hover = AddChartHover(box.transform, chartW, chartH, yAxisW, snaps, seriesList);
             _lines.Add(hover);
 
             // 左侧 GDP 数值尺（5 档刻度，与网格线对齐：底部=0 顶部=maxVal）
-            // 网格线在纹理内 y = ChartMargin + ch*frac（纹理已 ss 超采样，UI 换算统一除以 ss）
-            float chartBottom = boxH - chartH;
-            float uiMargin = ChartMargin / (float)ChartSupersample; // = 4（UI 单位）
+            // 网格线在 mesh 内 y = margin + plotH*frac，相对图表底部；刻度文本同为 box 左下角坐标系
+            const float uiMargin = ChartUiMargin;
             float plotH = chartH - uiMargin * 2f;
             var scaleCol = new Color(0.92f, 0.92f, 0.92f);
             for (int gi = 0; gi <= 4; gi++)
@@ -361,7 +347,7 @@ namespace EconomyMod.UI
             {
                 float frac = gi / 4f;
                 int idx = Mathf.RoundToInt((snaps.Count - 1) * frac);
-                // 纹理内折线 x：mL + cw*frac（mL=yAxisW, cw=chartW-yAxisW-mR, mR=4）
+                // mesh 内折线 x：x0 + plotW*frac（x0=yAxisW+margin, plotW=chartW-yAxisW-margin, margin=4）
                 float xPos = yAxisW + (chartW - yAxisW - uiMargin) * frac;
                 float pivotX = gi == 0 ? 0f : (gi == 4 ? 1f : 0.5f);
                 var xGo = UIHelpers.CreateText(UIHelpers.Lf("chart_year", snaps[idx].GameYear), box.transform, 9f, xCol, _gameFont, 14f);
@@ -413,47 +399,37 @@ namespace EconomyMod.UI
             boxEl.preferredHeight = boxH;
             _lines.Add(box);
 
-            // 贫富差距图纹理；缓存复用：键含基尼/阶段内容指纹，数据变化即重建
-            int cacheKey = snaps.Count * 10000 + (int)chartW;
-            cacheKey = cacheKey * 31 + ComputeGiniSignature(snaps);
-            if (_giniCacheKey != cacheKey)
-            {
-                _giniCacheKey = cacheKey;
-                if (_giniSprite != null) { Destroy(_giniSprite); _giniSprite = null; }
-                if (_giniTexture != null) { Destroy(_giniTexture); _giniTexture = null; }
-                _giniTexture = GenerateGiniChartTexture(snaps,
-                    Mathf.RoundToInt(chartW * ChartSupersample),
-                    Mathf.RoundToInt(chartH * ChartSupersample),
-                    Mathf.RoundToInt(yAxisW * ChartSupersample),
-                    cfg.CycleGiniHigh, cfg.CycleGiniLow, maxVal);
-                if (_giniTexture == null)
-                {
-                    AddLine(UIHelpers.L("chart_fail"), color: new Color(0.7f, 0.7f, 0.7f));
-                    return;
-                }
-                _giniSprite = Sprite.Create(_giniTexture,
-                    new Rect(0, 0, _giniTexture.width, _giniTexture.height),
-                    new Vector2(0.5f, 0.5f), 1f);
-            }
+            // 图表主体（顶点渲染组件）：锚定 box 左下角、pivot=(0,0)，本地原点与刻度 Text 坐标系对齐
+            var meshGo = new GameObject("GiniChartMesh", typeof(RectTransform), typeof(ChartMeshGraphic));
+            meshGo.transform.SetParent(box.transform, false);
+            var meshRt = meshGo.GetComponent<RectTransform>();
+            meshRt.anchorMin = Vector2.zero; meshRt.anchorMax = Vector2.zero;
+            meshRt.pivot = Vector2.zero;
+            float chartBottom = boxH - chartH;
+            meshRt.anchoredPosition = new Vector2(0f, chartBottom);
+            meshRt.sizeDelta = new Vector2(chartW, chartH);
+            var graph = meshGo.GetComponent<ChartMeshGraphic>();
+            graph.raycastTarget = false;
+            graph.yAxisWidth = yAxisW;
+            graph.margin = ChartUiMargin;
 
-            var imgGo = new GameObject("GiniChartImg", typeof(RectTransform), typeof(Image));
-            imgGo.transform.SetParent(box.transform, false);
-            var imgRt = imgGo.GetComponent<RectTransform>();
-            imgRt.anchorMin = new Vector2(0, 1); imgRt.anchorMax = new Vector2(1, 1);
-            imgRt.pivot = new Vector2(0.5f, 1f);
-            imgRt.anchoredPosition = Vector2.zero;
-            imgRt.sizeDelta = new Vector2(0, chartH);
-            var img = imgGo.GetComponent<Image>();
-            img.sprite = _giniSprite;
-            img.raycastTarget = false;
+            // 组装顶点数据：单系列基尼系数折线 + 阶段色带 + 危险/健康参考虚线
+            var vals = new float[1][];
+            var giniArr = new float[snaps.Count];
+            for (int i = 0; i < snaps.Count; i++) giniArr[i] = snaps[i].GiniCoefficient;
+            vals[0] = giniArr;
+            var colors = new Color[] { new Color(1f, 0.62f, 0.18f) };
+            var phases = new int[snaps.Count];
+            for (int i = 0; i < snaps.Count; i++) phases[i] = snaps[i].Phase;
+            graph.SetChartData(vals, colors, null, phases, 1, 0f, maxVal,
+                drawArea: false, drawRefs: true, refHigh: cfg.CycleGiniHigh, refLow: cfg.CycleGiniLow);
 
             // 悬停交互层 + 悬停竖线 + Tooltip（基尼图无多系列，悬停显示年份/基尼/阶段）
             var hover = AddChartHover(box.transform, chartW, chartH, yAxisW, snaps, null);
             _lines.Add(hover);
 
-            // 左侧基尼数值尺（0~maxVal，5 档，与纹理网格对齐）
-            float chartBottom = boxH - chartH;
-            float uiMargin = ChartMargin / (float)ChartSupersample; // = 4（UI 单位）
+            // 左侧基尼数值尺（0~maxVal，5 档，与网格线对齐）
+            const float uiMargin = ChartUiMargin;
             float plotH = chartH - uiMargin * 2f;
             var scaleCol = new Color(0.92f, 0.92f, 0.92f);
             for (int gi = 0; gi <= 4; gi++)
@@ -505,7 +481,7 @@ namespace EconomyMod.UI
             List<EconomySnapshot> snaps, List<ChartSeries> seriesList)
         {
             int n = snaps.Count;
-            float uiMargin = ChartMargin / (float)ChartSupersample;
+            const float uiMargin = ChartUiMargin;
 
             // 悬停接收层：覆盖折线区域（左起数值尺右缘，右至图右缘），透明但仍接收射线
             var hoverGo = new GameObject("ChartHover", typeof(RectTransform), typeof(Image));
@@ -740,37 +716,6 @@ namespace EconomyMod.UI
         }
 
         /// <summary>
-        /// 计算 GDP 图表内容指纹：全球 GDP 序列 + 各系列（动态王国）名称与数值序列（含 NaN 标记）。
-        /// 数据变化（含王国变更）→ 指纹变化 → 纹理重建；数据未变 → 复用缓存纹理。
-        /// </summary>
-        private static int ComputeSeriesSignature(List<EconomySnapshot> snaps, List<ChartSeries> seriesList)
-        {
-            int h = snaps.Count;
-            for (int i = 0; i < snaps.Count; i++)
-                h = h * 31 + (int)snaps[i].GlobalGDP;
-            for (int s = 0; s < seriesList.Count; s++)
-            {
-                var ser = seriesList[s];
-                h = h * 31 + (ser.Name != null ? ser.Name.GetHashCode() : 0);
-                for (int i = 0; i < ser.Values.Count; i++)
-                {
-                    float v = ser.Values[i];
-                    h = h * 31 + (float.IsNaN(v) ? int.MinValue : (int)v);
-                }
-            }
-            return h;
-        }
-
-        /// <summary>计算贫富差距图表内容指纹：基尼系数序列 + 经济阶段序列。</summary>
-        private static int ComputeGiniSignature(List<EconomySnapshot> snaps)
-        {
-            int h = snaps.Count;
-            for (int i = 0; i < snaps.Count; i++)
-                h = h * 31 + (int)(snaps[i].GiniCoefficient * 1000f) + snaps[i].Phase;
-            return h;
-        }
-
-        /// <summary>
         /// 图例（竖直行列表）：色条 + 名称 + 最新值（在榜）/ 已跌出（不在榜）。
         /// 每个系列独立一行，行内色条 + 名称 + 尾部数值，信息比横向图例更丰富。
         /// </summary>
@@ -848,260 +793,6 @@ namespace EconomyMod.UI
             public string Name;
             public Color Color;
             public List<float> Values = new List<float>();
-        }
-
-        // 图表像素缓冲复用：每次重绘只需 Clear，避免 ~1MB Color 数组的 GC
-        // （chartW 最大 ~848，chartH=120，约 10 万 Color × 16B = 1.6MB）
-        private static Color[] _chartPxBuffer;
-        private static int _chartPxBufferSize;
-
-        /// <summary>获取指定大小的复用像素缓冲；不足时按需扩容。</summary>
-        private static Color[] RentPixelBuffer(int w, int h, Color bg)
-        {
-            int len = w * h;
-            if (_chartPxBuffer == null || _chartPxBufferSize < len)
-            {
-                _chartPxBuffer = new Color[len];
-                _chartPxBufferSize = len;
-            }
-            var px = _chartPxBuffer;
-            for (int i = 0; i < len; i++) px[i] = bg;
-            return px;
-        }
-
-        /// <summary>
-        /// 绘制多线折线图纹理：暗色底、经济阶段背景色带、横向网格、每个系列一条折线，
-        /// 首个系列（全球 GDP）附加半透明面积填充；系列值为 NaN 的点不连线（王国跌出排名即断裂）。
-        /// y=0 在底部，显示时天然正向。
-        /// </summary>
-        private static Texture2D GenerateMultiLineChartTexture(
-            List<EconomySnapshot> snaps, int w, int h, int yAxisW,
-            List<ChartSeries> series, float maxVal)
-        {
-            int n = snaps.Count;
-            if (n < 2 || w <= 4 || h <= 4 || series.Count == 0) return null;
-            if (maxVal <= 0f) maxVal = 1f;
-
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            tex.filterMode = FilterMode.Bilinear;
-            var bg = new Color(0.06f, 0.07f, 0.09f, 0.95f);
-            var px = RentPixelBuffer(w, h, bg);
-
-            int mL = yAxisW > ChartMargin ? yAxisW : ChartMargin;
-            int mR = ChartMargin, mT = ChartMargin, mB = ChartMargin;
-            int cw = w - mL - mR;
-            int ch = h - mT - mB;
-
-            // 阶段背景色带（按每个快照的阶段，半透明叠加在背景上）
-            for (int i = 0; i < n - 1; i++)
-            {
-                int x0 = mL + Mathf.RoundToInt(cw * i / (float)(n - 1));
-                int x1 = mL + Mathf.RoundToInt(cw * (i + 1) / (float)(n - 1));
-                var band = PhaseBandColor(snaps[i].Phase);
-                for (int x = x0; x <= x1; x++)
-                    for (int y = mB; y <= mT + ch; y++)
-                        BlendChartPx(px, w, h, x, y, band);
-            }
-
-            // 横向网格线（含底部坐标轴），从数值尺右缘开始
-            var grid = new Color(0.35f, 0.35f, 0.4f, 0.45f);
-            for (int gi = 0; gi <= 4; gi++)
-            {
-                int y = mB + ch * gi / 4;
-                for (int x = mL; x < w - mR; x++) px[y * w + x] = grid;
-            }
-
-            // 每个系列绘制折线（NaN = 断裂，跳过该段）
-            for (int si = 0; si < series.Count; si++)
-            {
-                var s = series[si];
-                var pts = new Vector2Int[n];
-                for (int i = 0; i < n; i++)
-                {
-                    float v = i < s.Values.Count ? s.Values[i] : float.NaN;
-                    pts[i].x = mL + Mathf.RoundToInt(cw * i / (float)(n - 1));
-                    if (!float.IsNaN(v))
-                        pts[i].y = mB + Mathf.RoundToInt(ch * (v / maxVal));
-                    else
-                        pts[i].y = int.MinValue; // 断裂标记
-                }
-                // 首个系列（全球）附加面积填充（仅连续段）
-                if (si == 0)
-                {
-                    var fill = s.Color;
-                    fill.a = 0.14f;
-                    for (int i = 0; i < n - 1; i++)
-                        if (pts[i].y != int.MinValue && pts[i + 1].y != int.MinValue)
-                            FillAreaSegment(px, w, h, pts[i], pts[i + 1], mB, fill);
-                }
-                // 折线 + 末端高亮点（断裂段跳过）
-                bool lineActive = false;
-                for (int i = 0; i < n - 1; i++)
-                {
-                    if (pts[i].y != int.MinValue && pts[i + 1].y != int.MinValue)
-                    {
-                        DrawLine(px, w, h, pts[i], pts[i + 1], s.Color);
-                        lineActive = true;
-                    }
-                }
-                if (lineActive)
-                {
-                    // 末端高亮点：取最后一个有效点
-                    for (int i = n - 1; i >= 0; i--)
-                    {
-                        if (pts[i].y != int.MinValue)
-                        {
-                            DrawDot(px, w, h, pts[i], s.Color, 2);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // 复用缓冲可能大于 w*h，必须用 SetPixels(x,y,w,h,px) 仅写入前 w*h 个像素
-            tex.SetPixels(0, 0, w, h, px);
-            tex.Apply();
-            return tex;
-        }
-
-        /// <summary>
-        /// 贫富差距趋势图纹理：阶段背景色带 + 网格 + 危险/健康参考虚线 + 基尼折线。
-        /// </summary>
-        private static Texture2D GenerateGiniChartTexture(
-            List<EconomySnapshot> snaps, int w, int h, int yAxisW,
-            float giniHigh, float giniLow, float maxVal)
-        {
-            int n = snaps.Count;
-            if (n < 2 || w <= 4 || h <= 4) return null;
-            if (maxVal <= 0f) maxVal = 1f;
-
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            tex.filterMode = FilterMode.Bilinear;
-            var bg = new Color(0.06f, 0.07f, 0.09f, 0.95f);
-            var px = RentPixelBuffer(w, h, bg);
-
-            int mL = yAxisW > ChartMargin ? yAxisW : ChartMargin;
-            int mR = ChartMargin, mT = ChartMargin, mB = ChartMargin;
-            int cw = w - mL - mR;
-            int ch = h - mT - mB;
-
-            // 阶段背景色带（按每个快照的阶段，半透明叠加在背景上）
-            for (int i = 0; i < n - 1; i++)
-            {
-                int x0 = mL + Mathf.RoundToInt(cw * i / (float)(n - 1));
-                int x1 = mL + Mathf.RoundToInt(cw * (i + 1) / (float)(n - 1));
-                var band = PhaseBandColor(snaps[i].Phase);
-                for (int x = x0; x <= x1; x++)
-                    for (int y = mB; y <= mT + ch; y++)
-                        BlendChartPx(px, w, h, x, y, band);
-            }
-
-            // 横向网格线
-            var grid = new Color(0.35f, 0.35f, 0.4f, 0.45f);
-            for (int gi = 0; gi <= 4; gi++)
-            {
-                int y = mB + ch * gi / 4;
-                for (int x = mL; x < w - mR; x++) px[y * w + x] = grid;
-            }
-
-            // 危险线（红虚线）/ 健康线（绿虚线）
-            DrawDashedHLine(px, w, h, mL, w - mR,
-                mB + Mathf.RoundToInt(ch * Mathf.Clamp01(giniHigh / maxVal)),
-                new Color(1f, 0.35f, 0.3f, 0.85f));
-            DrawDashedHLine(px, w, h, mL, w - mR,
-                mB + Mathf.RoundToInt(ch * Mathf.Clamp01(giniLow / maxVal)),
-                new Color(0.4f, 0.9f, 0.4f, 0.85f));
-
-            // 基尼折线（橙色）+ 末端高亮点
-            var pts = new Vector2Int[n];
-            var lineC = new Color(1f, 0.62f, 0.18f);
-            for (int i = 0; i < n; i++)
-            {
-                float v = Mathf.Clamp(snaps[i].GiniCoefficient, 0f, maxVal);
-                pts[i].x = mL + Mathf.RoundToInt(cw * i / (float)(n - 1));
-                pts[i].y = mB + Mathf.RoundToInt(ch * (v / maxVal));
-            }
-            for (int i = 0; i < n - 1; i++)
-                DrawLine(px, w, h, pts[i], pts[i + 1], lineC);
-            DrawDot(px, w, h, pts[n - 1], lineC, 2);
-
-            // 复用缓冲可能大于 w*h，必须用 SetPixels(x,y,w,h,px) 仅写入前 w*h 个像素
-            tex.SetPixels(0, 0, w, h, px);
-            tex.Apply();
-            return tex;
-        }
-
-        /// <summary>经济阶段背景色带（半透明，与深色背景混合）。</summary>
-        private static Color PhaseBandColor(int phase)
-        {
-            switch (phase)
-            {
-                case (int)EconomyPhase.Boom:       return new Color(0.1f, 0.5f, 0.2f, 0.20f);
-                case (int)EconomyPhase.Recession:  return new Color(0.5f, 0.35f, 0.1f, 0.16f);
-                case (int)EconomyPhase.Depression: return new Color(0.5f, 0.12f, 0.1f, 0.22f);
-                case (int)EconomyPhase.Recovery:   return new Color(0.1f, 0.3f, 0.5f, 0.16f);
-                default:                           return new Color(0f, 0f, 0f, 0f);
-            }
-        }
-
-        /// <summary>半透明叠加像素（阶段色带与背景混合）。</summary>
-        private static void BlendChartPx(Color[] px, int w, int h, int x, int y, Color c)
-        {
-            if (x < 0 || x >= w || y < 0 || y >= h) return;
-            int i = y * w + x;
-            px[i] = Color.Lerp(px[i], c, c.a);
-        }
-
-        /// <summary>水平虚线（参考线用）：3 像素实线 + 2 像素间隔循环。</summary>
-        private static void DrawDashedHLine(Color[] px, int w, int h, int x0, int x1, int y, Color c)
-        {
-            for (int x = x0; x <= x1; x += 5)
-                for (int k = 0; k < 3 && x + k <= x1; k++)
-                    SetChartPx(px, w, h, x + k, y, c);
-        }
-
-        private static void SetChartPx(Color[] px, int w, int h, int x, int y, Color c)
-        {
-            if (x < 0 || x >= w || y < 0 || y >= h) return;
-            px[y * w + x] = c;
-        }
-
-        private static void DrawLine(Color[] px, int w, int h, Vector2Int a, Vector2Int b, Color c)
-        {
-            int x0 = a.x, y0 = a.y;
-            int x1 = b.x, y1 = b.y;
-            int dx = Mathf.Abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-            int dy = -Mathf.Abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-            int err = dx + dy;
-            while (true)
-            {
-                SetChartPx(px, w, h, x0, y0, c);
-                if (x0 == x1 && y0 == y1) break;
-                int e2 = 2 * err;
-                if (e2 >= dy) { err += dy; x0 += sx; }
-                if (e2 <= dx) { err += dx; y0 += sy; }
-            }
-        }
-
-        private static void FillAreaSegment(Color[] px, int w, int h,
-            Vector2Int a, Vector2Int b, int baseY, Color c)
-        {
-            int x0 = Mathf.Min(a.x, b.x), x1 = Mathf.Max(a.x, b.x);
-            for (int x = x0; x <= x1; x++)
-            {
-                float t = x1 > x0 ? (x - x0) / (float)(x1 - x0) : 0f;
-                int top = Mathf.RoundToInt(Mathf.Lerp(a.y, b.y, t));
-                for (int y = baseY; y <= top; y++)
-                    SetChartPx(px, w, h, x, y, c);
-            }
-        }
-
-        private static void DrawDot(Color[] px, int w, int h, Vector2Int p, Color c, int r)
-        {
-            for (int dy = -r; dy <= r; dy++)
-                for (int dx = -r; dx <= r; dx++)
-                    if (dx * dx + dy * dy <= r * r)
-                        SetChartPx(px, w, h, p.x + dx, p.y + dy, c);
         }
 
         private void BuildOverview()
