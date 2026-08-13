@@ -24,6 +24,9 @@ namespace EconomyMod.Core
         /// <summary>最近一次采集得到的财富 Top10（降序；未采集时为空）。</summary>
         public static readonly List<RichEntryData> TopRich = new List<RichEntryData>(10);
 
+        /// <summary>地理贸易网络：本周期 cityId → City 引用映射（仅主线程寻路用，每周期复用防 GC）。</summary>
+        private static readonly Dictionary<long, City> _cityRefs = new Dictionary<long, City>(128);
+
         /// <summary>
         /// 采集时顺带收集的"富裕"智慧生物（wealth &gt; SpendingEngine.WealthyThreshold），
         /// 供 SpendingEngine.RunOncePerYear 直接消费，避免每年重复全量遍历。
@@ -113,6 +116,55 @@ namespace EconomyMod.Core
                         pop, cap, food, cities, boats, (int)BiomeEconomy.GetSpecialty(k.data.id), cx, cy);
                 }
             }
+
+            // 城市快照（地理贸易网络节点）→ 纯数据，供后台按边贸易计算；
+            // 同时维护 cityId → City 引用映射（仅主线程寻路用，每周期复用防 GC）
+            _cityRefs.Clear();
+            if (kingdoms != null && UnrestConfig.Instance.TradeEnabled)
+            {
+                foreach (var k in kingdoms)
+                {
+                    if (k == null || k.data == null) continue;
+                    long kid = k.data.id;
+                    System.Collections.Generic.IEnumerable<City> cityList = null;
+                    try { cityList = k.getCities(); } catch (System.Exception) { }
+                    if (cityList == null) continue;
+                    foreach (var c in cityList)
+                    {
+                        if (c == null) continue;
+                        WorldTile tile = null;
+                        try { tile = c.getTile(false); } catch (System.Exception) { }
+                        if (tile == null) continue; // 无 tile 的城市无法定位，跳过
+                        int tx = tile.x, ty = tile.y;
+                        long cityId = ((long)tx << 32) | (uint)ty;
+                        int gold = 0, buildings = 0, boats = 0, cap = 0;
+                        // amount_gold 为属性（访问器 get_amount_gold，CS0571 不可显式调用）
+                        try { gold = c.amount_gold; } catch (System.Exception) { }
+                        try { buildings = c.countBuildings(); } catch (System.Exception) { }
+                        try { boats = c.countBoats(); } catch (System.Exception) { }
+                        // 原版仓库真实容量（游戏原版自带仓库系统）：ResourceLibrary.gold 为
+                        // public static 资源资产（全局命名空间），storage_max 为公开 int 字段，
+                        // 即该城市金库单槽上限。0 = API 不可用/资源未初始化 → 后台回退到估算。
+                        if (UnrestConfig.Instance.TradeUseRealStockpiles)
+                        {
+                            try
+                            {
+                                var goldAsset = ResourceLibrary.gold;
+                                if (goldAsset != null) cap = goldAsset.storage_max;
+                            }
+                            catch (System.Exception) { cap = 0; }
+                        }
+                        // 邻国王国（City.neighbours_kingdoms 为 internal 不可访问）：
+                        // 改由 PrepareRoutes 用王国几何距离（Kingdom.distanceBetweenKingdom）判定
+                        TradeSimulationWorker.AddCitySnapshot(cityId, kid, gold, buildings, boats,
+                            cap, tx, ty);
+                        _cityRefs[cityId] = c;
+                    }
+                }
+            }
+
+            // 主线程寻路限流（更新缓存并复制到本周期边缓冲）——必须在 PostCycle 之前
+            TradeSimulationWorker.PrepareRoutes(_cityRefs);
 
             // 提交后台计算（主线程零计算；结果由 EconomyTickRunner 轮询消费）。
             // postCycle=false（按钮同步路径）时不投递后台任务，交由调用方同步计算。

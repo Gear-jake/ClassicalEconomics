@@ -195,7 +195,7 @@
     {
       "Id": "distance_decay",
       "Type": "TEXT",
-      "TextVal": "0.005",
+      "TextVal": "0.02",
       "Callback": "EconomyConfigCallbacks:OnDistanceDecayChanged"
     },
     {
@@ -209,6 +209,54 @@
       "Type": "TEXT",
       "TextVal": "0.3",
       "Callback": "EconomyConfigCallbacks:OnPriceDiffWeightChanged"
+    },
+    {
+      "Id": "trade_max_pathfind_pairs",
+      "Type": "TEXT",
+      "TextVal": "100",
+      "Callback": "EconomyConfigCallbacks:OnMaxPathfindPairsChanged"
+    },
+    {
+      "Id": "trade_path_recompute",
+      "Type": "TEXT",
+      "TextVal": "20",
+      "Callback": "EconomyConfigCallbacks:OnPathRecomputeChanged"
+    },
+    {
+      "Id": "trade_max_range",
+      "Type": "TEXT",
+      "TextVal": "120",
+      "Callback": "EconomyConfigCallbacks:OnMaxTradeRangeChanged"
+    },
+    {
+      "Id": "trade_sea_penalty",
+      "Type": "TEXT",
+      "TextVal": "3.0",
+      "Callback": "EconomyConfigCallbacks:OnSeaRoutePenaltyChanged"
+    },
+    {
+      "Id": "trade_non_neighbor_penalty",
+      "Type": "TEXT",
+      "TextVal": "2.0",
+      "Callback": "EconomyConfigCallbacks:OnNonNeighborPenaltyChanged"
+    },
+    {
+      "Id": "trade_max_edges",
+      "Type": "TEXT",
+      "TextVal": "8000",
+      "Callback": "EconomyConfigCallbacks:OnMaxEdgesChanged"
+    },
+    {
+      "Id": "trade_city_capacity",
+      "Type": "TEXT",
+      "TextVal": "50",
+      "Callback": "EconomyConfigCallbacks:OnTradeCityCapacityChanged"
+    },
+    {
+      "Id": "trade_use_real_stockpiles",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnTradeUseRealStockpilesChanged"
     },
     {
       "Id": "population_enabled",

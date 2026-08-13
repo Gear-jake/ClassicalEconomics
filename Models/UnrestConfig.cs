@@ -110,16 +110,45 @@ namespace EconomyMod.Models
         /// <summary>税线倍数：财富超过全球人均×该值的公民需纳税（1.0~3.0）。</summary>
         public float WealthTaxLineMult = 1.5f;
 
-        // ===== 王国贸易金流（TradeSimulationWorker 后台模拟）=====
+        // ===== 地理贸易网络（TradeSimulationWorker 后台模拟：城市为节点 / 王国为聚合层）=====
 
-        /// <summary>是否启用王国贸易金流（人均财富→顺差/逆差，金币经城市仓库零和结算）。</summary>
+        /// <summary>是否启用地理贸易网络（城市供需缺口 → 城市对寻路 → 金币经城市仓库零和结算）。</summary>
         public bool TradeEnabled = true;
 
-        /// <summary>贸易流动比例：每年实际流动的贸易顺差/逆差占模拟余额的比例（0~0.2）。</summary>
+        /// <summary>贸易流动比例：每年实际流动的贸易量占供需缺口比例（0~0.2）。</summary>
         public float TradeFlowRatio = 0.05f;
 
-        /// <summary>距离衰减系数：贸易额随王国间地理距离按 1/(1+平均距离×系数) 衰减（0~0.05，越高远程贸易越弱、经济越地方化）。</summary>
-        public float DistanceDecay = 0.005f;
+        /// <summary>每周期主线程寻路对数量上限（默认 100，限流保护主线程，剩余对下一周期补齐）。</summary>
+        public int MaxPathfindPairs = 100;
+
+        /// <summary>地形变化后全量重算寻路缓存的间隔（周期）。</summary>
+        public int PathRecomputeEvery = 20;
+
+        /// <summary>城市贸易最大距离：仅邻国或距离 ≤ 该值的城市对才做城市级寻路（防止城市对爆炸）。</summary>
+        public float MaxTradeRange = 120f;
+
+        /// <summary>海路惩罚系数：cost = 陆路距离 + 海路距离 × SeaRoutePenalty。</summary>
+        public float SeaRoutePenalty = 3.0f;
+
+        /// <summary>非邻国加成：非邻国城市对在基础 cost 上乘以该系数（邻国 = 1.0）。</summary>
+        public float NonNeighborPenalty = 2.0f;
+
+        /// <summary>距离衰减：贸易量 ∝ 1 / (1 + cost × DistanceDecay)。</summary>
+        public float DistanceDecay = 0.02f;
+
+        /// <summary>单周期最大贸易边数（缓存上限，防止寻路结果无限膨胀）。</summary>
+        public int MaxEdges = 8000;
+
+        /// <summary>城市仓库容量基准（兜底）：capacity = countBuildings() × TradeCityBaseCapacity × 50%。
+        /// 启用 TradeUseRealStockpiles 时优先使用原版真实仓库容量（ResourceLibrary.gold.storage_max，
+        /// 每座城市的金库单槽上限），原版 API 不可用（=0）时才回退到本估算。</summary>
+        public int TradeCityBaseCapacity = 50;
+
+        /// <summary>使用原版真实仓库容量作为城市供需缺口基准（游戏原版自带仓库系统，
+        /// 直接读 ResourceLibrary.gold.storage_max 公开静态字段）；关闭则回退到建筑数估算。</summary>
+        public bool TradeUseRealStockpiles = true;
+
+        // ===== 兼容字段（EconomyEngine/EconomyHUD 消费，城市级引擎按聚合值回填）=====
 
         /// <summary>运输成本：贸易固定摩擦，按比例吃掉全部贸易额（0~0.3，越高物流成本越重、总贸易越少）。</summary>
         public float TransportCost = 0.05f;

@@ -3,7 +3,7 @@
 > A complete macroeconomic simulation mod for WorldBox — wealth tracking, economic cycles, kingdom trade, social unrest and sapient spending.
 
 **Author**: Jake
-**Version**: 0.9.0
+**Version**: 0.10.0
 **Type**: Macro-economy / Simulation enhancement
 **Target**: WorldBox 0.51.2+
 

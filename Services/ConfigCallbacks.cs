@@ -74,6 +74,9 @@ namespace EconomyMod.Services
             "uprising_gini_threshold", "uprising_delay_years", "kill_rich_ratio", "kill_rich_redist_ratio",
             "wealth_tax_enabled", "wealth_tax_ratio", "wealth_tax_line", "trade_enabled",
             "trade_flow_ratio", "distance_decay", "transport_cost", "price_diff_weight",
+            "trade_max_pathfind_pairs", "trade_path_recompute", "trade_max_range",
+            "trade_sea_penalty", "trade_non_neighbor_penalty", "trade_max_edges",
+            "trade_city_capacity", "trade_use_real_stockpiles",
             "population_enabled", "population_overcrowd", "era_enabled",
             "era_duration_years", "collapse_drop_ratio", "collapse_duration_years",
             "flourish_military_ratio", "flourish_periods", "labor_enabled", "labor_wage_base",
@@ -164,13 +167,20 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("wealth_tax_enabled", out var wt))       u.WealthTaxEnabled = wt.BoolVal;
                 if (group.TryGetValue("wealth_tax_ratio", out var wtr))        u.WealthTaxRatio = ParseFloat(wtr.TextVal, u.WealthTaxRatio, 0f, 0.5f);
                 if (group.TryGetValue("wealth_tax_line", out var wtl))         u.WealthTaxLineMult = ParseFloat(wtl.TextVal, u.WealthTaxLineMult, 1f, 3f);
-                // 王国贸易金流
+                // 地理贸易网络（城市为节点 / 王国为聚合层）
                 if (group.TryGetValue("trade_enabled", out var te))       u.TradeEnabled = te.BoolVal;
                 if (group.TryGetValue("trade_flow_ratio", out var tfr))    u.TradeFlowRatio = ParseFloat(tfr.TextVal, u.TradeFlowRatio, 0f, 0.2f);
-                // 地理贸易增强（v0.9）
-                if (group.TryGetValue("distance_decay", out var dd))        u.DistanceDecay = ParseFloat(dd.TextVal, u.DistanceDecay, 0f, 0.05f);
+                if (group.TryGetValue("distance_decay", out var dd))        u.DistanceDecay = ParseFloat(dd.TextVal, u.DistanceDecay, 0.001f, 0.5f);
                 if (group.TryGetValue("transport_cost", out var tc))        u.TransportCost = ParseFloat(tc.TextVal, u.TransportCost, 0f, 0.3f);
                 if (group.TryGetValue("price_diff_weight", out var pdw))    u.PriceDiffWeight = ParseFloat(pdw.TextVal, u.PriceDiffWeight, 0f, 1f);
+                if (group.TryGetValue("trade_max_pathfind_pairs", out var mp))   u.MaxPathfindPairs = ParseInt(mp.TextVal, u.MaxPathfindPairs, 1, 500);
+                if (group.TryGetValue("trade_path_recompute", out var pr))       u.PathRecomputeEvery = ParseInt(pr.TextVal, u.PathRecomputeEvery, 5, 100);
+                if (group.TryGetValue("trade_max_range", out var mtr))           u.MaxTradeRange = ParseFloat(mtr.TextVal, u.MaxTradeRange, 10f, 500f);
+                if (group.TryGetValue("trade_sea_penalty", out var sp))          u.SeaRoutePenalty = ParseFloat(sp.TextVal, u.SeaRoutePenalty, 1f, 10f);
+                if (group.TryGetValue("trade_non_neighbor_penalty", out var nnp)) u.NonNeighborPenalty = ParseFloat(nnp.TextVal, u.NonNeighborPenalty, 1f, 10f);
+                if (group.TryGetValue("trade_max_edges", out var me))            u.MaxEdges = ParseInt(me.TextVal, u.MaxEdges, 100, 50000);
+                if (group.TryGetValue("trade_city_capacity", out var tcc))       u.TradeCityBaseCapacity = ParseInt(tcc.TextVal, u.TradeCityBaseCapacity, 10, 500);
+                if (group.TryGetValue("trade_use_real_stockpiles", out var trs)) u.TradeUseRealStockpiles = trs.BoolVal;
                 // 人口约束（马尔萨斯）
                 if (group.TryGetValue("population_enabled", out var pe))   u.PopulationEnabled = pe.BoolVal;
                 if (group.TryGetValue("population_overcrowd", out var po)) u.OvercrowdRatio = ParseFloat(po.TextVal, u.OvercrowdRatio, 0.5f, 1.0f);
@@ -412,7 +422,7 @@ namespace EconomyMod.Services
             UnrestConfig.Instance.WealthTaxLineMult = ParseFloat(pValue, UnrestConfig.Instance.WealthTaxLineMult, 1f, 3f);
         }
 
-        // ===== 王国贸易金流回调 =====
+        // ===== 地理贸易网络回调 =====
 
         public static void OnTradeEnabledChanged(bool pValue)
         {
@@ -426,7 +436,7 @@ namespace EconomyMod.Services
 
         public static void OnDistanceDecayChanged(string pValue)
         {
-            UnrestConfig.Instance.DistanceDecay = ParseFloat(pValue, UnrestConfig.Instance.DistanceDecay, 0f, 0.05f);
+            UnrestConfig.Instance.DistanceDecay = ParseFloat(pValue, UnrestConfig.Instance.DistanceDecay, 0.001f, 0.5f);
         }
 
         public static void OnTransportCostChanged(string pValue)
@@ -437,6 +447,46 @@ namespace EconomyMod.Services
         public static void OnPriceDiffWeightChanged(string pValue)
         {
             UnrestConfig.Instance.PriceDiffWeight = ParseFloat(pValue, UnrestConfig.Instance.PriceDiffWeight, 0f, 1f);
+        }
+
+        public static void OnMaxPathfindPairsChanged(string pValue)
+        {
+            UnrestConfig.Instance.MaxPathfindPairs = ParseInt(pValue, UnrestConfig.Instance.MaxPathfindPairs, 1, 500);
+        }
+
+        public static void OnPathRecomputeChanged(string pValue)
+        {
+            UnrestConfig.Instance.PathRecomputeEvery = ParseInt(pValue, UnrestConfig.Instance.PathRecomputeEvery, 5, 100);
+        }
+
+        public static void OnMaxTradeRangeChanged(string pValue)
+        {
+            UnrestConfig.Instance.MaxTradeRange = ParseFloat(pValue, UnrestConfig.Instance.MaxTradeRange, 10f, 500f);
+        }
+
+        public static void OnSeaRoutePenaltyChanged(string pValue)
+        {
+            UnrestConfig.Instance.SeaRoutePenalty = ParseFloat(pValue, UnrestConfig.Instance.SeaRoutePenalty, 1f, 10f);
+        }
+
+        public static void OnNonNeighborPenaltyChanged(string pValue)
+        {
+            UnrestConfig.Instance.NonNeighborPenalty = ParseFloat(pValue, UnrestConfig.Instance.NonNeighborPenalty, 1f, 10f);
+        }
+
+        public static void OnMaxEdgesChanged(string pValue)
+        {
+            UnrestConfig.Instance.MaxEdges = ParseInt(pValue, UnrestConfig.Instance.MaxEdges, 100, 50000);
+        }
+
+        public static void OnTradeCityCapacityChanged(string pValue)
+        {
+            UnrestConfig.Instance.TradeCityBaseCapacity = ParseInt(pValue, UnrestConfig.Instance.TradeCityBaseCapacity, 10, 500);
+        }
+
+        public static void OnTradeUseRealStockpilesChanged(bool pValue)
+        {
+            UnrestConfig.Instance.TradeUseRealStockpiles = pValue;
         }
 
         // ===== 人口约束（马尔萨斯）回调 =====
