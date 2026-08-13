@@ -193,6 +193,24 @@
       "Callback": "EconomyConfigCallbacks:OnTradeFlowRatioChanged"
     },
     {
+      "Id": "distance_decay",
+      "Type": "TEXT",
+      "TextVal": "0.005",
+      "Callback": "EconomyConfigCallbacks:OnDistanceDecayChanged"
+    },
+    {
+      "Id": "transport_cost",
+      "Type": "TEXT",
+      "TextVal": "0.05",
+      "Callback": "EconomyConfigCallbacks:OnTransportCostChanged"
+    },
+    {
+      "Id": "price_diff_weight",
+      "Type": "TEXT",
+      "TextVal": "0.3",
+      "Callback": "EconomyConfigCallbacks:OnPriceDiffWeightChanged"
+    },
+    {
       "Id": "population_enabled",
       "Type": "SWITCH",
       "BoolVal": true,

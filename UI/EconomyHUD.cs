@@ -1003,7 +1003,7 @@ namespace EconomyMod.UI
                 color: new Color(0.8f, 0.9f, 0.7f));
             AddLine("");
 
-            // 核心指标卡网格（3列）
+            // 核心指标卡网格（3列，v0.9 新增价格离散度）
             var stats = new (string, string, Color)[]
             {
                 ("GDP", EconomyEngine.GlobalGDP.ToString("F0"), UIStyles.Gold),
@@ -1011,7 +1011,8 @@ namespace EconomyMod.UI
                 ("人口", EconomyEngine.AliveActorCount.ToString(), UIStyles.TextPrimary),
                 ("基尼", EconomyEngine.GiniCoefficient.ToString("F3"), GiniColor(EconomyEngine.GiniCoefficient)),
                 ("贸易", EconomyEngine.TotalTradeVolume.ToString("F0"), UIStyles.Positive),
-                ("泡沫", EconomyCycleModulator.BubbleValue.ToString("F0"), UIStyles.Warning)
+                ("泡沫", EconomyCycleModulator.BubbleValue.ToString("F0"), UIStyles.Warning),
+                ("价格离散", EconomyEngine.PriceDispersion.ToString("F3"), PriceDispersionColor(EconomyEngine.PriceDispersion))
             };
             _lines.Add(UIComponents.CreateStatGrid(_content.transform, stats, _gameFont, contentW, 3));
 
@@ -1029,6 +1030,7 @@ namespace EconomyMod.UI
             {
                 _lines.Add(UIComponents.CreateKingdomRow(_content.transform, rank, k.KingdomName,
                     k.GDP.ToString("F0"), k.AvgWealth.ToString("F1"), k.GiniCoefficient.ToString("F2"),
+                    k.LocalPrice.ToString("F2"),
                     _gameFont, contentW, rank == 1));
                 rank++;
             }
@@ -1074,6 +1076,12 @@ namespace EconomyMod.UI
         private static Color GiniColor(float gini)
         {
             return gini >= 0.7f ? UIStyles.Danger : gini >= 0.55f ? UIStyles.Warning : UIStyles.TextSecondary;
+        }
+
+        /// <summary>价格离散度语义色（≥0.2 高离散/套利空间大 → 琥珀；≥0.1 中等 → 信息蓝；其他弱色）。</summary>
+        private static Color PriceDispersionColor(float pd)
+        {
+            return pd >= 0.2f ? UIStyles.Warning : pd >= 0.1f ? UIStyles.Info : UIStyles.TextSecondary;
         }
 
         /// <summary>

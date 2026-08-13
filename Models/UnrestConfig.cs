@@ -118,6 +118,15 @@ namespace EconomyMod.Models
         /// <summary>贸易流动比例：每年实际流动的贸易顺差/逆差占模拟余额的比例（0~0.2）。</summary>
         public float TradeFlowRatio = 0.05f;
 
+        /// <summary>距离衰减系数：贸易额随王国间地理距离按 1/(1+平均距离×系数) 衰减（0~0.05，越高远程贸易越弱、经济越地方化）。</summary>
+        public float DistanceDecay = 0.005f;
+
+        /// <summary>运输成本：贸易固定摩擦，按比例吃掉全部贸易额（0~0.3，越高物流成本越重、总贸易越少）。</summary>
+        public float TransportCost = 0.05f;
+
+        /// <summary>价格差权重：区域价格差异对贸易额的加成权重（0~1，越高区域套利贸易越强）。</summary>
+        public float PriceDiffWeight = 0.3f;
+
         // ===== 人口约束（马尔萨斯，PopulationEngine）=====
 
         /// <summary>是否启用人口约束（超承载→饥饿/移民压力）。</summary>

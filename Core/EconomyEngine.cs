@@ -32,6 +32,9 @@ namespace EconomyMod.Core
         /// <summary>全球年总产出（生产函数：Workers × Productivity × CapitalFactor）。</summary>
         public static float TotalProduction { get; private set; }
 
+        /// <summary>区域价格离散度（本地价格变异系数 CV，0=各地同价，越高区域套利空间越大）。</summary>
+        public static float PriceDispersion { get; private set; }
+
         /// <summary>按王国 ID 聚合的经济统计（id=0 表示无王国桶）。</summary>
         public static Dictionary<long, KingdomStats> KingdomStats { get; private set; } = new Dictionary<long, KingdomStats>();
 
@@ -52,6 +55,7 @@ namespace EconomyMod.Core
             CycleIndex = res.CycleIndex;
             TotalTradeVolume = res.TotalTradeVolume;
             TotalProduction = res.TotalProduction;
+            PriceDispersion = res.PriceDispersion;
 
             KingdomStats.Clear();
             foreach (var ks in res.Kingdoms)
@@ -65,7 +69,8 @@ namespace EconomyMod.Core
                     ActorCount = ks.ActorCount,
                     GiniCoefficient = ks.Gini,
                     Population = ks.Population,
-                    TradeBalance = ks.TradeBalance
+                    TradeBalance = ks.TradeBalance,
+                    LocalPrice = ks.LocalPrice
                 };
             }
         }

@@ -1,5 +1,5 @@
 [h1]Classical Economics[/h1]
-[b]A macroeconomic simulation mod for WorldBox | v0.8.4[/b]
+[b]A macroeconomic simulation mod for WorldBox | v0.9.0[/b]
 [b]Requires:[/b] WorldBox 0.51.2+ and NeoModLoader (NML)
 
 Gives your world a real economy. The mod tracks the wealth of ALL sapient species (including aliens and dragons), then simulates a full macroeconomic system on top of it:
@@ -8,7 +8,7 @@ Gives your world a real economy. The mod tracks the wealth of ALL sapient specie
 [*]Macro statistics: global GDP, average wealth, Gini coefficient, price index (CPI), per-kingdom breakdown
 [*]Economic cycle: Boom / Recession / Depression / Recovery with bubble buildup and bursts; famine in depression
 [*]Unrest & revolution: inequality triggers rebellions, uprisings and revolutions; war plunder transfers loot to winners (actually working since v0.8.4)
-[*]Kingdom trade: zero-sum trade flows (surplus = deficit, no coins created from nothing) + biome specialties for comparative-advantage trade
+[*]Kingdom trade: zero-sum trade flows (surplus = deficit, no coins created from nothing) + biome specialties for comparative-advantage trade; [b]geographic trade (v0.9.0)[/b] — distance decay between capitals, transport costs, and regional price arbitrage
 [*]Labor division: employed population creates wages through a production function
 [*]Sapient spending: the rich spend yearly in 7 ways (weapons, building investment, arsenal, wholesale, era events, charity, taxes) — coins never vanish
 [*]Era events: Golden Age / Revival / Flourishing / Economic Collapse

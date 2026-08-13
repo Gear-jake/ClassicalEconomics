@@ -3,7 +3,7 @@
 > A complete macroeconomic simulation mod for WorldBox — wealth tracking, economic cycles, kingdom trade, social unrest and sapient spending.
 
 **Author**: Jake
-**Version**: 0.8.4
+**Version**: 0.9.0
 **Type**: Macro-economy / Simulation enhancement
 **Target**: WorldBox 0.51.2+
 
@@ -53,6 +53,9 @@ Everything is built on **vanilla game mechanics** — no external resources, all
 - Kingdoms above global average wealth are trade **surplus** (gain coins), below are **deficit** (pay coins)
 - Settled via city treasury, same channel as vanilla taxes
 - Total surplus = total deficit, **zero-sum, no coins created from nothing**
+- **Geographic trade** (v0.9.0): trade decays with **geographic distance** between kingdom capitals (`1/(1+avg distance × factor)`) — farther apart means weaker long-range trade, a more localized economy
+- **Transport cost** (v0.9.0): logistics friction eats a share of all trade volume; heavier logistics means less total trade
+- **Regional prices & arbitrage** (v0.9.0): each kingdom forms a local price from supply/demand (high output → low price, overcrowding → high price); price gaps drive arbitrage trade; the panel shows price dispersion and per-kingdom local prices
 
 ### 5. Biome economy specialties
 - Each kingdom gets an **output specialty** based on its territory (farming/hunting/lumber/mining/building…) with output bonuses
@@ -205,6 +208,15 @@ Manual install:
 ---
 
 ## Changelog
+
+### v0.9.0 (2026-08-13)
+**Geographic trade enhancement**: trade evolves from an abstract zero-dimensional flow into real geographic economics.
+- **Geographic distance decay**: the background thread resolves each kingdom capital city's tile coordinates (multi-candidate field probing + caching, zero performance cost); trade decays as `1/(1+avg distance × decay factor)` — far-apart kingdoms trade less, economies become more localized; kingdoms with unknown coordinates fall back to factor 1 (no penalty)
+- **Transport cost**: fixed trade friction eating a share of all trade volume; heavier logistics means less total trade
+- **Regional prices & arbitrage trade**: each kingdom forms a regional price index from local supply/demand (high output → ample supply → low local price; overcrowding → strong demand → high local price); kingdoms below the average price run export surpluses, those above run import deficits, and the price-gap weight drives arbitrage flows
+- **Panel additions**: "Price dispersion" stat card (coefficient of variation of local prices, 0 = uniform prices), "Local price" column in the kingdom ranking (≥1.3× baseline amber inflation / ≤0.8× info-blue bargain)
+- **UI fix**: stat card grid rebuilt as multi-row layout — no more horizontal overflow when cards exceed 3
+- New configs: distance decay (0–0.05), transport cost (0–0.3), price diff weight (0–1), localized in all four languages
 
 ### v0.8.4 (2026-08-12)
 **Comprehensive optimization & slimming**: 15 dead-code removals + 10 bug fixes + 4 refactorings, behavior fully unchanged.

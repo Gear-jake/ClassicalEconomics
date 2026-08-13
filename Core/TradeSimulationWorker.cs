@@ -13,9 +13,11 @@ namespace EconomyMod.Core
     /// 结果由主线程轮询 <see cref="TryConsume"/> 消费后发布。
     /// 后台线程绝不接触 Unity 对象，只处理纯值类型/字符串记录 → 线程安全。
     ///
-    /// 贸易金流（原版机制优先）：金币经城市仓库（gold 资源，与原版缴税同渠道）
-    /// 在王国间零和结算——人均财富高于全球均值的王国为贸易顺差（获得金币），
-    /// 低于者为逆差（支付金币），全王国顺差总额 = 逆差总额（总和为零，不凭空造币）。
+    /// 贸易金流（原版机制优先 + v0.9 地理贸易增强）：金币经城市仓库（gold 资源，与原版缴税同渠道）
+    /// 在王国间零和结算——贸易余额 =（特长产出加成 - 基础需求）× GDP × 距离衰减因子 ×（1 - 运输成本）
+    /// + 区域套利（本地价格低于均价者出口盈余，高于均价者进口逆差）。
+    /// 距离衰减随王国首都间地理距离按 1/(1+平均距离×DistanceDecay) 递减；坐标未知的王国不参与距离
+    /// 惩罚（因子=1）。全王国顺差总额 = 逆差总额（总和为零，不凭空造币）。
     /// </summary>
     public static class TradeSimulationWorker
     {
@@ -38,6 +40,8 @@ namespace EconomyMod.Core
             public int Cities;
             public int Boats;
             public int Specialty; // BiomeSpecialty（主线程采集阶段读取，后台线程只读，避免后台访问 Unity 对象）
+            public float CityX;   // 首都城市 tile x 坐标（主线程反射读取，后台只读；NaN=未知）
+            public float CityY;   // 首都城市 tile y 坐标
         }
 
         /// <summary>王国级模拟结果（后台计算，主线程只读消费）。</summary>
@@ -58,6 +62,9 @@ namespace EconomyMod.Core
             public float Productivity; // 平均劳动生产率（职业倍率均值）
             public float Production;  // 年产出 = Workers × Productivity × CapitalFactor（生产函数）
             public int Specialty;     // BiomeSpecialty（主线程采集阶段读取的纯数据）
+            public float LocalPrice;  // 区域价格指数（全局 CPI × 本地供需系数，1.0=基准）
+            public float CityX;       // 首都城市 x 坐标（纯数据，供距离计算）
+            public float CityY;       // 首都城市 y 坐标
         }
 
         /// <summary>一轮周期模拟结果。</summary>
@@ -70,6 +77,7 @@ namespace EconomyMod.Core
             public int CycleIndex;
             public long TotalTradeVolume; // 全王国出口总额（顺差之和）
             public float TotalProduction; // 全球年总产出（生产函数供给侧）
+            public float PriceDispersion; // 区域价格离散度（本地价格变异系数 CV，0=各地同价）
             public readonly List<KingdomSim> Kingdoms = new List<KingdomSim>(16);
         }
 
@@ -123,12 +131,13 @@ namespace EconomyMod.Core
         }
 
         public static void AddKingdom(long id, string name, int population, int capacity,
-            long food, int cities, int boats, int specialty)
+            long food, int cities, int boats, int specialty, float cityX, float cityY)
         {
             _collectKingdoms.Add(new KingdomFacts
             {
                 Id = id, Name = name, Population = population, Capacity = capacity,
-                Food = food, Cities = cities, Boats = boats, Specialty = specialty
+                Food = food, Cities = cities, Boats = boats, Specialty = specialty,
+                CityX = cityX, CityY = cityY
             });
         }
 
@@ -317,7 +326,9 @@ namespace EconomyMod.Core
                     Capacity = f.Capacity,
                     FoodPerCapita = f.Population > 0 ? (float)f.Food / f.Population : 0f,
                     Pressure = f.Capacity > 0 ? (float)f.Population / f.Capacity : 0f,
-                    Specialty = f.Specialty
+                    Specialty = f.Specialty,
+                    CityX = f.CityX, // 首都坐标（纯数据透传，供距离计算；NaN=未知）
+                    CityY = f.CityY
                 };
                 if (acc.TryGetValue(f.Id, out var a))
                 {
@@ -361,19 +372,106 @@ namespace EconomyMod.Core
             }
             res.TotalProduction = (float)totalProduction;
 
-            // --- 贸易金流模拟（零和：顺差总额 = 逆差总额）---
-            // --- 贸易金流模拟（比较优势：特长王国出口，非特长王国进口）---
-            // 有 biome 特长（矿产/木材/粮食/贸易品）的王国生产特长产品 → 贸易顺差（金币流入）；
-            // 无特长或特长弱的王国需要进口 → 贸易逆差（金币流出）。按王国 GDP ±10% 限幅防极端。
-            double totalExport = 0d;
+            // --- 区域价格指数（v0.9 地理贸易）：本地价格 = 上期全局 CPI × 本地供需系数 ---
+            // 供给侧：人均产出相对全球均值（产出高→供给充足→本地价低）；
+            // 需求侧：人口压力（超载→需求旺盛→本地价高）。无王国桶不参与（LocalPrice=基准 CPI）。
+            var cfg = UnrestConfig.Instance; // 后台只读纯数据配置（非 Unity 对象，与 BiomeEconomy.GetBonus 同模式）
+            float baseCPI = EconomyCycleModulator.CurrentCPI; // 上期价格指数（Evaluate 于发布后更新，此处读到即本期基准）
+            float totalPop = 0f;
+            foreach (var ks in res.Kingdoms)
+                if (ks.KingdomId != 0) totalPop += ks.Population;
+            float globalPerCapitaProd = totalPop > 0f ? (float)totalProduction / totalPop : 0f;
+
+            float meanPrice = 0f;
+            int priceCount = 0;
             foreach (var ks in res.Kingdoms)
             {
+                if (ks.KingdomId == 0) { ks.LocalPrice = baseCPI; continue; }
+                float localPerCapitaProd = ks.Population > 0f ? ks.Production / ks.Population : 0f;
+                float supplyRatio = globalPerCapitaProd > 0f ? localPerCapitaProd / globalPerCapitaProd : 1f;
+                float demandRatio = 1f + Mathf.Clamp(ks.Pressure - 1f, -0.5f, 0.5f) * 0.5f; // 超载/空置 ±25%
+                float localFactor = (1f / Mathf.Max(supplyRatio, 0.05f)) * Mathf.Max(demandRatio, 0.5f);
+                ks.LocalPrice = baseCPI * Mathf.Clamp(localFactor, 0.5f, 2f); // 限幅 0.5×~2× 防极端
+                meanPrice += ks.LocalPrice;
+                priceCount++;
+            }
+            if (priceCount > 0) meanPrice /= priceCount;
+
+            // 价格离散度 = 本地价格变异系数 CV（标准差/均值，0=各地同价，反映区域套利空间）
+            if (priceCount > 1 && meanPrice > 0f)
+            {
+                double variance = 0d;
+                foreach (var ks in res.Kingdoms)
+                {
+                    if (ks.KingdomId == 0) continue;
+                    double d = ks.LocalPrice - meanPrice;
+                    variance += d * d;
+                }
+                variance /= priceCount;
+                res.PriceDispersion = (float)(Math.Sqrt(variance) / meanPrice);
+            }
+            else res.PriceDispersion = 0f;
+
+            // --- 距离矩阵（v0.9 地理贸易）：王国首都间欧氏距离 → 平均距离 → 衰减因子 ---
+            // 坐标无效（NaN）的王国不参与距离计算，因子回退 1（不惩罚）。O(m²) 仅后台线程，开销可忽略。
+            int kingdomCount = res.Kingdoms.Count;
+            var distanceFactor = new float[kingdomCount];
+            for (int i = 0; i < kingdomCount; i++) distanceFactor[i] = 1f;
+            var validIdx = new List<int>(kingdomCount);
+            for (int i = 0; i < kingdomCount; i++)
+            {
+                var ks = res.Kingdoms[i];
+                if (ks.KingdomId != 0 && !float.IsNaN(ks.CityX) && !float.IsNaN(ks.CityY)) validIdx.Add(i);
+            }
+            float distanceDecay = cfg != null ? Mathf.Clamp(cfg.DistanceDecay, 0f, 0.05f) : 0f;
+            if (validIdx.Count > 1 && distanceDecay > 0f)
+            {
+                var xs = new float[validIdx.Count];
+                var ys = new float[validIdx.Count];
+                for (int i = 0; i < validIdx.Count; i++)
+                {
+                    var ks = res.Kingdoms[validIdx[i]];
+                    xs[i] = ks.CityX; ys[i] = ks.CityY;
+                }
+                for (int i = 0; i < validIdx.Count; i++)
+                {
+                    double sum = 0d;
+                    int cnt = 0;
+                    for (int j = 0; j < validIdx.Count; j++)
+                    {
+                        if (j == i) continue;
+                        double dx = xs[i] - xs[j];
+                        double dy = ys[i] - ys[j];
+                        sum += Math.Sqrt(dx * dx + dy * dy);
+                        cnt++;
+                    }
+                    float avg = cnt > 0 ? (float)(sum / cnt) : 0f;
+                    distanceFactor[validIdx[i]] = 1f / (1f + avg * distanceDecay);
+                }
+            }
+
+            // --- 贸易金流模拟（零和：顺差总额 = 逆差总额）---
+            // 比较优势（特长王国出口）+ 地理（距离衰减/运输成本）+ 区域套利（价格差）三者叠加。
+            // 有 biome 特长（矿产/木材/粮食/贸易品）的王国生产特长产品 → 贸易顺差（金币流入）；
+            // 无特长或特长弱、或本地价高的王国需进口 → 贸易逆差（金币流出）。按王国 GDP ±10% 限幅防极端。
+            float transportCost = cfg != null ? Mathf.Clamp(cfg.TransportCost, 0f, 0.3f) : 0f;
+            float priceDiffWeight = cfg != null ? Mathf.Clamp(cfg.PriceDiffWeight, 0f, 1f) : 0f;
+            double totalExport = 0d;
+            for (int i = 0; i < kingdomCount; i++)
+            {
+                var ks = res.Kingdoms[i];
                 if (ks.KingdomId == 0 || ks.ActorCount <= 0) continue;
                 // 特长在采集阶段（主线程）读取，后台只读纯数据，绝不访问 Unity 对象（S4 修复）
                 var specialty = (BiomeSpecialty)ks.Specialty;
                 float bonus = BiomeEconomy.GetBonus(specialty);
-                // 贸易余额 = 特长产出加成 - 基础需求（3%）
-                double balance = (bonus - 0.03d) * ks.GDP;
+                // 贸易余额 =（特长产出加成 - 基础需求 3%）× GDP × 距离衰减 ×（1 - 运输成本）
+                double balance = (bonus - 0.03d) * ks.GDP * distanceFactor[i] * (1d - transportCost);
+                // 区域套利：本地价低于均价 → 商品便宜 → 出口盈余；高于均价 → 进口逆差
+                if (priceDiffWeight > 0f && meanPrice > 0f && ks.LocalPrice > 0f)
+                {
+                    double priceGap = (meanPrice - ks.LocalPrice) / meanPrice;
+                    balance += priceGap * ks.GDP * priceDiffWeight;
+                }
                 double cap = Math.Abs(ks.GDP) * 0.10d;
                 if (balance > cap) balance = cap;
                 else if (balance < -cap) balance = -cap;

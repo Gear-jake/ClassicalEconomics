@@ -73,7 +73,8 @@ namespace EconomyMod.Services
             "war_waste_ratio", "revolution_delay_years", "revolution_kill_ratio",
             "uprising_gini_threshold", "uprising_delay_years", "kill_rich_ratio", "kill_rich_redist_ratio",
             "wealth_tax_enabled", "wealth_tax_ratio", "wealth_tax_line", "trade_enabled",
-            "trade_flow_ratio", "population_enabled", "population_overcrowd", "era_enabled",
+            "trade_flow_ratio", "distance_decay", "transport_cost", "price_diff_weight",
+            "population_enabled", "population_overcrowd", "era_enabled",
             "era_duration_years", "collapse_drop_ratio", "collapse_duration_years",
             "flourish_military_ratio", "flourish_periods", "labor_enabled", "labor_wage_base",
             "real_time_refresh", "real_time_interval", "money_velocity", "inflation_bubble_boost",
@@ -166,6 +167,10 @@ namespace EconomyMod.Services
                 // 王国贸易金流
                 if (group.TryGetValue("trade_enabled", out var te))       u.TradeEnabled = te.BoolVal;
                 if (group.TryGetValue("trade_flow_ratio", out var tfr))    u.TradeFlowRatio = ParseFloat(tfr.TextVal, u.TradeFlowRatio, 0f, 0.2f);
+                // 地理贸易增强（v0.9）
+                if (group.TryGetValue("distance_decay", out var dd))        u.DistanceDecay = ParseFloat(dd.TextVal, u.DistanceDecay, 0f, 0.05f);
+                if (group.TryGetValue("transport_cost", out var tc))        u.TransportCost = ParseFloat(tc.TextVal, u.TransportCost, 0f, 0.3f);
+                if (group.TryGetValue("price_diff_weight", out var pdw))    u.PriceDiffWeight = ParseFloat(pdw.TextVal, u.PriceDiffWeight, 0f, 1f);
                 // 人口约束（马尔萨斯）
                 if (group.TryGetValue("population_enabled", out var pe))   u.PopulationEnabled = pe.BoolVal;
                 if (group.TryGetValue("population_overcrowd", out var po)) u.OvercrowdRatio = ParseFloat(po.TextVal, u.OvercrowdRatio, 0.5f, 1.0f);
@@ -417,6 +422,21 @@ namespace EconomyMod.Services
         public static void OnTradeFlowRatioChanged(string pValue)
         {
             UnrestConfig.Instance.TradeFlowRatio = ParseFloat(pValue, UnrestConfig.Instance.TradeFlowRatio, 0f, 0.2f);
+        }
+
+        public static void OnDistanceDecayChanged(string pValue)
+        {
+            UnrestConfig.Instance.DistanceDecay = ParseFloat(pValue, UnrestConfig.Instance.DistanceDecay, 0f, 0.05f);
+        }
+
+        public static void OnTransportCostChanged(string pValue)
+        {
+            UnrestConfig.Instance.TransportCost = ParseFloat(pValue, UnrestConfig.Instance.TransportCost, 0f, 0.3f);
+        }
+
+        public static void OnPriceDiffWeightChanged(string pValue)
+        {
+            UnrestConfig.Instance.PriceDiffWeight = ParseFloat(pValue, UnrestConfig.Instance.PriceDiffWeight, 0f, 1f);
         }
 
         // ===== 人口约束（马尔萨斯）回调 =====
