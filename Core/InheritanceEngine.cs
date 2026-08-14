@@ -73,6 +73,9 @@ namespace EconomyMod.Core
             foreach (var actor in aliveList)
             {
                 if (actor == null) continue;
+                // 动物无遗产、不参与灾害经济冲击，跳过（DataCollector 同款 civ 过滤），
+                // 避免每 3 秒对全部动物（往往占总单位数相当比例）做无意义扫描。
+                if (actor.asset == null || !actor.asset.civ) continue;
                 long id;
                 try { id = actor.id; }
                 catch (System.Exception) { continue; } // 半销毁对象读取 id 可能抛异常，跳过

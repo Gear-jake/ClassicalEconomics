@@ -53,8 +53,6 @@ namespace EconomyMod.Services
                 LM.ApplyLocale(false);
                 // 按模组界面语言把配置项标签注入当前 NML locale（设置窗口跟随 ui_language）
                 RegisterConfigLocale();
-                // 验证标签是否解析为中文（写入日志便于部署检查）
-                UnityEngine.Debug.Log($"[ClassicalEconomics] 设置标签示例: economy_general = {LM.Get("economy_general")} / gini_threshold = {LM.Get("gini_threshold")}");
             }
             catch (System.Exception e)
             {
@@ -73,13 +71,14 @@ namespace EconomyMod.Services
             "war_waste_ratio", "revolution_delay_years", "revolution_kill_ratio",
             "uprising_gini_threshold", "uprising_delay_years", "kill_rich_ratio", "kill_rich_redist_ratio",
             "wealth_tax_enabled", "wealth_tax_ratio", "wealth_tax_line", "trade_enabled",
-            "trade_flow_ratio", "distance_decay", "transport_cost", "price_diff_weight",
+            "trade_flow_ratio",
             "trade_max_pathfind_pairs", "trade_path_recompute", "trade_max_range",
             "trade_sea_penalty", "trade_non_neighbor_penalty", "trade_max_edges",
             "trade_city_capacity", "trade_use_real_stockpiles",
             "population_enabled", "population_overcrowd", "era_enabled",
             "era_duration_years", "collapse_drop_ratio", "collapse_duration_years",
             "flourish_military_ratio", "flourish_periods", "labor_enabled", "labor_wage_base",
+            "trade_power_enabled", "trade_surplus_ratio", "trade_deficit_ratio",
             "real_time_refresh", "real_time_interval", "money_velocity", "inflation_bubble_boost",
             "disaster_enabled", "disaster_wealth_loss", "disaster_mine_bonus", "banking_enabled",
             "credit_rate", "default_rate_depression", "crisis_contagion_threshold"
@@ -170,9 +169,6 @@ namespace EconomyMod.Services
                 // 地理贸易网络（城市为节点 / 王国为聚合层）
                 if (group.TryGetValue("trade_enabled", out var te))       u.TradeEnabled = te.BoolVal;
                 if (group.TryGetValue("trade_flow_ratio", out var tfr))    u.TradeFlowRatio = ParseFloat(tfr.TextVal, u.TradeFlowRatio, 0f, 0.2f);
-                if (group.TryGetValue("distance_decay", out var dd))        u.DistanceDecay = ParseFloat(dd.TextVal, u.DistanceDecay, 0.001f, 0.5f);
-                if (group.TryGetValue("transport_cost", out var tc))        u.TransportCost = ParseFloat(tc.TextVal, u.TransportCost, 0f, 0.3f);
-                if (group.TryGetValue("price_diff_weight", out var pdw))    u.PriceDiffWeight = ParseFloat(pdw.TextVal, u.PriceDiffWeight, 0f, 1f);
                 if (group.TryGetValue("trade_max_pathfind_pairs", out var mp))   u.MaxPathfindPairs = ParseInt(mp.TextVal, u.MaxPathfindPairs, 1, 500);
                 if (group.TryGetValue("trade_path_recompute", out var pr))       u.PathRecomputeEvery = ParseInt(pr.TextVal, u.PathRecomputeEvery, 5, 100);
                 if (group.TryGetValue("trade_max_range", out var mtr))           u.MaxTradeRange = ParseFloat(mtr.TextVal, u.MaxTradeRange, 10f, 500f);
@@ -191,6 +187,10 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("collapse_duration_years", out var cdy)) u.CollapseDurationYears = ParseInt(cdy.TextVal, u.CollapseDurationYears, 1, 20);
                 if (group.TryGetValue("flourish_military_ratio", out var fmr)) u.FlourishMilitaryRatio = ParseFloat(fmr.TextVal, u.FlourishMilitaryRatio, 0.05f, 0.9f);
                 if (group.TryGetValue("flourish_periods", out var fp))        u.FlourishPeriods = ParseInt(fp.TextVal, u.FlourishPeriods, 1, 10);
+                // 贸易军力（顺差/逆差 → 国民战斗加成）
+                if (group.TryGetValue("trade_power_enabled", out var tpe))     u.TradePowerEnabled = tpe.BoolVal;
+                if (group.TryGetValue("trade_surplus_ratio", out var tsr))     u.TradeSurplusRatio = ParseFloat(tsr.TextVal, u.TradeSurplusRatio, 0.001f, 0.5f);
+                if (group.TryGetValue("trade_deficit_ratio", out var tdr))     u.TradeDeficitRatio = ParseFloat(tdr.TextVal, u.TradeDeficitRatio, 0.001f, 0.5f);
                 // 劳动分工
                 if (group.TryGetValue("labor_enabled", out var le))       u.LaborEnabled = le.BoolVal;
                 if (group.TryGetValue("labor_wage_base", out var lwb))    u.LaborWageBase = ParseFloat(lwb.TextVal, u.LaborWageBase, 0f, 5f);
@@ -256,6 +256,7 @@ namespace EconomyMod.Services
             // 语言切换后：刷新设置窗口标签 + 悬浮窗静态文本 + 重新注入按钮 tooltip（4 语言）
             try { RegisterConfigLocale(); } catch (System.Exception) { }
             try { EconomyHUD.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
+            try { TradeShareWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { EconomyUI.ReapplyTooltips(); } catch (System.Exception) { }
         }
 
@@ -434,21 +435,6 @@ namespace EconomyMod.Services
             UnrestConfig.Instance.TradeFlowRatio = ParseFloat(pValue, UnrestConfig.Instance.TradeFlowRatio, 0f, 0.2f);
         }
 
-        public static void OnDistanceDecayChanged(string pValue)
-        {
-            UnrestConfig.Instance.DistanceDecay = ParseFloat(pValue, UnrestConfig.Instance.DistanceDecay, 0.001f, 0.5f);
-        }
-
-        public static void OnTransportCostChanged(string pValue)
-        {
-            UnrestConfig.Instance.TransportCost = ParseFloat(pValue, UnrestConfig.Instance.TransportCost, 0f, 0.3f);
-        }
-
-        public static void OnPriceDiffWeightChanged(string pValue)
-        {
-            UnrestConfig.Instance.PriceDiffWeight = ParseFloat(pValue, UnrestConfig.Instance.PriceDiffWeight, 0f, 1f);
-        }
-
         public static void OnMaxPathfindPairsChanged(string pValue)
         {
             UnrestConfig.Instance.MaxPathfindPairs = ParseInt(pValue, UnrestConfig.Instance.MaxPathfindPairs, 1, 500);
@@ -531,6 +517,23 @@ namespace EconomyMod.Services
         public static void OnFlourishPeriodsChanged(string pValue)
         {
             UnrestConfig.Instance.FlourishPeriods = ParseInt(pValue, UnrestConfig.Instance.FlourishPeriods, 1, 10);
+        }
+
+        // ===== 贸易军力回调 =====
+
+        public static void OnTradePowerEnabledChanged(string pValue)
+        {
+            UnrestConfig.Instance.TradePowerEnabled = pValue == "true" || pValue == "1";
+        }
+
+        public static void OnTradeSurplusRatioChanged(string pValue)
+        {
+            UnrestConfig.Instance.TradeSurplusRatio = ParseFloat(pValue, UnrestConfig.Instance.TradeSurplusRatio, 0.001f, 0.5f);
+        }
+
+        public static void OnTradeDeficitRatioChanged(string pValue)
+        {
+            UnrestConfig.Instance.TradeDeficitRatio = ParseFloat(pValue, UnrestConfig.Instance.TradeDeficitRatio, 0.001f, 0.5f);
         }
 
         // ===== 劳动分工回调 =====

@@ -1,8 +1,8 @@
 {
   "name": "古典经济学",
   "author": "Jake",
-  "version": "0.10.0",
-  "description": "古典经济学 WorldBox Mod - 采集开智种族财富、计算 GDP/基尼系数、按王国拆分指标、经济周期、城市级地理贸易网络（城市为节点/王国聚合/海路容量/原版真实仓库）、社会动荡、劳动价值、灾害冲击与银行信贷；内置 Optime 兼容层（Transpiler 运行时 null 防御，零 Optime 修改），支持简中/繁中/English/Русский 四语言",
+  "version": "0.13.0",
+  "description": "古典经济学 WorldBox Mod - 采集开智种族财富、计算 GDP/基尼系数、按王国拆分指标、经济周期、城市级地理贸易网络（城市为节点/王国聚合/海路容量/原版真实仓库，距离衰减/运输成本/套利权重由游戏状态自适应推导）、贸易净额排名（城市/国家出口−进口）、贸易军力（顺差国国民战斗加成、逆差国惩罚）、社会动荡、劳动价值、灾害冲击与银行信贷；内置 Optime 兼容层（Transpiler 运行时 null 防御，零 Optime 修改），支持简中/繁中/English/Русский 四语言",
   "targetGameBuild": 719,
   "iconPath": "icon.png",
   "ModType": "NEOMOD",

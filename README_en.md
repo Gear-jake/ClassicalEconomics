@@ -3,7 +3,7 @@
 > A complete macroeconomic simulation mod for WorldBox — wealth tracking, economic cycles, kingdom trade, social unrest and sapient spending.
 
 **Author**: Jake
-**Version**: 0.10.0
+**Version**: 0.13.0
 **Type**: Macro-economy / Simulation enhancement
 **Target**: WorldBox 0.51.2+
 
@@ -53,9 +53,10 @@ Everything is built on **vanilla game mechanics** — no external resources, all
 - Kingdoms above global average wealth are trade **surplus** (gain coins), below are **deficit** (pay coins)
 - Settled via city treasury, same channel as vanilla taxes
 - Total surplus = total deficit, **zero-sum, no coins created from nothing**
-- **Geographic trade** (v0.9.0): trade decays with **geographic distance** between kingdom capitals (`1/(1+avg distance × factor)`) — farther apart means weaker long-range trade, a more localized economy
-- **Transport cost** (v0.9.0): logistics friction eats a share of all trade volume; heavier logistics means less total trade
-- **Regional prices & arbitrage** (v0.9.0): each kingdom forms a local price from supply/demand (high output → low price, overcrowding → high price); price gaps drive arbitrage trade; the panel shows price dispersion and per-kingdom local prices
+- **Adaptive trade parameters** (v0.11): distance decay / transport cost / arbitrage weight are derived each cycle from game state (map scale / sea-route share / fleet size / avg haul distance / price dispersion), EMA-smoothed, no fixed config
+- **Regional prices**: each kingdom forms a local price from supply/demand (high output → low price, overcrowding → high price); price gaps drive arbitrage trade
+- **Net trade balance ranking** (v0.13): a standalone floating window ranks cities/kingdoms by net trade (total exports − imports), surplus green / deficit red; a kingdom's value = sum of its cities
+- **Trade military power** (v0.13): surplus nations' people gain damage/armor, deficit nations suffer damage (surplus rate = net ÷ GDP, thresholds configurable) — trade powerhouses fight stronger
 
 ### 5. Biome economy specialties
 - Each kingdom gets an **output specialty** based on its territory (farming/hunting/lumber/mining/building…) with output bonuses
@@ -208,6 +209,17 @@ Manual install:
 ---
 
 ## Changelog
+
+### v0.13.0 (2026-08-14)
+**Net trade balance ranking + trade military power**.
+- **Net trade ranking**: the floating window is reworked from a share-trend line chart into two net-balance tables (cities / kingdoms), each row showing export / import / net (exports − imports), net descending, surplus green / deficit red. A kingdom's net = sum of its cities' trade, naturally consistent.
+- **Trade military power**: trade now maps to combat — surplus nations (net ÷ GDP ≥ threshold) grant their people real damage/armor (+20 damage / +10 armor), deficit nations −20 damage. Configurable toggle + thresholds (4 languages); only re-traverses citizens when the tier changes, O(1) otherwise.
+- **Same-kingdom city trade allowed**: city trade is no longer cross-border-only; same-kingdom city pairs also build land edges and settle, counted in city net (offsetting at kingdom level).
+
+### v0.12.0 (2026-08-14)
+**Trade pair tables (later reworked to net ranking in v0.13)**.
+- Replaced the share line chart with city↔city / kingdom↔kingdom pair tables, cities showing real names (collected on main thread via `SafeCityName`).
+- Fixes: trade trend chart freezing after 50 years (`HistoryService.GetRecent` ring-buffer read start bug → `start=_head-take`, Capacity 100→50); share window drag drift (anchor/pivot to `(0,0.5)` convention).
 
 ### v0.9.0 (2026-08-13)
 **Geographic trade enhancement**: trade evolves from an abstract zero-dimensional flow into real geographic economics.

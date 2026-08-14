@@ -14,7 +14,7 @@ Write-Host "CSC: $csc"
 
 Set-Location 'e:\code\new\2026-08-11-16-45-00\ClassicalEconomics'
 $out = 'bin\EconomyMod.dll'
-if (Test-Path $out) { Remove-Item $out -Force }
+if (Test-Path $out) { try { [System.IO.File]::Delete((Join-Path (Get-Location) $out)) } catch { } }
 if (-not (Test-Path 'bin')) { New-Item -ItemType Directory -Path 'bin' | Out-Null }
 
 $src = @(
@@ -41,6 +41,7 @@ $src = @(
     'UI\ChartMeshGraphic.cs',
     'UI\EventWindow.cs',
     'UI\RichListWindow.cs',
+    'UI\TradeShareWindow.cs',
     'UI\FloatingWindow.cs',
     'UI\IconLoader.cs',
     'UI\UIHelpers.cs',
@@ -54,6 +55,7 @@ $src = @(
     'Core\KingdomMonitorEngine.cs',
     'Core\DisasterEngine.cs',
     'Core\BankingEngine.cs',
+    'Core\TradePowerEngine.cs',
     'Core\BiomeEconomy.cs'
 )
 

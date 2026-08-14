@@ -20,7 +20,7 @@ namespace EconomyMod.Core
     /// - 邻国判定：原版城市邻国数据（City.neighbours_kingdoms 等）为 internal 不可访问，
     ///       以王国几何距离为代理——Kingdom.distanceBetweenKingdom ≤ MaxTradeRange ⇒ 邻国。
     /// - 成本：cost = (陆路距离 + 海路距离 × SeaRoutePenalty) × (邻国 ? 1 : NonNeighborPenalty)
-    ///       贸易量 ∝ 1 / (1 + cost × DistanceDecay) × 供需缺口 × TradeFlowRatio。
+    ///       贸易量 = min(|gapA|,|gapB|) × 距离衰减 × 运输摩擦 × 套利加成 × TradeFlowRatio。
     /// - 供需缺口：城市 gap = gold − 仓库容量；容量优先用原版真实仓库容量
     ///       （ResourceLibrary.gold.storage_max，游戏原版自带仓库系统，用户确认方案），
     ///       不可用（=0）时回退到 建筑数 × TradeCityBaseCapacity × 50% 估算；
@@ -30,9 +30,10 @@ namespace EconomyMod.Core
     /// 寻路缓存三类失效：Reset() 世界重置清空 / 每 PathRecomputeEvery 周期全量重算 /
     /// 王国生灭增量增删。
     ///
-    /// v0.9.1 兼容：生产函数（Workers × Productivity × CapitalFactor）、区域价格指数
-    /// （LocalPrice = 全局 CPI × 供需系数，clamp 0.5~2）、价格离散度（PriceDispersion=CV）、
-    /// 平均距离衰减因子（AvgDistanceFactor）等统计字段仍在此计算并发布，供 HUD 展示。
+    /// v0.11：生产函数（Workers × Productivity × CapitalFactor）、区域价格指数
+    /// （LocalPrice = 全局 CPI × 供需系数，clamp 0.5~2）、价格离散度（PriceDispersion=CV）；
+    /// 距离衰减/运输成本/套利权重三个参数由游戏状态每周期自适应推导（EMA 平滑 + 单点 clamp，
+    /// 无固定配置），并在 ComputeTrade 内真正参与流量计算。
     /// </summary>
     public static class TradeSimulationWorker
     {
@@ -64,6 +65,7 @@ namespace EconomyMod.Core
         {
             public long CityId;            // ((long)x << 32) | (uint)y（原版 City 无稳定 id，坐标唯一）
             public long KingdomId;
+            public string Name;            // 城市名（主线程采集 SafeCityName，后台聚合贸易对时只读）
             public int Gold;               // amount_gold（属性）
             public int Buildings;          // countBuildings()：兜底容量基准 = Buildings × TradeCityBaseCapacity × 50%
             public int Boats;              // countBoats()
@@ -127,16 +129,17 @@ namespace EconomyMod.Core
             public int CycleIndex;
             public long TotalTradeVolume; // 全图出口总额（各边出口之和）
             public float TotalProduction; // 全球年总产出（生产函数供给侧）
-            public float PriceDispersion; // 区域价格离散度（本地价格变异系数 CV，0=各地同价）
+            public float PriceDispersion; // 区域价格离散度（本地价格变异系数 CV，0=各地同价；套利权重推导输入）
 
-            // ===== 地理贸易实际生效值（v0.9.1：暴露给 HUD 展示）=====
-            public float AvgDistanceFactor; // 参与贸易王国的平均距离衰减因子（1=无衰减，越低远程贸易越弱）
-            public float DistanceDecay;     // 实际生效的距离衰减系数（clamp 后）
-            public float TransportCost;     // 实际生效的运输成本比例（clamp 后）
-            public float PriceDiffWeight;   // 实际生效的价格差（套利）权重（clamp 后）
+            // ===== 地理贸易实际生效值（v0.11：自适应推导，供 ComputeTrade 使用）=====
+            public float DistanceDecay;     // 实际生效的距离衰减系数（推导后 clamp）
+            public float TransportCost;     // 实际生效的运输成本比例（推导后 clamp）
+            public float PriceDiffWeight;   // 实际生效的价格差（套利）权重（推导后 clamp）
 
             public readonly List<KingdomSim> Kingdoms = new List<KingdomSim>(16);
             public readonly List<TradeFlow> TradeFlows = new List<TradeFlow>(128); // 本周期按边结算明细
+            public readonly List<TradeBalance> CityBalances = new List<TradeBalance>(64);    // 按城市净贸易额（降序）
+            public readonly List<TradeBalance> KingdomBalances = new List<TradeBalance>(16); // 按国家净贸易额（降序）
         }
 
         // ===== 职业代码 → 生产率倍率（纯数据，后台线程安全；与 LaborEngine.JobCodeOf 对应）=====
@@ -164,6 +167,7 @@ namespace EconomyMod.Core
         private static List<CitySnapshot> _collectCities = new List<CitySnapshot>(128);
         private static List<TradeEdge> _collectEdges = new List<TradeEdge>(512);
         private static readonly List<Actor> _unitPool = new List<Actor>(64); // 贸易逆差扣款兜底
+        private static Dictionary<long, City> _flowCityRefs; // cityId → City（主线程采集期缓存，供 ApplyTradeFlows O(1) 反查）
 
         // ===== 后台计算缓冲与握手 =====
         private static List<ActorRecord> _computeActors = new List<ActorRecord>(4096);
@@ -176,6 +180,11 @@ namespace EconomyMod.Core
         private static volatile string _workerError;      // 后台线程异常信息（主线程消费时记录日志，避免后台线程调用 Unity API）
         private static int _cycleIndex;
         private static int _generation;           // 代际计数：防止过期后台任务写入结果
+
+        // ===== 自适应贸易参数 EMA 平滑状态（v0.11：后台单任务互斥，无竞态；Reset 归零）=====
+        private static float _smDecay = 0.02f;     // EMA 距离衰减
+        private static float _smTransport = 0.05f; // EMA 运输成本
+        private static float _smPriceW = 0.3f;     // EMA 套利权重
 
         /// <summary>最近一次已消费的结果（供各引擎读取；主线程使用，不跨周期持有）。</summary>
         public static CycleResult LastResult { get; private set; }
@@ -223,12 +232,12 @@ namespace EconomyMod.Core
         }
 
         /// <summary>采集一个城市快照（地理贸易网络节点）。stockpileCap = 原版仓库真实容量，0 = 兜底估算。</summary>
-        public static void AddCitySnapshot(long cityId, long kingdomId, int gold, int buildings,
+        public static void AddCitySnapshot(long cityId, long kingdomId, string name, int gold, int buildings,
             int boats, int stockpileCap, int tileX, int tileY)
         {
             _collectCities.Add(new CitySnapshot
             {
-                CityId = cityId, KingdomId = kingdomId, Gold = gold, Buildings = buildings,
+                CityId = cityId, KingdomId = kingdomId, Name = name, Gold = gold, Buildings = buildings,
                 Boats = boats, StockpileCap = stockpileCap, TileX = tileX, TileY = tileY
             });
         }
@@ -240,6 +249,8 @@ namespace EconomyMod.Core
         /// </summary>
         public static void PrepareRoutes(Dictionary<long, City> cityRefs)
         {
+            // 缓存本周期 cityId→City 映射，供 ApplyTradeFlows 用 O(1) 反查替代逐王国遍历（性能优化）
+            _flowCityRefs = cityRefs;
             var cfg = UnrestConfig.Instance;
             if (cfg == null || !cfg.TradeEnabled) return; // 未启用贸易：不跑寻路，后台无边
             if (_collectCities.Count < 2) return;
@@ -326,6 +337,25 @@ namespace EconomyMod.Core
 
             // 王国级邻接：原版城市邻国数据（City.neighbours_kingdoms 等）为 internal 不可访问，
             // 以王国几何距离为公开 API 代理——distanceBetweenKingdom ≤ MaxTradeRange ⇒ 邻国
+
+            // 同王国内城市对：直接建陆路边（成本=欧氏距离，无惩罚）。城市间贸易可发生在国内。
+            foreach (var kv in kingdomCities)
+            {
+                var list = kv.Value;
+                for (int a = 0; a < list.Count; a++)
+                {
+                    for (int b = a + 1; b < list.Count; b++)
+                    {
+                        var ca = list[a]; var cb = list[b];
+                        _edgeCache[KeyOf(ca.CityId, cb.CityId)] = new TradeEdge
+                        {
+                            CityAId = ca.CityId, CityBId = cb.CityId,
+                            KingdomAId = ca.KingdomId, KingdomBId = cb.KingdomId,
+                            Cost = Dist(ca, cb), RouteType = 0
+                        };
+                    }
+                }
+            }
 
             float maxRange = Mathf.Max(0f, cfg.MaxTradeRange);
             var ids = new List<long>(kingdomCities.Keys);
@@ -578,6 +608,9 @@ namespace EconomyMod.Core
             _edgeCache.Clear();
             _pathfindQueue.Clear();
             _knownKingdoms.Clear();
+            _smDecay = 0.02f;
+            _smTransport = 0.05f;
+            _smPriceW = 0.3f;
         }
 
         private static void SwapBuffers()
@@ -703,7 +736,6 @@ namespace EconomyMod.Core
             // --- 区域价格指数（v0.9 地理贸易）：本地价格 = 上期全局 CPI × 本地供需系数 ---
             // 供给侧：人均产出相对全球均值（产出高→供给充足→本地价低）；
             // 需求侧：人口压力（超载→需求旺盛→本地价高）。无王国桶不参与（LocalPrice=基准 CPI）。
-            var cfg = UnrestConfig.Instance; // 后台只读纯数据配置（非 Unity 对象，与 BiomeEconomy.GetBonus 同模式）
             float baseCPI = EconomyCycleModulator.CurrentCPI; // 上期价格指数（Evaluate 于发布后更新，此处读到即本期基准）
             float totalPop = 0f;
             foreach (var ks in res.Kingdoms)
@@ -740,60 +772,76 @@ namespace EconomyMod.Core
             }
             else res.PriceDispersion = 0f;
 
-            // --- 距离矩阵（v0.9 地理贸易）：王国首都间欧氏距离 → 平均距离 → 衰减因子 ---
-            // 坐标无效（NaN）的王国不参与距离计算，因子回退 1（不惩罚）。O(m²) 仅后台线程，开销可忽略。
+            // --- 自适应贸易参数推导（v0.11：由游戏状态每周期动态决定，无固定配置）---
+            // 距离衰减：大图弱衰减，海路多/船队强 → 远程可行 → 更小衰减；
+            // 运输成本：平均运距主导，船队/网络密度减免；套利权重：正比实测价格离散 CV。
+            // EMA 平滑避免逐周期震荡，单点 clamp（消除原 [0.001,0.5]/[0,0.05]/max(0,) 三处不一致）。
             int kingdomCount = res.Kingdoms.Count;
-            var distanceFactor = new float[kingdomCount];
-            for (int i = 0; i < kingdomCount; i++) distanceFactor[i] = 1f;
+
+            // 全局平均首都距离 D_avg（单遍 O(K²)，仅后台线程，开销可忽略）
+            float D_avg = 60f;
             var validIdx = new List<int>(kingdomCount);
             for (int i = 0; i < kingdomCount; i++)
             {
                 var ks = res.Kingdoms[i];
                 if (ks.KingdomId != 0 && !float.IsNaN(ks.CityX) && !float.IsNaN(ks.CityY)) validIdx.Add(i);
             }
-            float distanceDecay = cfg != null ? Mathf.Clamp(cfg.DistanceDecay, 0f, 0.05f) : 0f;
-            if (validIdx.Count > 1 && distanceDecay > 0f)
+            if (validIdx.Count > 1)
             {
-                var xs = new float[validIdx.Count];
-                var ys = new float[validIdx.Count];
+                double pairwiseSum = 0d;
+                int pairwiseCnt = 0;
                 for (int i = 0; i < validIdx.Count; i++)
                 {
-                    var ks = res.Kingdoms[validIdx[i]];
-                    xs[i] = ks.CityX; ys[i] = ks.CityY;
-                }
-                for (int i = 0; i < validIdx.Count; i++)
-                {
-                    double sum = 0d;
-                    int cnt = 0;
-                    for (int j = 0; j < validIdx.Count; j++)
+                    var a = res.Kingdoms[validIdx[i]];
+                    for (int j = i + 1; j < validIdx.Count; j++)
                     {
-                        if (j == i) continue;
-                        double dx = xs[i] - xs[j];
-                        double dy = ys[i] - ys[j];
-                        sum += Math.Sqrt(dx * dx + dy * dy);
-                        cnt++;
+                        var b = res.Kingdoms[validIdx[j]];
+                        double dx = a.CityX - b.CityX;
+                        double dy = a.CityY - b.CityY;
+                        pairwiseSum += Math.Sqrt(dx * dx + dy * dy);
+                        pairwiseCnt++;
                     }
-                    float avg = cnt > 0 ? (float)(sum / cnt) : 0f;
-                    distanceFactor[validIdx[i]] = 1f / (1f + avg * distanceDecay);
                 }
+                if (pairwiseCnt > 0) D_avg = (float)(pairwiseSum / pairwiseCnt);
             }
 
-            // --- 地理贸易特征汇总（v0.9.1：供 HUD 概览页展示实际生效值）---
-            // 平均距离衰减因子 = 所有参与贸易王国距离因子的均值（无王国/无坐标时回退 1=无衰减）
-            float factorSum = 0f;
-            int factorCount = 0;
-            for (int i = 0; i < kingdomCount; i++)
+            // 海路占比 / 平均边成本（单遍 edges，O(E)）
+            float seaRatio = 0f;
+            float avgEdge = D_avg;
+            if (edges.Count > 0)
             {
-                if (res.Kingdoms[i].KingdomId == 0) continue;
-                factorSum += distanceFactor[i];
-                factorCount++;
+                int seaCnt = 0;
+                double costSum = 0d;
+                for (int i = 0; i < edges.Count; i++)
+                {
+                    if (edges[i].RouteType == 1) seaCnt++;
+                    costSum += edges[i].Cost;
+                }
+                seaRatio = (float)seaCnt / edges.Count;
+                avgEdge = (float)(costSum / edges.Count);
             }
-            res.AvgDistanceFactor = factorCount > 0 ? factorSum / factorCount : 1f;
-            res.DistanceDecay = distanceDecay;
-            float transportCost = cfg != null ? Mathf.Clamp(cfg.TransportCost, 0f, 0.3f) : 0f;
-            float priceDiffWeight = cfg != null ? Mathf.Clamp(cfg.PriceDiffWeight, 0f, 1f) : 0f;
-            res.TransportCost = transportCost;
-            res.PriceDiffWeight = priceDiffWeight;
+
+            // 平均船队规模（单遍 kingdoms，O(K)）
+            float fleet = 0f;
+            if (kingdoms.Count > 0)
+            {
+                int boatSum = 0;
+                for (int i = 0; i < kingdoms.Count; i++) boatSum += kingdoms[i].Boats;
+                fleet = (float)boatSum / kingdoms.Count;
+            }
+            int edgeCnt = edges.Count;
+
+            float decayRaw = 0.03f / (1f + D_avg / 80f) * (1f - 0.25f * seaRatio) / (1f + 0.15f * fleet / 10f);
+            _smDecay = Mathf.Lerp(_smDecay, decayRaw, 0.35f);
+            res.DistanceDecay = Mathf.Clamp(_smDecay, 0.001f, 0.05f);
+
+            float transRaw = 0.08f * (avgEdge / 80f) / (1f + 0.08f * fleet) / (1f + edgeCnt / 1200f);
+            _smTransport = Mathf.Lerp(_smTransport, transRaw, 0.35f);
+            res.TransportCost = Mathf.Clamp(_smTransport, 0.005f, 0.25f);
+
+            float pdwRaw = Mathf.Clamp01(res.PriceDispersion * 2f) * 0.5f;
+            _smPriceW = Mathf.Lerp(_smPriceW, pdwRaw, 0.45f);
+            res.PriceDiffWeight = Mathf.Clamp(_smPriceW, 0.01f, 0.5f);
 
             // --- 地理贸易网络（城市供需缺口 → 按边流动，全图净≈0）---
             ComputeTrade(res, cities, edges, kingdoms);
@@ -805,8 +853,10 @@ namespace EconomyMod.Core
         /// 城市 gap = gold − 仓库容量；仓库容量优先用原版真实容量（StockpileCap =
         /// ResourceLibrary.gold.storage_max，游戏原版自带仓库系统），=0 时回退到
         /// Buildings × TradeCityBaseCapacity × 50% 估算；
-        /// 互补缺口（一盈余一缺口）→ flow = min(|gapA|,|gapB|) × 1/(1+cost×DistanceDecay) × TradeFlowRatio；
+        /// 互补缺口（一盈余一缺口）→ flow = min(|gapA|,|gapB|) × 距离衰减 × 运输摩擦 × 套利加成 × TradeFlowRatio；
         /// 海路流量受出口王国 Boats × SeaCapacityPerBoat 上限约束（超限按比例缩放）。
+        /// 所有临时结构均为本地变量（后台线程局部，无跨线程共享静态缓冲，杜绝竞态），
+        /// 聚合出王国净余额 + 按王国/城市出口额（供份额趋势）。
         /// </summary>
         private static void ComputeTrade(CycleResult res, List<CitySnapshot> cities,
             List<TradeEdge> edges, List<KingdomFacts> kingdoms)
@@ -817,15 +867,22 @@ namespace EconomyMod.Core
 
             float flowRatio = Mathf.Clamp(cfg.TradeFlowRatio, 0f, 0.2f);
             if (flowRatio <= 0f) return;
-            float decay = Mathf.Max(0f, cfg.DistanceDecay);
+            float decay = res.DistanceDecay;
+            float transportCost = res.TransportCost;
+            float priceDiffWeight = res.PriceDiffWeight;
             float baseCap = Mathf.Max(1f, cfg.TradeCityBaseCapacity);
             int maxEdges = Mathf.Max(1, cfg.MaxEdges);
 
-            // 城市索引（cityId → 快照）
-            var cityMap = new Dictionary<long, CitySnapshot>(cities.Count);
-            for (int i = 0; i < cities.Count; i++) cityMap[cities[i].CityId] = cities[i];
+            // 城市索引（cityId → 下标）
+            var cityIndex = new Dictionary<long, int>(cities.Count);
+            for (int i = 0; i < cities.Count; i++) cityIndex[cities[i].CityId] = i;
 
-            // 王国 Boats（海路上限用）
+            // 王国索引（kingdomId → 下标）+ 本地价格（套利用）+ 船队（海路上限用）
+            int kCount = res.Kingdoms.Count;
+            var kingdomIndex = new Dictionary<long, int>(kCount);
+            for (int i = 0; i < kCount; i++) kingdomIndex[res.Kingdoms[i].KingdomId] = i;
+            var priceByK = new float[kCount];
+            for (int i = 0; i < kCount; i++) priceByK[i] = res.Kingdoms[i].LocalPrice;
             var boats = new Dictionary<long, int>(kingdoms.Count);
             for (int i = 0; i < kingdoms.Count; i++) boats[kingdoms[i].Id] = kingdoms[i].Boats;
 
@@ -846,18 +903,28 @@ namespace EconomyMod.Core
             for (int i = 0; i < usable.Count; i++)
             {
                 var e = usable[i];
-                if (!cityMap.TryGetValue(e.CityAId, out var ca)) continue;
-                if (!cityMap.TryGetValue(e.CityBId, out var cb)) continue;
-                if (ca.KingdomId == cb.KingdomId) continue; // 同王国不成边
+                int ia, ib;
+                if (!cityIndex.TryGetValue(e.CityAId, out ia)) continue;
+                if (!cityIndex.TryGetValue(e.CityBId, out ib)) continue;
+                var ca = cities[ia];
+                var cb = cities[ib];
 
-                float capA = ca.StockpileCap > 0 ? ca.StockpileCap : ca.Buildings * baseCap * 0.5f;
-                float capB = cb.StockpileCap > 0 ? cb.StockpileCap : cb.Buildings * baseCap * 0.5f;
+                // 仓库容量：真实容量仅在合理范围（≤10 万）内采用，异常大（无上限哨兵值）回退建筑估算
+                float capA = (ca.StockpileCap > 0 && ca.StockpileCap <= 100000) ? ca.StockpileCap : ca.Buildings * baseCap * 0.5f;
+                float capB = (cb.StockpileCap > 0 && cb.StockpileCap <= 100000) ? cb.StockpileCap : cb.Buildings * baseCap * 0.5f;
                 float gapA = ca.Gold - capA;
                 float gapB = cb.Gold - capB;
                 if (gapA * gapB >= 0f) continue; // 同号或零：无互补缺口
 
+                // 距离衰减 × 运输摩擦 × 套利加成（区域价格差越大套利越强）
                 float weight = 1f / (1f + e.Cost * decay);
-                float flow = Mathf.Min(Mathf.Abs(gapA), Mathf.Abs(gapB)) * weight * flowRatio;
+                float transportFactor = Mathf.Max(0.5f, 1f - transportCost);
+                float priceGap = 0f;
+                int kiA, kiB;
+                if (kingdomIndex.TryGetValue(ca.KingdomId, out kiA) && kingdomIndex.TryGetValue(cb.KingdomId, out kiB))
+                    priceGap = Mathf.Abs(priceByK[kiA] - priceByK[kiB]);
+                float arbitrage = 1f + priceDiffWeight * Mathf.Min(1f, priceGap);
+                float flow = Mathf.Min(Mathf.Abs(gapA), Mathf.Abs(gapB)) * weight * transportFactor * arbitrage * flowRatio;
                 if (flow < 1f) continue; // 太小忽略，避免琐碎结算
 
                 bool aExports = gapA > 0f;
@@ -876,25 +943,63 @@ namespace EconomyMod.Core
             // 海路 Boats 上限：出口王国海路总量 ≤ Boats × SeaCapacityPerBoat，超限按比例缩放
             ApplySeaCapacity(flows, boats);
 
-            // 王国净余额 + 全图出口总额
-            var balance = new Dictionary<long, long>(16);
+            // 净贸易额聚合：城市/国家各算 Export 与 Import，Net = Export − Import。
+            // 国家值自动 = 该国所有城市贸易额之和（同国城市对贸易在出口、进口两侧同时计入，净额抵消）。
+            var kExport = new long[kCount];
+            var kImport = new long[kCount];
+            var cExport = new long[cities.Count];
+            var cImport = new long[cities.Count];
             long totalExport = 0;
+
             for (int i = 0; i < flows.Count; i++)
             {
                 var f = flows[i];
+                if (f.Amount <= 0) continue;
                 totalExport += f.Amount;
-                if (f.FromKingdomId == f.ToKingdomId) continue;
-                long v;
-                balance.TryGetValue(f.FromKingdomId, out v); balance[f.FromKingdomId] = v + f.Amount;
-                balance.TryGetValue(f.ToKingdomId, out v);   balance[f.ToKingdomId] = v - f.Amount;
+
+                int fk, tk;
+                if (kingdomIndex.TryGetValue(f.FromKingdomId, out fk)) kExport[fk] += f.Amount;
+                if (kingdomIndex.TryGetValue(f.ToKingdomId, out tk)) kImport[tk] += f.Amount;
+
+                int fc, tc;
+                if (cityIndex.TryGetValue(f.FromCityId, out fc)) cExport[fc] += f.Amount;
+                if (cityIndex.TryGetValue(f.ToCityId, out tc)) cImport[tc] += f.Amount;
             }
-            for (int i = 0; i < res.Kingdoms.Count; i++)
-            {
-                long net;
-                if (balance.TryGetValue(res.Kingdoms[i].KingdomId, out net))
-                    res.Kingdoms[i].TradeBalance = net;
-            }
+            for (int i = 0; i < kCount; i++)
+                res.Kingdoms[i].TradeBalance = kExport[i] - kImport[i];
             res.TotalTradeVolume = totalExport;
+
+            // 城市净额排名（仅列有贸易的城市，按 Net 降序）
+            res.CityBalances.Clear();
+            for (int i = 0; i < cities.Count; i++)
+            {
+                if (cExport[i] <= 0 && cImport[i] <= 0) continue;
+                res.CityBalances.Add(new TradeBalance
+                {
+                    Id = cities[i].CityId,
+                    Name = cities[i].Name,
+                    Export = cExport[i],
+                    Import = cImport[i],
+                    Net = cExport[i] - cImport[i]
+                });
+            }
+            res.CityBalances.Sort((a, b) => b.Net.CompareTo(a.Net));
+
+            // 国家净额排名（降序）
+            res.KingdomBalances.Clear();
+            for (int i = 0; i < kCount; i++)
+            {
+                if (kExport[i] <= 0 && kImport[i] <= 0) continue;
+                res.KingdomBalances.Add(new TradeBalance
+                {
+                    Id = res.Kingdoms[i].KingdomId,
+                    Name = res.Kingdoms[i].Name,
+                    Export = kExport[i],
+                    Import = kImport[i],
+                    Net = kExport[i] - kImport[i]
+                });
+            }
+            res.KingdomBalances.Sort((a, b) => b.Net.CompareTo(a.Net));
         }
 
         /// <summary>海路出口上限约束（超限按比例缩放，保持各边相对结构）。</summary>
@@ -974,11 +1079,16 @@ namespace EconomyMod.Core
 
             long gross = 0;
             long net = 0;
+            var cityRefs = _flowCityRefs;
             foreach (var f in res.TradeFlows)
             {
                 if (f.Amount <= 0) continue;
-                var fromCity = FindCity(f.FromKingdomId, f.FromCityId);
-                var toCity = FindCity(f.ToKingdomId, f.ToCityId);
+                // O(1) 反查城市（cityId 全局唯一），替代原 FindCity 逐王国 getCities() 遍历（O(C)）
+                City fromCity, toCity;
+                if (cityRefs == null
+                    || !cityRefs.TryGetValue(f.FromCityId, out fromCity)
+                    || !cityRefs.TryGetValue(f.ToCityId, out toCity))
+                    continue; // 城市本周期内已消亡 → 该边作废
                 if (fromCity == null || toCity == null) continue;
                 gross += f.Amount;
 
@@ -1021,26 +1131,6 @@ namespace EconomyMod.Core
             {
                 GameHelpers.Log($"[ClassicalEconomics] 地理贸易：{res.TradeFlows.Count} 条边共 {gross} 金币流动，净 {net:+0;-0}（按边城市仓库结算）");
             }
-        }
-
-        /// <summary>按 (王国, 城市坐标 id) 反查 City 对象（主线程；cityId = (x&lt;&lt;32)|y）。</summary>
-        private static City FindCity(long kingdomId, long cityId)
-        {
-            var kingdom = GameHelpers.FindKingdom(kingdomId);
-            if (kingdom == null) return null;
-            int tx = (int)(cityId >> 32);
-            int ty = (int)(cityId & 0xFFFFFFFFL);
-            try
-            {
-                foreach (var c in kingdom.getCities())
-                {
-                    if (c == null) continue;
-                    var t = c.getTile(false);
-                    if (t != null && t.x == tx && t.y == ty) return c;
-                }
-            }
-            catch (System.Exception) { }
-            return null;
         }
     }
 }

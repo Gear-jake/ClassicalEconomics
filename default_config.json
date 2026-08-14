@@ -141,7 +141,7 @@
     {
       "Id": "uprising_gini_threshold",
       "Type": "TEXT",
-      "TextVal": "0.95",
+      "TextVal": "0.85",
       "Callback": "EconomyConfigCallbacks:OnUprisingGiniThresholdChanged"
     },
     {
@@ -191,24 +191,6 @@
       "Type": "TEXT",
       "TextVal": "0.05",
       "Callback": "EconomyConfigCallbacks:OnTradeFlowRatioChanged"
-    },
-    {
-      "Id": "distance_decay",
-      "Type": "TEXT",
-      "TextVal": "0.02",
-      "Callback": "EconomyConfigCallbacks:OnDistanceDecayChanged"
-    },
-    {
-      "Id": "transport_cost",
-      "Type": "TEXT",
-      "TextVal": "0.05",
-      "Callback": "EconomyConfigCallbacks:OnTransportCostChanged"
-    },
-    {
-      "Id": "price_diff_weight",
-      "Type": "TEXT",
-      "TextVal": "0.3",
-      "Callback": "EconomyConfigCallbacks:OnPriceDiffWeightChanged"
     },
     {
       "Id": "trade_max_pathfind_pairs",
@@ -305,6 +287,24 @@
       "Type": "TEXT",
       "TextVal": "2",
       "Callback": "EconomyConfigCallbacks:OnFlourishPeriodsChanged"
+    },
+    {
+      "Id": "trade_power_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnTradePowerEnabledChanged"
+    },
+    {
+      "Id": "trade_surplus_ratio",
+      "Type": "TEXT",
+      "TextVal": "0.03",
+      "Callback": "EconomyConfigCallbacks:OnTradeSurplusRatioChanged"
+    },
+    {
+      "Id": "trade_deficit_ratio",
+      "Type": "TEXT",
+      "TextVal": "0.03",
+      "Callback": "EconomyConfigCallbacks:OnTradeDeficitRatioChanged"
     },
     {
       "Id": "labor_enabled",

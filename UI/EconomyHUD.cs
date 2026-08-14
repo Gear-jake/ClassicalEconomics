@@ -823,22 +823,6 @@ namespace EconomyMod.UI
             };
             _lines.Add(UIComponents.CreateStatGrid(_content.transform, stats, _gameFont, contentW));
 
-            // 地理贸易特征（v0.9.1：距离衰减/运输成本/区域套利实际生效值可视化）
-            _lines.Add(UIComponents.CreateSectionHeader(_content.transform,
-                UIHelpers.L("overview_geo_trade"), _gameFont, contentW));
-            var geoStats = new (string, string, Color)[]
-            {
-                ("距离衰减", "×" + EconomyEngine.AvgDistanceFactor.ToString("F2"),
-                    DistanceFactorColor(EconomyEngine.AvgDistanceFactor)),
-                ("运输成本", (EconomyEngine.TransportCost * 100f).ToString("F0") + "%",
-                    UIStyles.Warning),
-                ("套利权重", (EconomyEngine.PriceDiffWeight * 100f).ToString("F0") + "%",
-                    UIStyles.Info),
-                ("价格离散", EconomyEngine.PriceDispersion.ToString("F3"),
-                    PriceDispersionColor(EconomyEngine.PriceDispersion))
-            };
-            _lines.Add(UIComponents.CreateStatGrid(_content.transform, geoStats, _gameFont, contentW));
-
             // 王国排行
             _lines.Add(UIComponents.CreateSectionHeader(_content.transform,
                 UIHelpers.L("overview_kingdoms"), _gameFont, contentW));
@@ -899,18 +883,6 @@ namespace EconomyMod.UI
         private static Color GiniColor(float gini)
         {
             return gini >= 0.7f ? UIStyles.Danger : gini >= 0.55f ? UIStyles.Warning : UIStyles.TextSecondary;
-        }
-
-        /// <summary>价格离散度语义色（≥0.2 高离散/套利空间大 → 琥珀；≥0.1 中等 → 信息蓝；其他弱色）。</summary>
-        private static Color PriceDispersionColor(float pd)
-        {
-            return pd >= 0.2f ? UIStyles.Warning : pd >= 0.1f ? UIStyles.Info : UIStyles.TextSecondary;
-        }
-
-        /// <summary>距离衰减因子语义色（≥0.9 几乎无衰减 → 绿；≥0.7 中等 → 信息蓝；更低远程贸易弱 → 琥珀）。</summary>
-        private static Color DistanceFactorColor(float f)
-        {
-            return f >= 0.9f ? UIStyles.Positive : f >= 0.7f ? UIStyles.Info : UIStyles.Warning;
         }
 
         /// <summary>

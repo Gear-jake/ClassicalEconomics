@@ -131,7 +131,11 @@ namespace EconomyMod.Core
             switch (kind)
             {
                 case PolicyKind.Redistribution:
-                    GameHelpers.RedistributeWithinKingdom(kingdom, 5, 10, 0.40f, 2f);
+                    // 劫富济贫规模按人口比例：大国动更多人，基尼才真正下降（原来固定 5 富 10 穷对大国无效）
+                    int pop = Mathf.Max(1, stats.ActorCount);
+                    int richCount = Mathf.Max(5, Mathf.RoundToInt(pop * 0.01f));   // 1% 富人（最少 5）
+                    int poorCount = Mathf.Max(10, Mathf.RoundToInt(pop * 0.02f));  // 2% 穷人（最少 10）
+                    GameHelpers.RedistributeWithinKingdom(kingdom, richCount, poorCount, 0.40f, 2f);
                     string kName = GameHelpers.SafeKingdomName(kingdom);
                     GameHelpers.Notify($"[政策] <{kName}> 推行贫富调节政策，财富再分配，贫富差距下降");
                     EventStreamService.Record(EventStreamService.TypePolicy, kName, 1);

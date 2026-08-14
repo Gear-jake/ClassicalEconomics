@@ -243,10 +243,16 @@ namespace EconomyMod.Core
             int count = 0;
             float richEdge = 0f, poorEdge = 0f; // 候选池边界缓存
 
+            // 采样上限：统一大国 units 可达数万，全量遍历会卡顿。只扫描前 MaxScan 个开智单位
+            // （WorldBox units 列表顺序近似随机，采样前 N 个足以覆盖财富 Top/穷极值），
+            // 人均/税线用采样均值近似，避免每次改革/暴动/镇压都几十毫秒遍历。
+            const int MaxScan = 3000;
+            int scanned = 0;
             foreach (var a in kingdom.units)
             {
                 if (a == null || !a.isAlive()) continue;
                 if (a.asset == null || !a.asset.civ) continue;
+                if (++scanned > MaxScan) break;
                 float w;
                 if (!TryGetWealth(a, out w)) continue;
                 totalWealth += w;

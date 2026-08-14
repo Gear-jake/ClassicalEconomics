@@ -33,6 +33,9 @@ namespace EconomyMod.Core
         /// </summary>
         public static readonly List<Actor> WealthyPool = new List<Actor>();
 
+        /// <summary>富豪税"贫困线以下"公民缓冲（收税单遍顺带收集，避免 ApplyWealthTax 再全量遍历两遍）。</summary>
+        private static readonly List<Actor> _poorPool = new List<Actor>(256);
+
         // 富豪榜条目对象池：每年采集最多新建 0 个对象（复用池中条目）
         private static readonly List<RichEntryData> _entryPool = new List<RichEntryData>(10);
 
@@ -143,21 +146,27 @@ namespace EconomyMod.Core
                         try { buildings = c.countBuildings(); } catch (System.Exception) { }
                         try { boats = c.countBoats(); } catch (System.Exception) { }
                         // 原版仓库真实容量（游戏原版自带仓库系统）：ResourceLibrary.gold 为
-                        // public static 资源资产（全局命名空间），storage_max 为公开 int 字段，
-                        // 即该城市金库单槽上限。0 = API 不可用/资源未初始化 → 后台回退到估算。
+                        // public static 资源资产（全局命名空间），storage_max 为公开 int 字段。
+                        // 实测 storage_max 可能是「无上限」哨兵值（≈6 亿，接近 int 上限），
+                        // 直接用作 gap 基准会让 gap=gold−6亿 恒为负、所有城市都是缺口 → 无贸易。
+                        // 故加合理性检查：超过 10 万金币视为无效，回退到建筑数估算。
                         if (UnrestConfig.Instance.TradeUseRealStockpiles)
                         {
                             try
                             {
                                 var goldAsset = ResourceLibrary.gold;
-                                if (goldAsset != null) cap = goldAsset.storage_max;
+                                if (goldAsset != null)
+                                {
+                                    cap = goldAsset.storage_max;
+                                    if (cap > 100000) cap = 0; // 哨兵值/无上限 → 回退建筑估算
+                                }
                             }
                             catch (System.Exception) { cap = 0; }
                         }
                         // 邻国王国（City.neighbours_kingdoms 为 internal 不可访问）：
                         // 改由 PrepareRoutes 用王国几何距离（Kingdom.distanceBetweenKingdom）判定
-                        TradeSimulationWorker.AddCitySnapshot(cityId, kid, gold, buildings, boats,
-                            cap, tx, ty);
+                        TradeSimulationWorker.AddCitySnapshot(cityId, kid, GameHelpers.SafeCityName(c),
+                            gold, buildings, boats, cap, tx, ty);
                         _cityRefs[cityId] = c;
                     }
                 }
@@ -199,51 +208,47 @@ namespace EconomyMod.Core
                 ? World.world.units.units_only_alive : null;
             if (aliveList == null) return;
 
-            // 第一遍：对超税线者收税（立即扣款），累计税款
+            // 单遍：对超税线者收税（立即扣款）+ 顺带收集贫困线以下公民到复用缓冲。
+            // 原来分三遍遍历（收税/统计穷人/发钱），现合并为一遍全量 + 一遍穷人数（远小于全量）。
             long totalTax = 0;
+            var poor = _poorPool;
+            poor.Clear();
             foreach (var actor in aliveList)
             {
                 if (actor == null || !actor.isAlive()) continue;
                 if (actor.asset == null || !actor.asset.civ) continue;
                 float w;
                 if (!GameHelpers.TryGetWealth(actor, out w)) continue;
-                if (w <= taxLine) continue;
-                long tax = (long)Mathf.Min((w - taxLine) * ratio, w * MaxRatio);
-                if (tax <= 0) continue;
-                try { actor.addMoney(-(int)tax); totalTax += tax; } catch (System.Exception) { }
+                if (w > taxLine)
+                {
+                    long tax = (long)Mathf.Min((w - taxLine) * ratio, w * MaxRatio);
+                    if (tax > 0)
+                    {
+                        try { actor.addMoney(-(int)tax); totalTax += tax; } catch (System.Exception) { }
+                    }
+                }
+                else if (w < poorLine)
+                {
+                    poor.Add(actor); // 收集穷人，第二遍只遍历缓冲
+                }
             }
             if (totalTax <= 0) return;
 
-            // 第二遍：统计贫困线以下公民数量（均分需总数）
-            int poorCount = 0;
-            foreach (var actor in aliveList)
-            {
-                if (actor == null || !actor.isAlive()) continue;
-                if (actor.asset == null || !actor.asset.civ) continue;
-                float w;
-                if (!GameHelpers.TryGetWealth(actor, out w)) continue;
-                if (w < poorLine) poorCount++;
-            }
+            int poorCount = poor.Count;
             if (poorCount <= 0) return;
 
-            // 第三遍：税款均分给贫困线以下公民（余数补给第一个）。
+            // 第二遍：税款均分给贫困线以下公民（只遍历穷人缓冲，余数补给第一个）。
             // 注意：per==0（税款总额 < 贫困人口数）时仍须分发——余数=totalTax 全部补给第一个穷人，
             // 保证收上来的税款绝不凭空消失（金币守恒）。
             long per = totalTax / poorCount;
-            bool first = true;
-            foreach (var actor in aliveList)
+            long remainder = totalTax - per * poorCount;
+            for (int i = 0; i < poorCount; i++)
             {
+                var actor = poor[i];
                 if (actor == null || !actor.isAlive()) continue;
-                if (actor.asset == null || !actor.asset.civ) continue;
-                float w;
-                if (!GameHelpers.TryGetWealth(actor, out w)) continue;
-                if (w >= poorLine) continue;
-                try
-                {
-                    actor.addMoney((int)per + (first ? (int)(totalTax - per * poorCount) : 0));
-                }
-                catch (System.Exception) { }
-                first = false;
+                long give = per + (i == 0 ? remainder : 0);
+                if (give <= 0) continue;
+                try { actor.addMoney((int)give); } catch (System.Exception) { }
             }
 
             GameHelpers.Log($"[ClassicalEconomics] 年度累进税：征税 {totalTax} 金币 → {poorCount} 名贫困公民（人均+{per}）");

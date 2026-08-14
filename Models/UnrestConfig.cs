@@ -88,7 +88,7 @@ namespace EconomyMod.Models
 
         /// <summary>街头起义触发阈值：叛乱后基尼仍 ≥ 该值持续满 UprisingDelayYears 年 → 街头起义。
         /// 起义 = 全城暴动 + 杀富济贫 + 推翻国王（比普通叛乱更彻底）。</summary>
-        public float UprisingGiniThreshold = 0.95f;
+        public float UprisingGiniThreshold = 0.85f;
 
         /// <summary>起义延迟（年）：叛乱后基尼持续超起义阈值满 N 年触发街头起义。</summary>
         public int UprisingDelayYears = 3;
@@ -133,9 +133,6 @@ namespace EconomyMod.Models
         /// <summary>非邻国加成：非邻国城市对在基础 cost 上乘以该系数（邻国 = 1.0）。</summary>
         public float NonNeighborPenalty = 2.0f;
 
-        /// <summary>距离衰减：贸易量 ∝ 1 / (1 + cost × DistanceDecay)。</summary>
-        public float DistanceDecay = 0.02f;
-
         /// <summary>单周期最大贸易边数（缓存上限，防止寻路结果无限膨胀）。</summary>
         public int MaxEdges = 8000;
 
@@ -147,14 +144,6 @@ namespace EconomyMod.Models
         /// <summary>使用原版真实仓库容量作为城市供需缺口基准（游戏原版自带仓库系统，
         /// 直接读 ResourceLibrary.gold.storage_max 公开静态字段）；关闭则回退到建筑数估算。</summary>
         public bool TradeUseRealStockpiles = true;
-
-        // ===== 兼容字段（EconomyEngine/EconomyHUD 消费，城市级引擎按聚合值回填）=====
-
-        /// <summary>运输成本：贸易固定摩擦，按比例吃掉全部贸易额（0~0.3，越高物流成本越重、总贸易越少）。</summary>
-        public float TransportCost = 0.05f;
-
-        /// <summary>价格差权重：区域价格差异对贸易额的加成权重（0~1，越高区域套利贸易越强）。</summary>
-        public float PriceDiffWeight = 0.3f;
 
         // ===== 人口约束（马尔萨斯，PopulationEngine）=====
 
@@ -183,6 +172,17 @@ namespace EconomyMod.Models
 
         /// <summary>强盛期防抖：连续满足条件期数。</summary>
         public int FlourishPeriods = 2;
+
+        // ===== 贸易军力（TradePowerEngine：贸易顺差/逆差 → 国民战斗加成）=====
+
+        /// <summary>是否启用贸易军力（顺差国国民伤害/护甲加成，逆差国惩罚）。</summary>
+        public bool TradePowerEnabled = true;
+
+        /// <summary>顺差国判定阈值：净顺差占 GDP 比例 ≥ 该值判定为顺差国（0.001~0.5）。</summary>
+        public float TradeSurplusRatio = 0.03f;
+
+        /// <summary>逆差国判定阈值：净逆差占 GDP 比例 ≥ 该值判定为逆差国（0.001~0.5）。</summary>
+        public float TradeDeficitRatio = 0.03f;
 
         // ===== 劳动分工（LaborEngine）=====
 

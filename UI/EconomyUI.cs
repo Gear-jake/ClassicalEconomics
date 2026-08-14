@@ -137,17 +137,14 @@ namespace EconomyMod.UI
 
         public static void Initialize()
         {
-            // 诊断日志：输出当前语言 id 与 IsChinese 判定结果，
-            // 便于部署后从 Player.log 定位 tooltip 语言注入问题
-            var cl = LocalizedTextManager.current_language;
-            UnityEngine.Debug.Log($"[ClassicalEconomics] 当前语言 id='{cl?.id ?? "null"}' IsChinese={IsChinese()}");
-
             // 创建悬浮 HUD（Canvas 上的非模态面板）
             EconomyHUD.Create();
             // 创建富豪榜"工具框"（点击皇冠按钮弹出的轻量弹窗）
             RichListWindow.Create();
             // 创建事件流悬浮窗（独立于经济窗口，点击铃铛按钮切换显隐）
             EventWindow.Create();
+            // 创建贸易份额趋势悬浮窗（各国各城市出口份额趋势，独立窗口）
+            TradeShareWindow.Create();
 
             // 创建底部工具栏 Tab（带金币图标）；
             // 先注入 Tab 名称/描述本地化键（vanilla LTM 按 key 查找，缺失会打印 missing text 日志）
@@ -242,6 +239,19 @@ namespace EconomyMod.UI
                 "События", "Переключить окно событий");
             PowerButtonCreator.AddButtonToTab(btnEvents, _tab, null);
 
+            // 创建"贸易净额"工具按钮（复用金币图标）：切换贸易净额排名悬浮窗显隐
+            var btnShare = PowerButtonCreator.CreateSimpleButton(
+                "economy_trade_share",
+                () => TradeShareWindow.Instance?.Toggle(),
+                IconLoader.Get("coin"),
+                _tab.transform, Vector2.zero);
+            RegisterTooltip(btnShare, "economy_trade_share",
+                "贸易净额", "查看各城市/国家净贸易额（出口−进口）排名",
+                "貿易淨額", "查看各城市/國家淨貿易額（出口−進口）排名",
+                "Trade Balance", "Net trade balance (exports − imports) by city/kingdom",
+                "Торговый баланс", "Чистый баланс (экспорт − импорт) по городам/странам");
+            PowerButtonCreator.AddButtonToTab(btnShare, _tab, null);
+
             // 创建"切换经济阶段"按钮（循环切换：繁荣→衰退→萧条→复苏→繁荣）
             // 合并原4个阶段按钮，降低工具栏认知负荷（11→8按钮）
             var btnCyclePhase = PowerButtonCreator.CreateSimpleButton(
@@ -288,6 +298,10 @@ namespace EconomyMod.UI
             if (EventWindow.Instance != null && EventWindow.Instance.IsVisible)
             {
                 EventWindow.Instance.RefreshNow();
+            }
+            if (TradeShareWindow.Instance != null && TradeShareWindow.Instance.IsVisible)
+            {
+                TradeShareWindow.Instance.RefreshNow();
             }
         }
     }

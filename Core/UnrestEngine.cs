@@ -499,14 +499,16 @@ namespace EconomyMod.Core
         /// 基尼系数超过阈值越多，可暴动城市越多；差距越小（刚过阈值）则越少（最低 1 座）。
         /// 返回 [1, 按贫富差距放大后的上限] 之间的随机整数。
         /// </summary>
-        private static int ComputeUnrestCityCount(float gini, UnrestConfig cfg)
+        private static int ComputeUnrestCityCount(float gini, UnrestConfig cfg, int cityCount)
         {
             float threshold = Mathf.Max(0.05f, cfg.GiniThreshold);
             // 基尼超出阈值的部分归一化到 0..1（阈值 → 1.0）
             float ratio = (gini - threshold) / Mathf.Max(0.01f, 1f - threshold);
             ratio = Mathf.Clamp01(ratio);
-            int max = Mathf.Max(1, cfg.MaxAffectedPerKingdom);
-            // 上限随贫富差距线性放大：差距越大上限越高（最小 1，最大 MaxAffectedPerKingdom）
+            // 暴动规模上限随城市数放大（大国暴动更多城、更难镇压，避免"3 城对大国无关痛痒"），
+            // 最少 MaxAffectedPerKingdom；基尼极高时最多约 50% 城市。
+            int byCity = Mathf.Max(1, Mathf.RoundToInt(cityCount * 0.5f));
+            int max = Mathf.Max(cfg.MaxAffectedPerKingdom, byCity);
             int upper = 1 + Mathf.RoundToInt(ratio * (max - 1));
             return Random.Range(1, upper + 1); // [1, upper]
         }
@@ -589,7 +591,7 @@ namespace EconomyMod.Core
                 var cityList = _cityPool;
                 cityList.Clear();
                 cityList.AddRange(cities);
-                int maxAffect = ComputeUnrestCityCount(stats.GiniCoefficient, cfg);
+                int maxAffect = ComputeUnrestCityCount(stats.GiniCoefficient, cfg, cityList.Count);
                 foreach (var city in cityList)
                 {
                     if (affected >= maxAffect) break;

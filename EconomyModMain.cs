@@ -57,6 +57,7 @@ namespace EconomyMod
             EconomyCycleModulator.Reset();
             SocialCrisisEngine.Reset();
             EraEngine.Reset();
+            TradePowerEngine.Reset();
             UnrestEngine.Reset();   // M7：清空震荡状态与收复战争跟踪
             PolicyEngine.Reset();   // M7：清空改革冷却
             KingdomMonitorEngine.Reset();
@@ -104,6 +105,8 @@ namespace EconomyMod
                     RegisterTrait(Core.EraEngine.ActorTraitRevival,  "ui/Icons/iconEraRevival",   35f, 10f, 0f, 10, "复兴", "迎来复兴：国民幸福 +35、伤害 +10、生育 +10");
                     RegisterTrait(Core.EraEngine.ActorTraitFlourish, "ui/Icons/iconEraFlourish",  20f, 5f, 5f, 0, "强盛期", "强盛期：国民幸福 +20、伤害 +5、护甲 +5");
                     RegisterTrait(Core.EraEngine.ActorTraitCollapse, "ui/Icons/iconEraCollapse",  -15f, 30f, 20f, 0, "经济崩溃", "经济崩溃：国民幸福 -15、伤害 +30、护甲 +20");
+                    RegisterTrait(Core.TradePowerEngine.ActorTraitSurplus, "ui/Icons/iconEraFlourish", 0f, 20f, 10f, 0, "贸易顺差", "贸易顺差：国民伤害 +20、护甲 +10");
+                    RegisterTrait(Core.TradePowerEngine.ActorTraitDeficit, "ui/Icons/iconEraCollapse", 0f, -20f, 0f, 0, "贸易逆差", "贸易逆差：国民伤害 -20");
                 }
                 else
                 {
@@ -111,6 +114,8 @@ namespace EconomyMod
                     RegisterTrait(Core.EraEngine.ActorTraitRevival,  "ui/Icons/iconEraRevival",   35f, 10f, 0f, 10, "Revival", "Revival: happiness +35, damage +10, birth rate +10");
                     RegisterTrait(Core.EraEngine.ActorTraitFlourish, "ui/Icons/iconEraFlourish",  20f, 5f, 5f, 0, "Flourishing", "Flourishing: happiness +20, damage +5, armor +5");
                     RegisterTrait(Core.EraEngine.ActorTraitCollapse, "ui/Icons/iconEraCollapse",  -15f, 30f, 20f, 0, "Economic Collapse", "Economic Collapse: happiness -15, damage +30, armor +20");
+                    RegisterTrait(Core.TradePowerEngine.ActorTraitSurplus, "ui/Icons/iconEraFlourish", 0f, 20f, 10f, 0, "Trade Surplus", "Trade Surplus: damage +20, armor +10");
+                    RegisterTrait(Core.TradePowerEngine.ActorTraitDeficit, "ui/Icons/iconEraCollapse", 0f, -20f, 0f, 0, "Trade Deficit", "Trade Deficit: damage -20");
                 }
             }
             catch (System.Exception e)
@@ -284,10 +289,11 @@ namespace EconomyMod
         /// </summary>
         public static void RealTimeRefresh()
         {
-            // 熔断：超大地图时跳过实时全量重算（O(n log n) 基尼排序），避免卡顿
+            // 熔断：较大地图时跳过实时全量重算（主线程同步 O(n log n) 基尼排序 + 全量采集），
+            // 阈值从 5000 下调到 3000 —— 实测 5000 人口已出现可感卡顿，3000 更稳。
             var aliveList = World.world != null && World.world.units != null
                 ? World.world.units.units_only_alive : null;
-            if (aliveList != null && aliveList.Count > 5000)
+            if (aliveList != null && aliveList.Count >= 3000)
             {
                 EconomyUI.RefreshOverview(); // 仅刷新UI，不重算
                 return;
@@ -423,6 +429,8 @@ namespace EconomyMod
                 // 时代事件：先自动评估触发（含花钱触发的状态），再同步国民特质与到期移除
                 EraEngine.Evaluate();
                 EraEngine.Tick(year);
+                // 贸易军力：顺差国国民战斗加成 / 逆差国惩罚（依赖后台已算好的净贸易额）
+                TradePowerEngine.Evaluate();
                 // 灾害经济冲击：检测城市人口骤降，施加财富蒸发（火山矿产加成）
                 DisasterEngine.Evaluate();
                 // 银行信贷：放贷/偿还/违约/危机传染
@@ -459,6 +467,11 @@ namespace EconomyMod
                     PriceIndex = EconomyCycleModulator.CurrentCPI
                 };
                 snapshot.Kingdoms = new List<KingdomStats>(EconomyEngine.KingdomStats.Values);
+                // 贸易净额排名（v0.13）：直接引用后台已聚合的城市/国家净额列表（本周期只读，零拷贝）
+                snapshot.TotalExport = EconomyEngine.TotalTradeVolume;
+                var last = TradeSimulationWorker.LastResult;
+                snapshot.CityBalances = last != null ? last.CityBalances : new List<TradeBalance>();
+                snapshot.KingdomBalances = last != null ? last.KingdomBalances : new List<TradeBalance>();
                 HistoryService.AppendSnapshot(snapshot);
                 EconomyUI.RefreshOverview();
             }

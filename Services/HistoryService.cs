@@ -10,7 +10,9 @@ namespace EconomyMod.Services
     /// </summary>
     public static class HistoryService
     {
-        private const int Capacity = 100;
+        // 只保留最近 50 期（图表/份额窗均只消费最近 50 条），超限覆盖最老条目即"删除"，
+        // 内存固定 ≤ 50 × EconomySnapshot，杜绝无界增长。
+        private const int Capacity = 50;
 
         // 环形数组缓冲：_head 指向下一个写入位置，_count 为当前条数（≤Capacity）
         private static readonly EconomySnapshot[] _buffer = new EconomySnapshot[Capacity];
@@ -38,8 +40,10 @@ namespace EconomyMod.Services
             int take = count > _count ? _count : count;
             if (take <= 0) return result;
 
-            // 环形读取：从最老条目开始（_head - _count 已对 Capacity 取模）
-            int start = (_head - _count + Capacity) % Capacity;
+            // 环形读取：取最近 take 条，起点 = 最近 take 条中的最老位置（_head - take）。
+            // 注意不能用 (_head - _count) —— 那是最老条目，会在数据超 take 后永远返回最老的 take 条
+            // 导致图表"卡住"不再滚动（v0.11 修复）。
+            int start = (_head - take + Capacity) % Capacity;
             for (int i = 0; i < take; i++)
             {
                 int idx = (start + i) % Capacity;
