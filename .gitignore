@@ -18,3 +18,6 @@ errors.txt
 .vs/
 .idea/
 *.user
+
+# Steam 创意工坊上传脚本（含本机绝对路径，机器特定，不入库）
+steam_workshop_build.vdf
