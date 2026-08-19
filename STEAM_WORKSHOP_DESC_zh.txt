@@ -1,5 +1,5 @@
 [h1]古典经济学 (Classical Economics)[/h1]
-[b]WorldBox 宏观经济模拟模组 | 版本 0.13.0[/b]
+[b]WorldBox 宏观经济模拟模组 | 版本 0.13.1[/b]
 [b]适用版本：[/b]WorldBox 0.51.2+（需 NeoModLoader / NML 加载器）
 
 为 WorldBox 引入完整的宏观经济模拟。模组会识别所有智慧生物（包括外星人、龙等能建立文明的种族）的财富，并以此为基础模拟真实的经济运行：

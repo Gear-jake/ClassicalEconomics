@@ -1,5 +1,5 @@
 [h1]Classical Economics[/h1]
-[b]A macroeconomic simulation mod for WorldBox | v0.13.0[/b]
+[b]A macroeconomic simulation mod for WorldBox | v0.13.1[/b]
 [b]Requires:[/b] WorldBox 0.51.2+ and NeoModLoader (NML)
 
 Gives your world a real economy. The mod tracks the wealth of ALL sapient species (including aliens and dragons), then simulates a full macroeconomic system on top of it:

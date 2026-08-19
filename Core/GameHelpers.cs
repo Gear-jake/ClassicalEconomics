@@ -88,6 +88,14 @@ namespace EconomyMod.Core
         /// <summary>将 kingdoms 拷贝到复用的静态缓冲，返回该缓冲；不分配新对象。</summary>
         private static readonly List<Kingdom> _kingdomSnapshot = new List<Kingdom>();
 
+        /// <summary>进入无世界状态时解除复用缓冲对旧世界对象的引用。</summary>
+        public static void ClearWorldReferences()
+        {
+            _kingdomSnapshot.Clear();
+            _redistRich.Clear();
+            _redistPoor.Clear();
+        }
+
         /// <summary>获取 kingdoms 列表的复用快照（每年评估时使用，避免 GC 分配）。</summary>
         public static List<Kingdom> KingdomSnapshot()
         {

@@ -22,6 +22,8 @@ namespace EconomyMod.Core
 
         // 上周期王国城市数快照（kingdomId → cities）
         private static readonly Dictionary<long, int> _prevKingdomCities = new Dictionary<long, int>(32);
+        private static readonly HashSet<long> _seenKingdoms = new HashSet<long>();
+        private static readonly List<long> _staleKingdoms = new List<long>();
 
         /// <summary>本期受灾城市数（供快照/UI读取）。</summary>
         public static int LastDisasterCityCount { get; private set; }
@@ -34,6 +36,8 @@ namespace EconomyMod.Core
         {
             _prevKingdomPop.Clear();
             _prevKingdomCities.Clear();
+            _seenKingdoms.Clear();
+            _staleKingdoms.Clear();
             LastDisasterCityCount = 0;
             LastWealthLost = 0;
         }
@@ -57,11 +61,13 @@ namespace EconomyMod.Core
             bool isBoom = EconomyCycleModulator.CurrentPhase == EconomyPhase.Boom;
             float lossRatio = cfg.DisasterWealthLoss;
             float mineBonus = cfg.DisasterMineBonus;
+            _seenKingdoms.Clear();
 
             foreach (var k in kingdoms)
             {
                 if (k == null || k.data == null) continue;
                 long kingdomId = k.data.id;
+                _seenKingdoms.Add(kingdomId);
                 int curPop;
                 int curCities = 0;
                 try { curPop = k.getPopulationTotal(); } catch { continue; }
@@ -109,6 +115,15 @@ namespace EconomyMod.Core
                 }
                 _prevKingdomPop[kingdomId] = curPop;
                 _prevKingdomCities[kingdomId] = curCities;
+            }
+
+            _staleKingdoms.Clear();
+            foreach (var kv in _prevKingdomPop)
+                if (!_seenKingdoms.Contains(kv.Key)) _staleKingdoms.Add(kv.Key);
+            foreach (long id in _staleKingdoms)
+            {
+                _prevKingdomPop.Remove(id);
+                _prevKingdomCities.Remove(id);
             }
 
             if (LastDisasterCityCount > 0)

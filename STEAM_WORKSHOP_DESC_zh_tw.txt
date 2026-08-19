@@ -1,5 +1,5 @@
 [h1]古典經濟學 (Classical Economics)[/h1]
-[b]WorldBox 宏觀經濟模擬模組 | 版本 0.13.0[/b]
+[b]WorldBox 宏觀經濟模擬模組 | 版本 0.13.1[/b]
 [b]適用版本：[/b]WorldBox 0.51.2+（需 NeoModLoader / NML 載入器）
 
 為 WorldBox 引入完整的宏觀經濟模擬。模組會識別所有智慧生物（包括外星人、龍等能建立文明的種族）的財富，並以此為基礎模擬真實的經濟運行：

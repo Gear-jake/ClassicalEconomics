@@ -266,10 +266,14 @@ namespace EconomyMod.Core
             _stale.Clear();
             foreach (var kv in _prevAvg)
                 if (!curIds.Contains(kv.Key)) _stale.Add(kv.Key);
+            foreach (var kv in _kingdomTrait)
+                if (!curIds.Contains(kv.Key) && !_stale.Contains(kv.Key)) _stale.Add(kv.Key);
             foreach (long id in _stale)
             {
                 _prevAvg.Remove(id);
-                _flourishStreak.Remove(id); // 已消失王国的强盛防抖计数一并清理，防字典缓慢膨胀
+                _flourishStreak.Remove(id);
+                _kingdomTrait.Remove(id);
+                _startYears.Remove(id);
             }
         }
 
@@ -287,16 +291,22 @@ namespace EconomyMod.Core
                 _expired.Clear();
                 foreach (var kv in _startYears)
                 {
-                    string trait = _kingdomTrait[kv.Key];
+                    if (!_kingdomTrait.TryGetValue(kv.Key, out string trait))
+                    {
+                        _expired.Add(kv.Key);
+                        continue;
+                    }
                     int duration = trait == KingdomTraitCollapse
                         ? cfg.CollapseDurationYears : cfg.EraDurationYears;
                     if (currentYear - kv.Value >= duration) _expired.Add(kv.Key);
                 }
                 foreach (long kid in _expired)
                 {
-                    string trait = _kingdomTrait[kid];
-                    var k = GameHelpers.FindKingdom(kid);
-                    if (k != null) RemoveActorTraitFromMembers(k, KingdomToActor[trait]);
+                    if (_kingdomTrait.TryGetValue(kid, out string trait))
+                    {
+                        var k = GameHelpers.FindKingdom(kid);
+                        if (k != null) RemoveActorTraitFromMembers(k, KingdomToActor[trait]);
+                    }
                     _kingdomTrait.Remove(kid);
                     _startYears.Remove(kid);
                 }

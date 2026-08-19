@@ -3,7 +3,7 @@
 > A complete macroeconomic simulation mod for WorldBox — wealth tracking, economic cycles, kingdom trade, social unrest and sapient spending.
 
 **Author**: Jake
-**Version**: 0.13.0
+**Version**: 0.13.1
 **Type**: Macro-economy / Simulation enhancement
 **Target**: WorldBox 0.51.2+
 
@@ -209,6 +209,13 @@ Manual install:
 ---
 
 ## Changelog
+
+### v0.13.1 (2026-08-19)
+**Memory lifecycle fixes**.
+- Release stale `City`, `Actor`, and `Kingdom` references when switching worlds or returning to the main menu.
+- Evict trade edges belonging to removed cities and kingdoms, preventing cache growth in long-running worlds.
+- Prevent compute-buffer reuse until old background trade workers have actually exited.
+- Remove stale disaster and era state, and prevent hot reloads from duplicating the tick runner, toolbar, and tooltips.
 
 ### v0.13.0 (2026-08-14)
 **Net trade balance ranking + trade military power**.

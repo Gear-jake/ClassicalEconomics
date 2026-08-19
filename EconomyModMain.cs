@@ -23,7 +23,8 @@ namespace EconomyMod
             // 注册时代事件国民特质（盛世/复兴/强盛期/经济崩溃），供 EraEngine 国民加成使用
             RegisterEraTraits();
 
-            gameObject.AddComponent<EconomyTickRunner>();
+            if (gameObject.GetComponent<EconomyTickRunner>() == null)
+                gameObject.AddComponent<EconomyTickRunner>();
             // 每次打开游戏都清空历史，图表从本局从头绘制（避免残留上局数据）
             HistoryService.ClearHistory();
             EconomyUI.Initialize();
@@ -317,6 +318,7 @@ namespace EconomyMod
             private float _realtimeTimer;    // 实时刷新节流计时（配置开启时按秒轻量刷新 HUD 数据）
             private bool _cyclePending;      // 后台统计进行中/待消费
             private bool _optimeGuardChecked; // 首帧执行一次 Optime 兼容兜底安装
+            private bool _worldReferencesCleared;
 
             private void Update()
             {
@@ -368,8 +370,16 @@ namespace EconomyMod
                 if (World.world == null)
                 {
                     _cyclePending = false;
+                    if (!_worldReferencesCleared)
+                    {
+                        _worldReferencesCleared = true;
+                        DataCollector.ClearWorldReferences();
+                        TradeSimulationWorker.ClearWorldReferences();
+                        GameHelpers.ClearWorldReferences();
+                    }
                     return;
                 }
+                _worldReferencesCleared = false;
 
                 int currentYear = GetCurrentGameYear();
                 // 年份回退：可能是新地图/新游戏（年份归零），也可能是读档（存档年份 < 上次运行年份）

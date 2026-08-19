@@ -1,5 +1,6 @@
 $csc = 'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\MSBuild\Current\Bin\Roslyn\csc.exe'
-$diag = 'e:\code\new\2026-08-11-16-45-00\ClassicalEconomics\build_diag.txt'
+$root = $PSScriptRoot
+$diag = Join-Path $root 'build_diag.txt'
 if (-not (Test-Path $csc)) {
     Write-Host "csc.exe not found at $csc, trying .NET Framework"
     $csc = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
@@ -12,7 +13,7 @@ if (-not (Test-Path $csc)) {
 "CSC_OK: $csc" | Out-File -Encoding utf8 $diag
 Write-Host "CSC: $csc"
 
-Set-Location 'e:\code\new\2026-08-11-16-45-00\ClassicalEconomics'
+Set-Location $root
 $out = 'bin\EconomyMod.dll'
 if (Test-Path $out) { try { [System.IO.File]::Delete((Join-Path (Get-Location) $out)) } catch { } }
 if (-not (Test-Path 'bin')) { New-Item -ItemType Directory -Path 'bin' | Out-Null }
@@ -88,7 +89,7 @@ $refArgs = $refs | ForEach-Object { "/reference:$_" }
     /nowarn:CS0436 `
     /lib:$libsDir `
     $refArgs `
-    $src *> 'e:\code\new\2026-08-11-16-45-00\ClassicalEconomics\errors.txt'
+    $src *> (Join-Path $root 'errors.txt')
 
 Write-Host ("EXIT_CODE: " + $LASTEXITCODE)
 "EXIT_CODE: $LASTEXITCODE" | Out-File -Encoding utf8 -Append $diag

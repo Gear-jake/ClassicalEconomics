@@ -14,6 +14,7 @@ namespace EconomyMod.UI
     public static class EconomyUI
     {
         private static PowersTab _tab;
+        private static bool _initialized;
 
         /// <summary>
         /// 判断当前界面语言是否为中文系（简/繁）。
@@ -137,6 +138,9 @@ namespace EconomyMod.UI
 
         public static void Initialize()
         {
+            if (_initialized) return;
+            _initialized = true;
+            _tooltips.Clear();
             // 创建悬浮 HUD（Canvas 上的非模态面板）
             EconomyHUD.Create();
             // 创建富豪榜"工具框"（点击皇冠按钮弹出的轻量弹窗）

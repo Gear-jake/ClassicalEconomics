@@ -180,6 +180,7 @@ namespace EconomyMod.Core
         private static volatile string _workerError;      // 后台线程异常信息（主线程消费时记录日志，避免后台线程调用 Unity API）
         private static int _cycleIndex;
         private static int _generation;           // 代际计数：防止过期后台任务写入结果
+        private static int _activeWorkers;         // Reset 后仍在退出的旧任务；归零前禁止复用计算缓冲
 
         // ===== 自适应贸易参数 EMA 平滑状态（v0.11：后台单任务互斥，无竞态；Reset 归零）=====
         private static float _smDecay = 0.02f;     // EMA 距离衰减
@@ -202,6 +203,7 @@ namespace EconomyMod.Core
             new Dictionary<(long, long), TradeEdge>(512);   // key = KeyOf(cityAId, cityBId)
         private static readonly Queue<CityPair> _pathfindQueue = new Queue<CityPair>(256);
         private static readonly HashSet<long> _knownKingdoms = new HashSet<long>(32);
+        private static readonly HashSet<long> _knownCities = new HashSet<long>(128);
         private static int _routeCycle;                     // PrepareRoutes 调用计数（全量重算节奏）
 
         // ===== 主线程采集入口 =====
@@ -258,9 +260,14 @@ namespace EconomyMod.Core
             _routeCycle++;
             bool fullRebuild = (_routeCycle % Mathf.Max(1, cfg.PathRecomputeEvery)) == 0;
 
-            // 王国生灭检测：消失王国 → 删除相关边；新增王国 → 触发重建候选
+            // 王国/城市生灭检测：删除失效边，并在拓扑变化后重建候选。
             var curKingdoms = new HashSet<long>(_collectCities.Count / 2);
-            for (int i = 0; i < _collectCities.Count; i++) curKingdoms.Add(_collectCities[i].KingdomId);
+            var curCities = new HashSet<long>(_collectCities.Count);
+            for (int i = 0; i < _collectCities.Count; i++)
+            {
+                curKingdoms.Add(_collectCities[i].KingdomId);
+                curCities.Add(_collectCities[i].CityId);
+            }
 
             bool kingdomsChanged = false;
             if (curKingdoms.Count != _knownKingdoms.Count) kingdomsChanged = true;
@@ -270,14 +277,23 @@ namespace EconomyMod.Core
                     if (!_knownKingdoms.Contains(k)) { kingdomsChanged = true; break; }
             }
 
-            if (kingdomsChanged)
+            bool citiesChanged = curCities.Count != _knownCities.Count;
+            if (!citiesChanged)
             {
-                RemoveDeadKingdomEdges(curKingdoms);
-                _knownKingdoms.Clear();
-                foreach (var k in curKingdoms) _knownKingdoms.Add(k);
+                foreach (var c in curCities)
+                    if (!_knownCities.Contains(c)) { citiesChanged = true; break; }
             }
 
-            if (fullRebuild || kingdomsChanged)
+            if (kingdomsChanged || citiesChanged)
+            {
+                RemoveStaleEdges(curKingdoms, curCities);
+                _knownKingdoms.Clear();
+                foreach (var k in curKingdoms) _knownKingdoms.Add(k);
+                _knownCities.Clear();
+                foreach (var c in curCities) _knownCities.Add(c);
+            }
+
+            if (fullRebuild || kingdomsChanged || citiesChanged)
             {
                 _pathfindQueue.Clear();
                 EnqueueCandidatePairs(cfg);
@@ -301,15 +317,15 @@ namespace EconomyMod.Core
             foreach (var kv in _edgeCache) _collectEdges.Add(kv.Value);
         }
 
-        /// <summary>删除已消失王国涉及的全部边（缓存维护，主线程 O(N) 过滤）。</summary>
-        private static void RemoveDeadKingdomEdges(HashSet<long> curKingdoms)
+        /// <summary>删除已消失王国或城市涉及的全部边（缓存维护，主线程 O(N) 过滤）。</summary>
+        private static void RemoveStaleEdges(HashSet<long> curKingdoms, HashSet<long> curCities)
         {
-            if (_knownKingdoms.Count == 0) return;
             var keysToRemove = new List<(long, long)>(8);
             foreach (var kv in _edgeCache)
             {
                 var e = kv.Value;
-                if (!curKingdoms.Contains(e.KingdomAId) || !curKingdoms.Contains(e.KingdomBId))
+                if (!curKingdoms.Contains(e.KingdomAId) || !curKingdoms.Contains(e.KingdomBId)
+                    || !curCities.Contains(e.CityAId) || !curCities.Contains(e.CityBId))
                     keysToRemove.Add(kv.Key);
             }
             for (int i = 0; i < keysToRemove.Count; i++) _edgeCache.Remove(keysToRemove[i]);
@@ -492,7 +508,7 @@ namespace EconomyMod.Core
         /// </summary>
         public static bool PostCycle()
         {
-            if (_posting || _computing) return false; // 防御：仅允许一轮在途
+            if (_posting || _computing || System.Threading.Volatile.Read(ref _activeWorkers) > 0) return false; // 防御：仅允许一轮在途
             SwapBuffers();
             _cycleIndex++;
             _generation++;
@@ -504,9 +520,10 @@ namespace EconomyMod.Core
             var edges = _computeEdges;
             _computing = true;
             _posting = true;
+            System.Threading.Interlocked.Increment(ref _activeWorkers);
             try
             {
-                ThreadPool.QueueUserWorkItem(_ =>
+                bool queued = ThreadPool.QueueUserWorkItem(_ =>
                 {
                     try
                     {
@@ -525,14 +542,17 @@ namespace EconomyMod.Core
                     }
                     finally
                     {
-                        if (gen == _generation) _computing = false; // volatile 写：发布对 _readyResult 的写入
+                        if (gen == _generation) _computing = false;
+                        System.Threading.Interlocked.Decrement(ref _activeWorkers);
                     }
                 });
+                if (!queued) throw new InvalidOperationException("ThreadPool rejected work item");
                 return true;
             }
             catch (Exception e)
             {
                 Debug.LogWarning("[ClassicalEconomics] 后台线程提交失败: " + e.Message);
+                System.Threading.Interlocked.Decrement(ref _activeWorkers);
                 _computing = false;
                 _posting = false;
                 return false;
@@ -546,7 +566,7 @@ namespace EconomyMod.Core
         public static bool TryConsume()
         {
             if (!_posting) return false;
-            if (_computing) return false;
+            if (_computing || System.Threading.Volatile.Read(ref _activeWorkers) > 0) return false;
             // 后台线程异常：主线程在此输出日志（后台线程不允许调用 Unity API）
             var err = _workerError;
             _workerError = null;
@@ -563,10 +583,18 @@ namespace EconomyMod.Core
         }
 
         /// <summary>是否已有周期在途（已提交未消费 / 后台计算中）。调用方在发起新周期或同步计算前应检查。</summary>
-        public static bool IsBusy() => _posting || _computing;
+        public static bool IsBusy() => _posting || _computing || System.Threading.Volatile.Read(ref _activeWorkers) > 0;
 
         /// <summary>后台结果是否已就绪但尚未被消费（供周期驱动器自愈：_posting 遗留但无人消费时兜底置位）。</summary>
-        public static bool HasPendingResult() => _posting && !_computing;
+        public static bool HasPendingResult() => _posting && !_computing
+            && System.Threading.Volatile.Read(ref _activeWorkers) == 0;
+
+        /// <summary>进入主菜单时解除旧世界 Unity 对象引用；后台纯数据任务可自行退出。</summary>
+        public static void ClearWorldReferences()
+        {
+            _flowCityRefs = null;
+            _unitPool.Clear();
+        }
 
         /// <summary>
         /// 手动采集/实时刷新：同步计算并立即发布（按钮触发，不等后台线程）。
@@ -605,9 +633,11 @@ namespace EconomyMod.Core
             _collectKingdoms.Clear();
             _collectCities.Clear();
             _collectEdges.Clear();
+            _flowCityRefs = null;
             _edgeCache.Clear();
             _pathfindQueue.Clear();
             _knownKingdoms.Clear();
+            _knownCities.Clear();
             _smDecay = 0.02f;
             _smTransport = 0.05f;
             _smPriceW = 0.3f;
@@ -1072,6 +1102,8 @@ namespace EconomyMod.Core
         /// </summary>
         public static void ApplyTradeFlows()
         {
+            var cityRefs = _flowCityRefs;
+            _flowCityRefs = null;
             var cfg = UnrestConfig.Instance;
             if (cfg == null || !cfg.TradeEnabled) return;
             var res = LastResult;
@@ -1079,7 +1111,6 @@ namespace EconomyMod.Core
 
             long gross = 0;
             long net = 0;
-            var cityRefs = _flowCityRefs;
             foreach (var f in res.TradeFlows)
             {
                 if (f.Amount <= 0) continue;

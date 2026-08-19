@@ -39,6 +39,16 @@ namespace EconomyMod.Core
         // 富豪榜条目对象池：每年采集最多新建 0 个对象（复用池中条目）
         private static readonly List<RichEntryData> _entryPool = new List<RichEntryData>(10);
 
+        /// <summary>进入主菜单或切换世界时释放 Unity 世界对象引用，不影响经济历史。</summary>
+        public static void ClearWorldReferences()
+        {
+            for (int i = 0; i < TopRich.Count; i++) ReturnEntry(TopRich[i]);
+            TopRich.Clear();
+            WealthyPool.Clear();
+            _poorPool.Clear();
+            _cityRefs.Clear();
+        }
+
         /// <summary>
         /// 执行一次采集。遍历 ActorManager.units_only_alive（public List&lt;Actor&gt;），
         /// 读取原生 money/loot 字段（只读），并顺带读取公民职业。
