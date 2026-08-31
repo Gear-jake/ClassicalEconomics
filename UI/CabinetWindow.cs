@@ -507,17 +507,23 @@ namespace EconomyMod.UI
                 var iconsField = banner.GetType().GetField("icons", F);
                 if (iconsField == null) return null;
                 var icons = iconsField.GetValue(banner) as System.Collections.IList;
-                if (icons == null || iconId < 0 || iconId >= icons.Count) return null;
+                if (icons == null || iconId < 0 || iconId >= icons.Count)
+                {
+                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 图腾诊断：iconId=" + iconId
+                        + " icons=" + (icons != null ? icons.Count : -1) + " banner=" + banner.GetType().Name);
+                    return null;
+                }
                 var part = icons[iconId];
                 if (part == null) return null;
                 var spr = part as Sprite;
                 if (spr != null) return spr;
                 var p = part.GetType().GetProperty("sprite", F) ?? part.GetType().GetProperty("sprite", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                return (p != null ? p.GetValue(part) : null) as Sprite;
+                if (p == null) return null; // 元素类型无 sprite：诊断一次
+                return p.GetValue(part) as Sprite;
             }
-            catch (System.Exception)
+            catch (System.Exception e)
             {
-                // 图腾不可用：静默（背景+颜色仍完整）
+                UnityEngine.Debug.LogWarning("[ClassicalEconomics] 图腾诊断异常: " + e.Message);
             }
             return null;
         }
@@ -529,13 +535,9 @@ namespace EconomyMod.UI
             string name = GameHelpers.SafeKingdomName(target);
 
             var topRow = NewRow(2, 34f);
-            AddRowButton(topRow, UIHelpers.L("cabinet_dip_back"), BtnColor,
-                () => { _dipTargetId = 0; RefreshNow(); }, 90f);
-            var crest = UIHelpers.CreateText(name, topRow.transform, 15f, UIStyles.Gold, _gameFont, 28f);
-            var crestLe = crest.GetComponent<LayoutElement>();
-            if (crestLe == null) crestLe = crest.AddComponent<LayoutElement>();
-            crestLe.flexibleWidth = 1f;
-            // 国徽：RulerBox 同款双层旗章——底色背景（getElementBackground + 主色）+ 徽记图标
+            // 行不强制拉伸子项，防止旗章被拉成竖条
+            topRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+            // 国徽：RulerBox 同款双层旗章（最先创建 = 排最左）——底色背景（getElementBackground + 主色）+ 徽记图标
             // （getElementIcon + 旗帜色）叠加于固定 26x26 容器，防止被行布局拉伸成大色块
             try
             {
@@ -546,7 +548,9 @@ namespace EconomyMod.UI
                 fwRt.pivot = new Vector2(0, 0.5f);
                 fwRt.sizeDelta = new Vector2(26f, 26f);
                 var fwLe = flagWrap.AddComponent<LayoutElement>();
-                fwLe.preferredWidth = 26f; fwLe.preferredHeight = 26f; fwLe.flexibleWidth = 0f;
+                fwLe.preferredWidth = 26f; fwLe.preferredHeight = 26f;
+                fwLe.flexibleWidth = 0f; fwLe.flexibleHeight = 0f;
+                fwLe.minWidth = 26f; fwLe.minHeight = 26f;
 
                 var bgGo = new GameObject("FlagBg", typeof(RectTransform), typeof(Image));
                 bgGo.transform.SetParent(flagWrap.transform, false);
@@ -570,6 +574,13 @@ namespace EconomyMod.UI
                 try { icImg.color = target.kingdomColor.getColorBanner(); } catch (System.Exception) { }
             }
             catch (System.Exception) { }
+
+            var crest = UIHelpers.CreateText(name, topRow.transform, 15f, UIStyles.Gold, _gameFont, 28f);
+            var crestLe = crest.GetComponent<LayoutElement>();
+            if (crestLe == null) crestLe = crest.AddComponent<LayoutElement>();
+            crestLe.flexibleWidth = 1f;
+            AddRowButton(topRow, UIHelpers.L("cabinet_dip_back"), BtnColor,
+                () => { _dipTargetId = 0; RefreshNow(); }, 90f);
             AddDivider(DividerColor);
 
             EconomyMod.Models.KingdomStats ks;
