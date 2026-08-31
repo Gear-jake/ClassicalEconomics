@@ -17,6 +17,46 @@ namespace EconomyMod.Core
         private static object _kingdomIndexSource;
         private static int _kingdomIndexCount = -1;
 
+        /// <summary>解析城市所属王国：反射探测常见成员（kingdom/kingdomData/mainKingdom），全部失败返回 null。</summary>
+        public static Kingdom GetKingdomOfCity(City city)
+        {
+            if (city == null) return null;
+            try
+            {
+                var t = city.GetType();
+                const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+                foreach (var name in new string[] { "kingdom", "kingdomData", "mainKingdom" })
+                {
+                    var prop = t.GetProperty(name, F);
+                    if (prop != null)
+                    {
+                        var v = prop.GetValue(city);
+                        if (v is Kingdom k) return k;
+                        if (v != null)
+                        {
+                            var idField = v.GetType().GetField("id", F);
+                            long id = idField != null ? System.Convert.ToInt64(idField.GetValue(v)) : 0L;
+                            if (id != 0) return FindKingdom(id);
+                        }
+                    }
+                    var field = t.GetField(name, F);
+                    if (field != null)
+                    {
+                        var v = field.GetValue(city);
+                        if (v is Kingdom k) return k;
+                        if (v != null)
+                        {
+                            var idField = v.GetType().GetField("id", F);
+                            long id = idField != null ? System.Convert.ToInt64(idField.GetValue(v)) : 0L;
+                            if (id != 0) return FindKingdom(id);
+                        }
+                    }
+                }
+            }
+            catch (System.Exception) { }
+            return null;
+        }
+
         /// <summary>按王国 ID 在 World.world.kingdoms 中查找原生 Kingdom 对象；不存在返回 null。</summary>
         public static Kingdom FindKingdom(long kingdomId)
         {

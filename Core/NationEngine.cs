@@ -191,6 +191,8 @@ namespace EconomyMod.Core
             _pactFlowPermille = 1000;
             _tariffImportPermille = 1000;
             _tariffPricePermille = 1000;
+            _nativeBuildId = null;
+            _nativeBuildName = null;
             NationDiplomacy.Reset();
         }
 
@@ -841,6 +843,144 @@ namespace EconomyMod.Core
             return pool;
         }
 
-        private static readonly List<Actor> _poorPool = new List<Actor>(64);
+        private static readonly List<Actor> _poorPool = new List<Actor>(64);        // ===== 原版建筑放置（RulerBox BuildingPlacementTool 模式）：建设页选建筑 →
+        // ===== 鼠标点击地图（本国领土、非海洋）→ 金库扣费 → World.world.buildings.addBuilding。
+        // ===== 右键取消；放置成功可继续放置（连续建造），再次右键退出。
+
+        private static string _nativeBuildId;
+        private static string _nativeBuildName;
+
+        /// <summary>是否处于原版建筑放置模式。</summary>
+        public static bool IsNativePlacing => _nativeBuildId != null;
+
+        /// <summary>当前放置中的建筑名（UI 提示用）。</summary>
+        public static string NativeBuildName => _nativeBuildName;
+
+        /// <summary>按建筑资产解析金库费用：gold 成本 + 资源成本折半，保底 100 金币。</summary>
+        public static long NativeFee(BuildingAsset asset)
+        {
+            if (asset == null || asset.cost == null) return 100L;
+            var c = asset.cost;
+            long fee = c.gold + (c.wood + c.stone + c.common_metals) / 2;
+            return System.Math.Max(100L, fee);
+        }
+
+        /// <summary>进入放置模式；建筑不存在或未认领时返回 false（fail-closed）。</summary>
+        public static bool BeginNativePlacement(string assetId, string displayName)
+        {
+            var cfg = UnrestConfig.Instance;
+            if (cfg == null || !cfg.NationPlayEnabled || _nationKingdomId == 0) return false;
+            if (AnnualPipeline.IsSettling) return false;
+            BuildingAsset asset = null;
+            try { asset = AssetManager.buildings.get(assetId); } catch (System.Exception) { }
+            if (asset == null)
+            {
+                GameHelpers.NotifyLocalized("toast_nation_build_unavailable", displayName != null ? displayName : assetId);
+                return false;
+            }
+            _nativeBuildId = assetId;
+            _nativeBuildName = assetId;
+            GameHelpers.NotifyLocalized("toast_nation_place_mode", displayName != null ? displayName : assetId);
+            return true;
+        }
+
+        /// <summary>取消放置模式。</summary>
+        public static void CancelNativePlacement()
+        {
+            _nativeBuildId = null;
+            _nativeBuildName = null;
+        }
+
+        /// <summary>每帧由 EconomyTickRunner 调用：右键取消；左键（非 UI 上）尝试放置。</summary>
+        public static void TickNativePlacement()
+        {
+            if (!IsNativePlacing) return;
+            if (World.world == null) { CancelNativePlacement(); return; }
+
+            try
+            {
+                if (UnityEngine.Input.GetMouseButtonDown(1))
+                {
+                    CancelNativePlacement();
+                    GameHelpers.NotifyLocalized("toast_nation_place_cancelled");
+                    return;
+                }
+                if (!UnityEngine.Input.GetMouseButtonDown(0)) return;
+                if (UnityEngine.EventSystems.EventSystem.current != null
+                    && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+                    return; // 点在 UI 上不放
+
+                var tile = World.world.getMouseTilePos();
+                if (tile == null) return;
+                if (tile.Type != null && (tile.Type.ocean || tile.Type.liquid))
+                {
+                    GameHelpers.NotifyLocalized("toast_nation_place_land");
+                    return;
+                }
+                var city = tile.zone != null ? tile.zone.city : null;
+                var kingdom = city != null ? GameHelpers.GetKingdomOfCity(city) : null;
+                if (kingdom == null || kingdom.data == null || kingdom.data.id != _nationKingdomId)
+                {
+                    GameHelpers.NotifyLocalized("toast_nation_place_territory");
+                    return;
+                }
+
+                BuildingAsset asset = null;
+                try { asset = AssetManager.buildings.get(_nativeBuildId); } catch (System.Exception) { }
+                if (asset == null) { CancelNativePlacement(); return; }
+
+                long fee = NativeFee(asset);
+                if (!TrySpend(fee))
+                {
+                    GameHelpers.NotifyLocalized("toast_nation_poor_treasury");
+                    return;
+                }
+
+                if (!NativeAddBuildingTried(asset, tile))
+                {
+                    _treasury += fee; // 放置失败退款（fail-closed）
+                    GameHelpers.NotifyLocalized("toast_nation_build_failed");
+                    return;
+                }
+                AddRecord(SafeYearNow(), "nation_build_native", fee);
+                EventStreamService.Record(EventStreamService.TypeNationBuild, _nationName,
+                    fee > int.MaxValue ? int.MaxValue : (int)fee);
+                GameHelpers.NotifyLocalized("toast_nation_built", _nationName, FormatGold(fee));
+                // 连续放置：不退出模式（右键结束）
+            }
+            catch (System.Exception) { CancelNativePlacement(); }
+        }
+
+        // BuildingManager.addBuilding(string, WorldTile) 为运行时成员（编译期 DLL 缺失，与 startWar 同理）：
+        // 运行时反射定位一次并缓存；失败返回 false（调用方退款）。
+        private static System.Reflection.MethodInfo _addBuildingByIdMethod;
+
+        private static bool NativeAddBuildingTried(BuildingAsset asset, WorldTile tile)
+        {
+            try
+            {
+                if (_addBuildingByIdMethod == null)
+                {
+                    _addBuildingByIdMethod = typeof(BuildingManager).GetMethod("addBuilding",
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+                        null, new System.Type[] { typeof(string), typeof(WorldTile) }, null);
+                }
+                if (_addBuildingByIdMethod == null || _buildingManagerInstance == null)
+                {
+                    _buildingManagerInstance = World.world.buildings;
+                }
+                if (_addBuildingByIdMethod == null || _buildingManagerInstance == null) return false;
+                _addBuildingByIdMethod.Invoke(_buildingManagerInstance, new object[] { asset.id, tile });
+                return true;
+            }
+            catch (System.Exception) { return false; }
+        }
+
+        private static BuildingManager _buildingManagerInstance;
+
+        private static int SafeYearNow()
+        {
+            try { return EconomyModMain.GetCurrentGameYear(); } catch (System.Exception) { return 0; }
+        }
     }
 }

@@ -257,7 +257,67 @@ namespace EconomyMod.UI
             BuildDecreeRow("nation_decree_festival", UIHelpers.Lf("cabinet_decree_cost_festival"), year < NationEngine.FestivalReadyYear,
                 () => { if (NationEngine.TryFestival(SafeYear())) RefreshNow(); });
             AddLine("", Muted, 6f);
+            BuildNativeBuildings();
+            AddLine("", Muted, 6f);
             BuildBuildingRows();
+        }
+
+        /// <summary>原版建筑放置区（RulerBox 式）：点建筑 → 放置模式 → 鼠标点击地图（本国领土）。
+        /// 建筑 ID 按本国种族拼接（house_human_3 等）；放置模式时黄字提示。</summary>
+        private void BuildNativeBuildings()
+        {
+            AddLine(UIHelpers.L("cabinet_build_native"), UIStyles.Gold, 13f);
+            if (NationEngine.IsNativePlacing)
+            {
+                AddLine(UIHelpers.Lf("cabinet_place_mode", NationEngine.NativeBuildName), UIStyles.Warning, 12f);
+            }
+            else
+            {
+                AddLine(UIHelpers.L("cabinet_place_hint"), Muted, 11f);
+            }
+
+            string race = ""; // 本国种族（如 human）；取不到时走通用 ID
+            var kingdom = GameHelpers.FindKingdom(NationEngine.NationKingdomId);
+            if (kingdom != null)
+            {
+                try
+                {
+                    var raceAsset = kingdom.getActorAsset();
+                    if (raceAsset != null) race = raceAsset.id;
+                }
+                catch (System.Exception) { }
+            }
+
+            // 建筑清单：(无种族前缀基础ID, 种族后缀, 显示键, 通用ID兜底)
+            var defs = new (string Base, string Suffix, string Key, string Plain)[]
+            {
+                ("house", "_1", "build_native_house_t1", "house_1"),
+                ("house", "_3", "build_native_house_t3", "house_3"),
+                ("house", "_5", "build_native_house_t5", "house_5"),
+                ("barracks", "", "build_native_barracks", "barracks"),
+                ("watch_tower", "", "build_native_watchtower", "watch_tower"),
+                ("well", "", "build_native_well", "well"),
+                ("mine", "", "build_native_mine", "mine"),
+                ("statue", "", "build_native_statue", "statue"),
+                ("temple", "", "build_native_temple", "temple"),
+                ("bonfire", "", "build_native_bonfire", "bonfire"),
+            };
+
+            for (int i = 0; i < defs.Length; i += 2)
+            {
+                var row = NewRow(2);
+                for (int j = i; j < i + 2 && j < defs.Length; j++)
+                {
+                    var d = defs[j];
+                    string id = string.IsNullOrEmpty(d.Suffix) ? d.Plain
+                        : (race.Length > 0 ? d.Base + "_" + race + d.Suffix : d.Plain);
+                    string label = UIHelpers.L(d.Key);
+                    AddRowButton(row, label, BtnGood, () =>
+                    {
+                        if (NationEngine.BeginNativePlacement(id, label)) RefreshNow();
+                    });
+                }
+            }
         }
 
         private void BuildDiplomacyPage()

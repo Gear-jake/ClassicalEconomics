@@ -380,6 +380,9 @@ BiomeEconomy.ClearCache();
                 }
                 catch (System.Exception) { }
 
+                // 原版建筑放置模式（RulerBox 式）：左键放置/右键取消
+                try { NationEngine.TickNativePlacement(); } catch (System.Exception) { }
+
                 InheritanceEngine.Tick(Time.deltaTime);
                 // 每帧维持收复战争（内部 1 秒节流）：和谈后立即重新宣战，直到收回叛乱城市
                 UnrestEngine.SustainRebelWars();
