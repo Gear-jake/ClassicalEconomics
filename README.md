@@ -35,6 +35,40 @@
 2. 将 `EconomyMod` 文件夹放入 `WorldBox/Mods/`
 3. 游戏内模组列表启用「古典经济学」
 
+
+
+### 性能分组（年度收尾治理）
+
+NML 设置页新增 **性能** 分组，全部键已同步实现于 `default_config.json`、`UnrestConfig`、`ConfigCallbacks`（AllConfigIds + 有界 ParseInt + 回调）与四种语言（zh / zh_tw / en / ru），并由 `tools/Test-ConfigDocs.ps1` 一致性门禁校验（fail-closed）：
+
+| 配置键 | 默认值 | 取值范围 | 说明 |
+|--------|-------:|---------|------|
+| `real_time_refresh_threshold` | 2000 | 100-100000 | 实时刷新熔断阈值：存活单位数 ≥ 该值时跳过重算，仅刷新 UI |
+| `real_time_refresh_budget` | 2000 | 100-100000 | 实时刷新处理预算：单次轻量刷新最多采集的存活单位数 |
+| `spending_cap_per_year` | 5000 | 1-100000 | 年度消费上限：每年最多处理的富裕生物数 |
+| `banking_default_cap_per_year` | 500 | 1-100000 | 银行违约年度上限：每年最多处理信贷/违约的王国数 |
+| `banking_contagion_cap_per_year` | 500 | 1-100000 | 银行危机传染评估年度上限：每年最多评估的传染伙伴王国数 |
+| `inheritance_scan_per_frame` | 2000 | 1-100000 | 遗产扫描每帧上限：3 秒扫描窗口内每帧最多扫描的存活单位数 |
+| `frame_budget_ms` | 4 | 1-100 | 年度收尾单帧预算：状态机每帧最多推进的阶段执行毫秒数，全部阶段完成才写快照/刷新 UI |
+| `cycle_window_ms` | 2000 | 100-10000 | 年度收尾窗口：整个收尾允许的累计毫秒数；超时先延窗至 5000ms，再按 消费→银行→其他 削减，税收永不削减 |
+| `perf_diagnostics_enabled` | false | 开关 | 年度收尾性能诊断（Stopwatch 耗时 + 托管内存增量），只记录超预算阶段；关闭 = 零开销（默认） |
+| `cycle_alloc_budget` | 4096 | 1-1048576 | 年度收尾托管分配预算（KB，默认 4096 = 4MB）：整年分配增量超过该值在年度汇总中标注超预算 |
+| `memory_cleanup_enabled` | true | 开关 | 自动内存清理：开启后每隔一段时间在游戏空闲时对静态 scratch/缓存集合执行 TrimExcess 缩容（默认开启） |
+| `memory_cleanup_force_gc` | false | 开关 | 清理间隔到达时是否强制执行一次 System.GC.Collect（全项目唯一 GC 入口，仅此一行受性能门禁允许；默认关闭） |
+| `memory_cleanup_interval_seconds` | 30 | 5-300 | 自动内存清理间隔（秒）：两次清理之间至少相隔的秒数 |
+| `memory_cleanup_notify_enabled` | true | 开关 | 清理释放量有意义（估算 ≥0.5 MB 或执行了强制 GC）时在屏幕顶部弹横幅提示；经济面板内存状态行与日志不受此开关影响 |
+| `nation_play_enabled` | true | 开关 | 中央银行家玩法：国家认领、王室财政金库、持续政策与一次性法令（默认开启） |
+| `treasury_income_ratio` | 5 | 1-20 | 王室财政每期税负比例：从本国城市仓库金币中征收的百分比 |
+| `policy_slots` | 3 | 1-5 | 持续政策槽位上限：同时最多生效的持续政策数量 |
+| `trade_astar_enabled` | true | 开关 | 贸易寻路用 A* 真实路径长度计成本（绕山跨海更真实；关闭回退直线距离） |
+| `nation_claim_hotkey` | G | 文本 | 大地图悬停国家后按此键打开/认领内阁面板（Unity KeyCode 名，留空禁用） |
+
+经济面板概览显示内存状态行：上次清理时间、释放量、托管堆与 Unity 已用/保留内存（`hud_mem_cleanup` / `hud_mem_cleanup_pending` / `hud_mem_usage`，清理弹窗文案为 `memory_cleanup_toast`，均为四语言本地化字符串，非配置键）。托管堆是模组与游戏共享的 Mono GC 口径；Unity 已用/保留是游戏本体原生资源口径——若托管堆稳定而 Unity 已用持续上涨，说明增长来自游戏本体而非模组。
+
+年度结算进行时 HUD 显示结算标记（`settling_marker` / `settling_hint`），期间立即采集与手动切换阶段被禁用。结算标记是纯本地化字符串（四语言），非配置键。
+
+---
+
 ## 操作提示
 
 - **G**（可改键）：大地图悬停国家 → 认领 / 打开内阁（也可点国家窗口右上角账本按钮）

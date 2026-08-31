@@ -35,6 +35,40 @@
 2. Put the `EconomyMod` folder into `WorldBox/Mods/`
 3. Enable "Classical Economics" in the mod list
 
+
+
+### Performance group (annual closeout)
+
+The NML settings window adds a **Performance** group. Every key below is synchronized across `default_config.json`, `UnrestConfig`, `ConfigCallbacks` (AllConfigIds + bounded ParseInt + callback), and all four locales (zh / zh_tw / en / ru), verified by the fail-closed `tools/Test-ConfigDocs.ps1` consistency gate:
+
+| Config key | Default | Range | Description |
+|------------|--------:|-------|-------------|
+| `real_time_refresh_threshold` | 2000 | 100-100000 | Refresh breaker: skip recompute when alive units reach this (UI-only refresh) |
+| `real_time_refresh_budget` | 2000 | 100-100000 | Max alive units processed per lightweight refresh |
+| `spending_cap_per_year` | 5000 | 1-100000 | Max wealthy actors processed per year |
+| `banking_default_cap_per_year` | 500 | 1-100000 | Max kingdoms processed for credit/defaults per year |
+| `banking_contagion_cap_per_year` | 500 | 1-100000 | Max contagion partners evaluated per year |
+| `inheritance_scan_per_frame` | 2000 | 1-100000 | Max alive units scanned per frame in the 3-second inheritance window |
+| `frame_budget_ms` | 4 | 1-100 | Max ms the annual closeout state machine advances per frame (snapshot/UI only after all stages) |
+| `cycle_window_ms` | 2000 | 100-10000 | Total ms allowed for the whole annual closeout; on timeout extend to 5000ms first, then reduce spending → banking → other; tax is never reduced |
+| `perf_diagnostics_enabled` | false | switch | Records closeout stage times (Stopwatch) and managed-memory deltas; logs only over-budget stages. OFF = zero overhead (default) |
+| `cycle_alloc_budget` | 4096 | 1-1048576 | Per-cycle managed-allocation budget in KB (default 4096 = 4MB); the yearly summary flags cycles exceeding it |
+| `memory_cleanup_enabled` | true | switch | Auto memory cleanup: when ON, trims static scratch/cache collections (TrimExcess) at intervals while the game is idle (default ON) |
+| `memory_cleanup_force_gc` | false | switch | Whether to run one System.GC.Collect when the cleanup interval fires (the only GC entry point in the mod, allowed by the performance gate on this single line only; default OFF) |
+| `memory_cleanup_interval_seconds` | 30 | 5-300 | Auto memory cleanup interval (s): minimum seconds between two automatic memory cleanups |
+| `memory_cleanup_notify_enabled` | true | switch | Shows a top-banner toast when a cleanup frees a meaningful amount (estimated ≥0.5 MB or forced GC ran); the HUD memory status line and logs are unaffected |
+| `nation_play_enabled` | true | switch | Central banker gameplay: nation claiming, royal treasury, ongoing policies and one-shot decrees (default ON) |
+| `treasury_income_ratio` | 5 | 1-20 | Royal treasury income ratio: percent of city warehouse gold levied each cycle |
+| `policy_slots` | 3 | 1-5 | Ongoing policy slot cap: maximum simultaneous ongoing policies |
+| `trade_astar_enabled` | true | switch | Trade edges cost by real A* path length (realistic detours around mountains/seas; OFF falls back to straight-line distance) |
+| `nation_claim_hotkey` | G | text | Hover a kingdom on the map and press this key to claim/open the cabinet (Unity KeyCode name; blank disables) |
+
+The economy panel overview shows a memory status line: last cleanup time, freed amount, managed heap and Unity used/reserved memory (`hud_mem_cleanup` / `hud_mem_cleanup_pending` / `hud_mem_usage`; the toast text is `memory_cleanup_toast`; all are locale strings in four languages, not config keys). The managed heap is the Mono GC view shared by the mod and the game; Unity used/reserved is the native-asset view — if the managed heap stays flat while Unity used keeps rising, the growth comes from the game itself, not the mod.
+
+While the annual settlement runs, the HUD shows a settling marker (`settling_marker` / `settling_hint`) and manual collection / phase switching are disabled. The markers are pure locale strings (all four locales), not config keys.
+
+---
+
 ## Controls
 
 - **G** (rebindable): hover a kingdom → claim / open Cabinet (or the ledger button in nation/city windows)
