@@ -564,5 +564,20 @@
   "cabinet_dip_stat_laws": "Законов {0} · Политик {1}",
   "cabinet_dip_stat_war": "Сейчас в состоянии войны",
   "cabinet_dip_stat_peace": "Сейчас в состоянии мира",
-  "cabinet_dip_actions": "Дипломатические действия"
+  "cabinet_dip_actions": "Дипломатические действия",
+  "codex_eff_production": "Производство",
+  "codex_eff_tax": "Налоги",
+  "codex_eff_trade": "Торговля",
+  "codex_eff_price": "Цены",
+  "codex_eff_consume": "Траты",
+  "codex_eff_disaster": "Катастрофы",
+  "codex_eff_build": "Стройка",
+  "codex_eff_wage": "Зарплаты",
+  "codex_eff_unrest": "Волнения",
+  "codex_eff_happy": "Довольство",
+  "codex_eff_birth": "Рождаемость",
+  "codex_eff_gini": "Джини",
+  "codex_eff_military": "Армия",
+  "cabinet_codex_effect_title": "Суммарные эффекты",
+  "cabinet_codex_effect_none": "Нет эффектов (по умолчанию)"
 }

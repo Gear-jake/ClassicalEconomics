@@ -564,5 +564,20 @@
   "cabinet_dip_stat_laws": "法律 {0} 條 · 國策 {1} 條",
   "cabinet_dip_stat_war": "目前處於戰爭狀態",
   "cabinet_dip_stat_peace": "目前處於和平狀態",
-  "cabinet_dip_actions": "外交動作"
+  "cabinet_dip_actions": "外交動作",
+  "codex_eff_production": "生產",
+  "codex_eff_tax": "稅收",
+  "codex_eff_trade": "貿易",
+  "codex_eff_price": "物價",
+  "codex_eff_consume": "消費",
+  "codex_eff_disaster": "災害",
+  "codex_eff_build": "建築",
+  "codex_eff_wage": "工資",
+  "codex_eff_unrest": "動盪",
+  "codex_eff_happy": "幸福",
+  "codex_eff_birth": "生育",
+  "codex_eff_gini": "基尼",
+  "codex_eff_military": "軍力",
+  "cabinet_codex_effect_title": "本頁聚合效果",
+  "cabinet_codex_effect_none": "無效果（預設狀態）"
 }

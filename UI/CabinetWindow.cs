@@ -188,6 +188,8 @@ namespace EconomyMod.UI
             AddLine(UIHelpers.Lf("cabinet_codex_nation", GameHelpers.SafeKingdomName(kingdom)), UIStyles.Gold, 13f);
             int style = CodexEngine.GetStyle(kid);
             AddLine(UIHelpers.Lf("cabinet_codex_style", UIHelpers.L(CodexEngine.StyleKeys[style])), UIStyles.Info, 12f);
+            AddLine(UIHelpers.L("cabinet_codex_effect_title"), UIStyles.Gold, 12f);
+            BuildCodexEffectSummary(kid);
             // AI 建议改为逐条嵌入法律行（当前档→建议档小按钮），不再占顶部整块
             AddDivider(DividerColor);
 
@@ -207,6 +209,44 @@ namespace EconomyMod.UI
             foreach (var key in CodexEngine.PolicyKeys)
             {
                 BuildCodexPolicyRow(kingdom, key);
+            }
+        }
+
+        /// <summary>法典聚合总览：直接读 LawMods，把偏离中性的乘数实时格式化展示（无需等年度）。</summary>
+        private void BuildCodexEffectSummary(long kid)
+        {
+            var m = CodexEngine.GetMods(kid);
+            var parts = new List<string>();
+            System.Action<string, float> addPct = (key, v) =>
+            {
+                if (System.Math.Abs(v - 1f) > 0.0001f)
+                    parts.Add(UIHelpers.L(key) + (v > 1f ? " +" : " -") + (System.Math.Abs(v - 1f) * 100f).ToString("F1") + "%");
+            };
+            addPct("codex_eff_production", m.Productivity);
+            addPct("codex_eff_tax", m.TaxRate);
+            addPct("codex_eff_trade", m.TradeFlow);
+            addPct("codex_eff_price", m.Price);
+            addPct("codex_eff_consume", m.Consumer);
+            addPct("codex_eff_disaster", m.DisasterResist);
+            addPct("codex_eff_build", m.BuildCost);
+            addPct("codex_eff_wage", m.Wage);
+            addPct("codex_eff_unrest", m.UnrestAccum);
+            addPct("codex_eff_happy", m.Happiness);
+            addPct("codex_eff_birth", m.Birth);
+            if (System.Math.Abs(m.GiniShift) > 0.0001f)
+                parts.Add(UIHelpers.L("codex_eff_gini") + (m.GiniShift > 0f ? " +" : " -") + System.Math.Abs(m.GiniShift).ToString("F2"));
+            if (System.Math.Abs(m.Military) > 0.0001f)
+                parts.Add(UIHelpers.L("codex_eff_military") + (m.Military > 0f ? " +" : " -") + System.Math.Abs(m.Military).ToString("F1"));
+
+            if (parts.Count == 0)
+            {
+                AddLine(UIHelpers.L("cabinet_codex_effect_none"), Muted, 11f);
+                return;
+            }
+            for (int i = 0; i < parts.Count; i += 3)
+            {
+                int end = System.Math.Min(parts.Count, i + 3);
+                AddLine(string.Join("｜", parts.GetRange(i, end - i).ToArray()), UIStyles.Info, 11f);
             }
         }
 

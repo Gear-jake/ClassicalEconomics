@@ -564,5 +564,20 @@
   "cabinet_dip_stat_laws": "Laws {0} · Policies {1}",
   "cabinet_dip_stat_war": "Currently at war",
   "cabinet_dip_stat_peace": "Currently at peace",
-  "cabinet_dip_actions": "Diplomatic Actions"
+  "cabinet_dip_actions": "Diplomatic Actions",
+  "codex_eff_production": "Production",
+  "codex_eff_tax": "Tax",
+  "codex_eff_trade": "Trade",
+  "codex_eff_price": "Price",
+  "codex_eff_consume": "Spend",
+  "codex_eff_disaster": "Disaster",
+  "codex_eff_build": "Build",
+  "codex_eff_wage": "Wage",
+  "codex_eff_unrest": "Unrest",
+  "codex_eff_happy": "Happy",
+  "codex_eff_birth": "Birth",
+  "codex_eff_gini": "Gini",
+  "codex_eff_military": "Military",
+  "cabinet_codex_effect_title": "Aggregate Effects",
+  "cabinet_codex_effect_none": "No effects (default)"
 }
