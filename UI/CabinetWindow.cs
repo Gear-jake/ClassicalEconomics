@@ -123,6 +123,7 @@ namespace EconomyMod.UI
             _page = page;
             for (int i = 0; i < PageCount; i++)
                 _pages[i].SetActive(i == (int)page);
+            UpdateTabHighlights(); // 高亮随打开的页面（曾漏调：点击 Tab 后永远停在第一个）
             RefreshNow();
         }
 
@@ -256,11 +257,14 @@ namespace EconomyMod.UI
             string name = UIHelpers.L(key);
             AddLine(name, level > 0 ? UIStyles.Positive : UIStyles.TextPrimary, 10f);
             var row = NewRow(CodexEngine.LawTiers, 22f, fill: true);
-            // 档位按钮（0..4，小号横排）
+            // 档位按钮（0..4，小号横排）：显示该法律自己的档位语义名（如 无贸易保护→闭关锁国），缺失回退 无/轻/中/重/极
             for (int lv = 0; lv < CodexEngine.LawTiers; lv++)
             {
                 int target = lv;
-                AddRowButton(row, UIHelpers.Lf("codex_lv" + lv),
+                string lvKey = key + "_lv" + lv;
+                string lvLabel = UIHelpers.L(lvKey);
+                if (lvLabel == lvKey) lvLabel = UIHelpers.L("codex_lv" + lv);
+                AddRowButton(row, lvLabel,
                     lv == level ? BtnGood : BtnColor,
                     () =>
                     {
