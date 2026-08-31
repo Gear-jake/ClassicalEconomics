@@ -446,5 +446,12 @@
   "ev_desc_nation_diplomacy": "Diplomatic relations with <{0}> changed",
   "nation_claim": "Claim Nation",
   "nation_claim_hotkey": "Cabinet Hotkey",
-  "nation_claim_hotkey Description": "Hover a kingdom on the map and press this key to claim/open the cabinet panel (Unity KeyCode name, e.g. G; blank disables; default G)"
+  "nation_claim_hotkey Description": "Hover a kingdom on the map and press this key to claim/open the cabinet panel (Unity KeyCode name, e.g. G; blank disables; default G)",
+  "cabinet_tab_finance": "Finance",
+  "cabinet_tab_policy": "Policies",
+  "cabinet_tab_decree": "Decrees·Build",
+  "cabinet_tab_diplomacy": "Diplomacy",
+  "cabinet_policy_hint": "Ongoing policies occupy slots; enabling pays the first year, retiering pays a reform fee, cancelling is free",
+  "cabinet_decree_hint": "One-shot decrees are instant; buildings are one per city and can be destroyed by wars and disasters",
+  "cabinet_diplomacy_hint": "Real-time actions against a target: war/peace/alliance/pact/gift; 2 pact slots"
 }

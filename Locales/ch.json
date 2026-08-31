@@ -446,5 +446,12 @@
   "ev_desc_nation_diplomacy": "与 <{0}> 的外交关系发生变化",
   "nation_claim": "认领国家",
   "nation_claim_hotkey": "内阁快捷键",
-  "nation_claim_hotkey Description": "大地图上把鼠标悬停国家后按此键打开/认领内阁面板（Unity KeyCode 名，如 G；留空禁用；默认 G）"
+  "nation_claim_hotkey Description": "大地图上把鼠标悬停国家后按此键打开/认领内阁面板（Unity KeyCode 名，如 G；留空禁用；默认 G）",
+  "cabinet_tab_finance": "财税",
+  "cabinet_tab_policy": "政策",
+  "cabinet_tab_decree": "法令·建设",
+  "cabinet_tab_diplomacy": "外交",
+  "cabinet_policy_hint": "持续政策占槽位；启用付首年年费，改档付改制约，取消免费",
+  "cabinet_decree_hint": "一次性法令即点即用；兴建建筑每城一座，可被战争与灾害摧毁",
+  "cabinet_diplomacy_hint": "对目标国实时执行：宣战/求和/结盟/协定/赠礼；协定槽位 2"
 }

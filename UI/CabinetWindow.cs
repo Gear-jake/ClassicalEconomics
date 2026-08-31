@@ -8,10 +8,10 @@ using UnityEngine.UI;
 namespace EconomyMod.UI
 {
     /// <summary>
-    /// 内阁面板（中央银行家 v0.95）：玩家认领国家的治理台。
-    /// 四区：国库（余额/收支/认领切换）、政策（6 个持续政策 × 三档、槽位上限）、
-    /// 法令（紧急救济/庆典/建筑）、记录（政绩环形列表，含执行前后关键指标对比）。
-    /// 与其他悬浮窗同构（FloatingWindow 骨架 + 深色金融主题）。
+    /// 内阁面板（中央银行家）：玩家认领国家的治理台。
+    /// RulerBox 式枢纽-页面布局：顶部 Tab 切换 4 个页面——财税 / 政策 / 法令·建设 / 外交，
+    /// 每个页面获得整幅内容宽度（不再挤在一个小页里）；窗口 600×760。
+    /// 未认领时显示国家列表（认领页）。
     /// </summary>
     public class CabinetWindow : FloatingWindow
     {
@@ -30,34 +30,144 @@ namespace EconomyMod.UI
         protected override Vector2 AnchorMin => new Vector2(0.5f, 0.5f);
         protected override Vector2 AnchorMax => new Vector2(0.5f, 0.5f);
         protected override Vector2 Pivot => new Vector2(0.5f, 0.5f);
-        protected override Vector2 AnchoredPosition => new Vector2(620f, 0f);
-        protected override Vector2 Size => new Vector2(400f, 640f);
+        protected override Vector2 AnchoredPosition => new Vector2(560f, 0f);
+        protected override Vector2 Size => new Vector2(600f, 760f);
         protected override Color BgColor => new Color(0.12f, 0.13f, 0.16f, 0.97f);
+
+        private enum CabinetPage { Finance = 0, Policy, Decree, Diplomacy }
+        private const int PageCount = 4;
+        private static readonly string[] PageKeys = { "cabinet_tab_finance", "cabinet_tab_policy", "cabinet_tab_decree", "cabinet_tab_diplomacy" };
 
         private static readonly Color Muted = new Color(0.7f, 0.7f, 0.7f);
         private static readonly Color DividerColor = new Color(0.35f, 0.35f, 0.4f, 0.6f);
         private static readonly Color BtnColor = new Color(0.35f, 0.35f, 0.4f, 0.85f);
         private static readonly Color BtnGood = new Color(0.25f, 0.42f, 0.3f, 0.9f);
         private static readonly Color BtnBad = new Color(0.45f, 0.28f, 0.28f, 0.9f);
+        private static readonly Color TabOn = new Color(0.25f, 0.42f, 0.3f, 0.95f);
+        private static readonly Color TabOff = new Color(0.28f, 0.29f, 0.34f, 0.9f);
+
+        private RectTransform _contentRect;
+        private Button[] _tabButtons = new Button[PageCount];
+        private readonly GameObject[] _pages = new GameObject[PageCount];
+        private readonly List<GameObject>[] _pageLines = new List<GameObject>[PageCount];
+        private CabinetPage _page = CabinetPage.Finance;
+
+        private List<GameObject> CurLines => _pageLines[(int)_page];
+        private GameObject CurPage => _pages[(int)_page];
+
+        protected override void BuildPanel()
+        {
+            var canvas = GetComponent<Canvas>();
+            UIHelpers.SetupCanvas(canvas, SortingOrder);
+
+            _panelRect = UIHelpers.CreatePanelRoot(transform, WindowName + "Panel",
+                AnchorMin, AnchorMax, Pivot, AnchoredPosition, Size, BgColor);
+            _panelRoot = _panelRect.gameObject;
+
+            UIHelpers.CreateDragArea(_panelRect, _panelRect, Padding + 36);
+            _titleText = UIHelpers.CreateWindowTitle(_panelRect, UIHelpers.L(TitleKey), _gameFont,
+                UIStyles.Gold, TitleFontSize, Padding, TitleLineHeight);
+            UIHelpers.CreateResizeHandles(_panelRect, OnPanelResized);
+            UIHelpers.CreateCloseButton(_panelRect, _gameFont, Hide);
+
+            // Tab 栏（RulerBox 式页面切换）
+            var tabBar = new GameObject("CabinetTabBar", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            tabBar.transform.SetParent(_panelRoot.transform, false);
+            var tabRt = tabBar.GetComponent<RectTransform>();
+            tabRt.anchorMin = new Vector2(0, 1); tabRt.anchorMax = new Vector2(1, 1);
+            tabRt.pivot = new Vector2(0.5f, 1f);
+            tabRt.anchoredPosition = new Vector2(0, -(Padding + TitleLineHeight));
+            tabRt.sizeDelta = new Vector2(-Padding * 2, 30f);
+            var hlg = tabBar.GetComponent<HorizontalLayoutGroup>();
+            hlg.spacing = 4; hlg.childForceExpandWidth = true; hlg.childForceExpandHeight = true;
+            hlg.childControlWidth = true; hlg.childControlHeight = true;
+
+            for (int i = 0; i < PageCount; i++)
+            {
+                int page = i;
+                var btn = UIHelpers.CreateButton(UIHelpers.L(PageKeys[i]), tabBar.transform, -1, 28, _gameFont, TabOff, 12f);
+                btn.onClick.AddListener(() => SwitchPage((CabinetPage)page));
+                _tabButtons[i] = btn;
+            }
+
+            // 滚动内容区（页面容器挂这里）
+            var scrollGo = UIHelpers.CreateScrollContent(_panelRect, Padding, Padding + 30f + 34f);
+            _content = scrollGo.gameObject;
+            _contentRect = scrollGo;
+
+            // 4 个页面容器（SetActive 切换）
+            for (int i = 0; i < PageCount; i++)
+            {
+                var go = new GameObject("CabinetPage" + i, typeof(RectTransform), typeof(VerticalLayoutGroup));
+                go.transform.SetParent(_content.transform, false);
+                var rt = go.GetComponent<RectTransform>();
+                rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(1, 1);
+                rt.pivot = new Vector2(0.5f, 1f);
+                rt.sizeDelta = Vector2.zero;
+                var vhl = go.GetComponent<VerticalLayoutGroup>();
+                vhl.spacing = 4;
+                vhl.padding = new RectOffset(2, 2, 2, 2);
+                vhl.childControlWidth = true; vhl.childControlHeight = false;
+                vhl.childForceExpandWidth = true; vhl.childForceExpandHeight = false;
+                _pages[i] = go;
+                _pageLines[i] = new List<GameObject>();
+            }
+
+            UpdateTabHighlights();
+            SwitchPage(CabinetPage.Finance);
+        }
+
+        private void SwitchPage(CabinetPage page)
+        {
+            _page = page;
+            for (int i = 0; i < PageCount; i++)
+                _pages[i].SetActive(i == (int)page);
+            RefreshNow();
+        }
+
+        private void UpdateTabHighlights()
+        {
+            for (int i = 0; i < PageCount; i++)
+            {
+                if (_tabButtons[i] == null) continue;
+                var img = _tabButtons[i].GetComponent<Image>();
+                if (img != null) img.color = i == (int)_page ? TabOn : TabOff;
+            }
+        }
 
         public override void RefreshNow()
         {
-            ClearContent();
+            // 只重建当前页；其余页保持隐藏
+            foreach (var go in CurLines) Destroy(go);
+            CurLines.Clear();
+
             var cfg = UnrestConfig.Instance;
             if (cfg == null) return;
+
+            if (AnnualPipeline.IsSettling)
+            {
+                AddLine(UIHelpers.L("settling_marker"), UIStyles.Warning, 12f);
+            }
 
             if (!cfg.NationPlayEnabled)
             {
                 AddLine(UIHelpers.L("cabinet_disabled"), Muted, 12f);
                 return;
             }
-            if (AnnualPipeline.IsSettling)
-            {
-                AddLine(UIHelpers.L("settling_marker"), UIStyles.Warning, 12f);
-            }
 
             if (NationEngine.NationKingdomId == 0) BuildClaimSection();
-            else BuildNationSections();
+            else BuildPage((int)_page);
+        }
+
+        private void BuildPage(int page)
+        {
+            switch ((CabinetPage)page)
+            {
+                case CabinetPage.Finance: BuildFinancePage(); break;
+                case CabinetPage.Policy: BuildPolicyPage(); break;
+                case CabinetPage.Decree: BuildDecreePage(); break;
+                default: BuildDiplomacyPage(); break;
+            }
         }
 
         // ===== 未认领：国家列表 =====
@@ -86,71 +196,81 @@ namespace EconomyMod.UI
             foreach (var kingdom in kingdomList)
             {
                 if (kingdom == null || kingdom.data == null) continue;
-                if (shown >= 10) break;
+                if (shown >= 12) break;
                 string name = GameHelpers.SafeKingdomName(kingdom);
                 long gdp = 0;
                 if (EconomyEngine.KingdomStats.TryGetValue(kingdom.data.id, out var ks)) gdp = (long)ks.GDP;
                 var btn = UIHelpers.CreateButton(
                     UIHelpers.Lf("cabinet_claim_row", name, gdp),
-                    _content.transform, -1, 30, _gameFont, BtnGood);
+                    CurPage.transform, -1, 30, _gameFont, BtnGood);
                 long kid = kingdom.data.id;
                 btn.onClick.AddListener(() =>
                 {
                     int year = SafeYear();
                     if (NationEngine.Claim(GameHelpers.FindKingdom(kid), year, out _)) RefreshNow();
                 });
-                _lines.Add(btn.gameObject);
+                CurLines.Add(btn.gameObject);
                 shown++;
             }
             if (shown == 0) AddLine(UIHelpers.L("picker_empty"), Muted, 12f);
         }
 
-        // ===== 已认领：国库/政策/法令/记录 =====
+        // ===== 已认领页面 =====
 
-        private void BuildNationSections()
+        private void BuildFinancePage()
         {
             int year = SafeYear();
-            var cfg = UnrestConfig.Instance;
-
-            // --- 国库 ---
-            AddLine(UIHelpers.Lf("cabinet_nation", NationEngine.NationName), UIStyles.Gold, 13f);
+            AddLine(UIHelpers.Lf("cabinet_nation", NationEngine.NationName), UIStyles.Gold, 14f);
             AddLine(UIHelpers.Lf("cabinet_treasury", NationEngine.FormatGold(NationEngine.Treasury)),
-                UIStyles.Gold, 13f);
+                UIStyles.Gold, 14f);
             AddLine(UIHelpers.Lf("cabinet_flow", NationEngine.FormatGold(NationEngine.LastIncome),
                 NationEngine.FormatGold(NationEngine.LastExpense)), Muted, 12f);
             int cooldown = NationEngine.LastSwitchYear + 10 - year;
             if (cooldown > 0)
                 AddLine(UIHelpers.Lf("cabinet_switch_cooldown", cooldown), Muted, 12f);
+            AddDivider(DividerColor);
+            BuildRecordSection();
+        }
 
-            // --- 持续政策 ---
+        private void BuildPolicyPage()
+        {
+            int year = SafeYear();
+            var cfg = UnrestConfig.Instance;
             AddLine(UIHelpers.Lf("cabinet_policies", NationEngine.SlotCount, cfg.PolicySlots), UIStyles.Gold, 13f);
+            AddLine(UIHelpers.L("cabinet_policy_hint"), Muted, 11f);
+            AddDivider(DividerColor);
             for (int kind = 0; kind < NationEngine.PolicyKindCount; kind++)
             {
                 BuildPolicyRow((NationEngine.PolicyKind)kind, year);
+                AddLine("", Muted, 6f);
             }
-            AddLine("", Muted, 8f);
+        }
 
-            // --- 法令 ---
+        private void BuildDecreePage()
+        {
+            int year = SafeYear();
             AddLine(UIHelpers.L("cabinet_decrees"), UIStyles.Gold, 13f);
+            AddLine(UIHelpers.L("cabinet_decree_hint"), Muted, 11f);
+            AddDivider(DividerColor);
             BuildDecreeRow("nation_decree_relief", UIHelpers.Lf("cabinet_decree_cost_relief"), year < NationEngine.ReliefReadyYear,
                 () => { if (NationEngine.TryEmergencyRelief(SafeYear())) RefreshNow(); });
             BuildDecreeRow("nation_decree_festival", UIHelpers.Lf("cabinet_decree_cost_festival"), year < NationEngine.FestivalReadyYear,
                 () => { if (NationEngine.TryFestival(SafeYear())) RefreshNow(); });
+            AddLine("", Muted, 6f);
             BuildBuildingRows();
-            AddLine("", Muted, 8f);
-
-            // --- 外交（实时生效：宣战/求和/结盟/协定/赠礼） ---
-            BuildDiplomacySection();
-            AddLine("", Muted, 8f);
-
-            // --- 记录 ---
-            BuildRecordSection();
         }
 
-        /// <summary>外交区块：列出他国（按 GDP 前 8），每国一行：好感 + 5 个动作按钮。</summary>
-        private void BuildDiplomacySection()
+        private void BuildDiplomacyPage()
         {
             AddLine(UIHelpers.L("cabinet_diplomacy"), UIStyles.Gold, 13f);
+            AddLine(UIHelpers.L("cabinet_diplomacy_hint"), Muted, 11f);
+            AddDivider(DividerColor);
+            BuildDiplomacyList();
+        }
+
+        /// <summary>外交列表：他国（按 GDP 前 12），每国一行：好感 + 5 个动作按钮。</summary>
+        private void BuildDiplomacyList()
+        {
             var mineId = NationEngine.NationKingdomId;
             if (World.world == null || World.world.kingdoms == null)
             {
@@ -171,7 +291,7 @@ namespace EconomyMod.UI
             {
                 if (k == null || k.data == null) continue;
                 if (k.data.id == mineId) continue;
-                if (shown >= 8) break;
+                if (shown >= 12) break;
 
                 long kid = k.data.id;
                 string name = GameHelpers.SafeKingdomName(k);
@@ -296,7 +416,7 @@ namespace EconomyMod.UI
             int shown = 0;
             foreach (var city in cities)
             {
-                if (shown >= 6) break;
+                if (shown >= 12) break;
                 long cityId;
                 try { cityId = city.id; } catch (System.Exception) { continue; }
                 string cname = GameHelpers.SafeCityName(city);
@@ -325,7 +445,7 @@ namespace EconomyMod.UI
         private void BuildRecordSection()
         {
             AddLine(UIHelpers.L("cabinet_records"), UIStyles.Gold, 13f);
-            var records = NationEngine.GetRecentRecords(10);
+            var records = NationEngine.GetRecentRecords(12);
             if (records.Count == 0)
             {
                 AddLine(UIHelpers.L("cabinet_no_records"), Muted, 11f);
@@ -345,12 +465,24 @@ namespace EconomyMod.UI
             }
         }
 
-        // ===== 行/按钮小构件 =====
+        // ===== 行/按钮小构件（挂当前页） =====
+
+        /// <summary>向当前页添加一行文本。</summary>
+        private void AddLine(string text, Color color, float size)
+        {
+            var go = UIHelpers.CreateText(text, CurPage.transform, size, color, _gameFont, 22f);
+            CurLines.Add(go);
+        }
+
+        private void AddDivider(Color color)
+        {
+            CurLines.Add(UIHelpers.CreateDivider(CurPage.transform, color));
+        }
 
         private GameObject NewRow(int expectButtons)
         {
             var row = new GameObject("CabinetRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
-            row.transform.SetParent(_content.transform, false);
+            row.transform.SetParent(CurPage.transform, false);
             var le = row.AddComponent<LayoutElement>();
             le.preferredHeight = 28f;
             le.flexibleWidth = 1f;
@@ -360,7 +492,7 @@ namespace EconomyMod.UI
             hlg.childForceExpandHeight = true;
             hlg.childControlWidth = true;
             hlg.childControlHeight = true;
-            _lines.Add(row);
+            CurLines.Add(row);
             return row;
         }
 
@@ -386,7 +518,19 @@ namespace EconomyMod.UI
         public override void RefreshAllTexts()
         {
             base.RefreshAllTexts();
+            for (int i = 0; i < PageCount; i++)
+            {
+                if (_tabButtons[i] == null) continue;
+                var t = _tabButtons[i].GetComponentInChildren<Text>();
+                if (t != null) t.text = UIHelpers.L(PageKeys[i]);
+            }
             if (_visible && _panelRoot != null) RefreshNow();
+        }
+
+        /// <summary>窗口内容区随改变缩放重建（页面结构不变，仅刷新当前页）。</summary>
+        protected override void OnPanelResized()
+        {
+            if (_visible) RefreshNow();
         }
     }
 }

@@ -132,7 +132,7 @@ if (-not (Test-Path -LiteralPath $diplomacyPath -PathType Leaf)) {
     Assert ($tsw -match 'NationDiplomacy\.BilateralFlowMult') 'trade flows must apply the bilateral pact multiplier'
     Assert ($nation -match 'NationDiplomacy\.RunAnnual') 'annual pipeline must charge bilateral pact fees'
     Assert ($nation -match 'NationDiplomacy\.Reset') 'nation reset must clear diplomacy state'
-    Assert ($cabinet -match 'BuildDiplomacySection') 'cabinet must render the diplomacy section'
+    Assert ($cabinet -match 'BuildDiplomacyPage|BuildDiplomacyList') 'cabinet must render the diplomacy page'
     Assert ($cabinet -match 'DeclareWar|SueForPeace|FormAlliance|GiveGift|SignPact') 'cabinet must expose the five diplomacy actions'
     Assert ($main -match 'NationEngine\.NationKingdomId != 0') 'real-time refresh must auto-enable while a nation is claimed'
     Assert ($events -match 'TypeNationDiplomacy') 'event stream must track diplomacy actions'
