@@ -840,7 +840,21 @@ namespace EconomyMod.UI
             var el = chartCard.GetComponent<LayoutElement>();
             el.preferredWidth = -1f;
             el.flexibleWidth = 1f; // 随窗口宽度自适应
-            var chart = chartCard.gameObject.AddComponent<ChartMeshGraphic>();
+
+            // 折线网格作为卡的独立子物体（与 HUD 概览同模式）：ChartMeshGraphic 约定 pivot=(0,0)、
+            // 原点在左下角；四角拉伸随卡自适应，禁止与卡 Image 同 GameObject 共存（双 Graphic 互扰 + 尺寸为 0）
+            var meshGo = new GameObject("GdpChartMesh", typeof(RectTransform), typeof(ChartMeshGraphic));
+            meshGo.transform.SetParent(chartCard, false);
+            var meshRt = meshGo.GetComponent<RectTransform>();
+            meshRt.anchorMin = Vector2.zero;
+            meshRt.anchorMax = Vector2.one;
+            meshRt.pivot = Vector2.zero;
+            meshRt.offsetMin = new Vector2(10f, 8f);
+            meshRt.offsetMax = new Vector2(-10f, -8f);
+            var chart = meshGo.GetComponent<ChartMeshGraphic>();
+            chart.raycastTarget = false;
+            chart.yAxisWidth = 44f;
+            chart.margin = 4f;
             try
             {
                 // 自适应刻度：以实际最小/最大值为界（避免 0 起使波动脉成直线）
