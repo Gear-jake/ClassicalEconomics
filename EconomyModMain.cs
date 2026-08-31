@@ -66,6 +66,7 @@ namespace EconomyMod
             PopulationEngine.Reset();
             SpendingEngine.Reset();
             NationEngine.Reset(); // 中央银行家：清空国家绑定/金库/政策（新地图从零开始）
+            CodexEngine.ResetAll(); // 法典：清空各国法律/国策/个性（新地图重新演化）
             HistoryService.ClearHistory();
             EventStreamService.Clear();
             if (full)
@@ -361,6 +362,7 @@ BiomeEconomy.ClearCache();
                     _optimeGuardChecked = true;
                     Services.OptimeCompatibility.TryInstall();
                     KingdomWindowIntegration.TryInstall(); // 中央银行家：原版界面入口（手动补丁，幂等）;
+                    CodexSave.TryInstall(); // 法典：存档持久化（手动补丁，幂等）
                 }
 
                 // 大地图快捷键（默认 G，可配置）：鼠标悬停国家 → 认领/打开内阁（RulerBox K 键同款）

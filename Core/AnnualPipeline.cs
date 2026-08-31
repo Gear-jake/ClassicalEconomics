@@ -166,6 +166,8 @@ namespace EconomyMod.Core
                 case AnnualStage.Nation:
                     // 中央银行家：金库税负 + 持续政策 + 政绩记录回填（财政路径，不参与削减）
                     NationEngine.RunAnnual(_year);
+                    // 法典：全王国法律/国策年度演变（AI 国自动；玩家国 B3 接建议）＋乘数聚合
+                    CodexEngine.RunAnnual(_year);
                     break;
                 case AnnualStage.Snapshot:
                     // 全部经济阶段完成后才写快照/刷 UI（唯一完成钩子）

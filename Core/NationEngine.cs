@@ -862,6 +862,9 @@ namespace EconomyMod.Core
             if (asset == null || asset.cost == null) return 100L;
             var c = asset.cost;
             long fee = c.gold + (c.wood + c.stone + c.common_metals) / 2;
+            // 法典：建筑费乘数（公共工程折扣 / 筑防加价）
+            float bc = _nationKingdomId != 0 ? CodexEngine.GetMods(_nationKingdomId).BuildCost : 1f;
+            if (bc != 1f) fee = System.Math.Max(50L, (long)(fee * bc));
             return System.Math.Max(100L, fee);
         }
 

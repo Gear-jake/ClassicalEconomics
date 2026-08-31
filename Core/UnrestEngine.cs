@@ -94,6 +94,13 @@ namespace EconomyMod.Core
                     // 宣传政策（中央银行家）：本国高基尼下暂缓积累与触发（基尼回落路径不受影响）
                     if (NationEngine.PropagandaActive(kid)) continue;
 
+                    // 法典：动荡积累被法律抑制（新闻监管/司法/反腐等乘数 <1 时按比例跳过积累年）
+                    float unrestAccumMult = CodexEngine.GetMods(kid).UnrestAccum;
+                    if (unrestAccumMult < 0.85f && (unrestAccumMult <= 0.5f || UnityEngine.Random.value < 0.45f))
+                    {
+                        continue;
+                    }
+
                     // 高基尼：进入/维持震荡累积状态
                     if (!_states.TryGetValue(kid, out var st))
                     {

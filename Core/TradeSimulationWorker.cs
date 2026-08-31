@@ -1114,6 +1114,8 @@ namespace EconomyMod.Core
                                           * governanceBonus * scaleEfficiency
                                           + employmentRatio * 0.15f;
                     ks.Production = a.Workers * ks.Productivity * capitalFactor;
+                    // 法典：生产函数乘数（教育/补贴/计划 vs 自由市场等聚合）
+                    ks.Production *= CodexEngine.GetMods(ks.KingdomId).Productivity;
                     totalProduction += ks.Production;
                 }
                 res.Kingdoms.Add(ks);
@@ -1161,6 +1163,9 @@ namespace EconomyMod.Core
                 // 中央银行家·关税：本国物价上浮（限幅 0.5×~2.5×）
                 if (NationEngine.TariffPriceMult(ks.KingdomId) != 1f)
                     ks.LocalPrice = Mathf.Clamp(ks.LocalPrice * NationEngine.TariffPriceMult(ks.KingdomId), 0.5f, 2.5f);
+                // 法典：物价乘数（紧缩/贸易协定等聚合）
+                float cp2 = CodexEngine.GetMods(ks.KingdomId).Price;
+                if (cp2 != 1f) ks.LocalPrice = Mathf.Clamp(ks.LocalPrice * cp2, 0.5f, 3f);
                 meanPrice += ks.LocalPrice;
                 priceCount++;
             }
@@ -1364,6 +1369,11 @@ namespace EconomyMod.Core
                 // 中央银行家：双边贸易协定（边两端恰为本国↔协约国时流量+）
                 float bilateral = NationDiplomacy.BilateralFlowMult(ca.KingdomId, cb.KingdomId);
                 if (bilateral != 1f) flow *= bilateral;
+                // 法典：贸易流量乘数（自由贸易/计划/闭关等聚合，取两端较高一档）
+                float codexFlowA = CodexEngine.GetMods(ca.KingdomId).TradeFlow;
+                float codexFlowB = CodexEngine.GetMods(cb.KingdomId).TradeFlow;
+                float codexFlow = codexFlowA > codexFlowB ? codexFlowA : codexFlowB;
+                if (codexFlow != 1f) flow *= codexFlow;
                 if (flow < 1f) continue; // 太小忽略，避免琐碎结算
 
                 bool aExports = gapA > 0f;

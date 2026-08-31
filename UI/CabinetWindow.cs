@@ -34,9 +34,9 @@ namespace EconomyMod.UI
         protected override Vector2 Size => new Vector2(600f, 760f);
         protected override Color BgColor => new Color(0.12f, 0.13f, 0.16f, 0.97f);
 
-        private enum CabinetPage { Finance = 0, Policy, Decree, Diplomacy }
-        private const int PageCount = 4;
-        private static readonly string[] PageKeys = { "cabinet_tab_finance", "cabinet_tab_policy", "cabinet_tab_decree", "cabinet_tab_diplomacy" };
+        private enum CabinetPage { Finance = 0, Policy, Decree, Diplomacy, Codex }
+        private const int PageCount = 5;
+        private static readonly string[] PageKeys = { "cabinet_tab_finance", "cabinet_tab_policy", "cabinet_tab_decree", "cabinet_tab_diplomacy", "cabinet_tab_codex" };
 
         private static readonly Color Muted = new Color(0.7f, 0.7f, 0.7f);
         private static readonly Color DividerColor = new Color(0.35f, 0.35f, 0.4f, 0.6f);
@@ -167,7 +167,88 @@ namespace EconomyMod.UI
                 case CabinetPage.Policy: BuildPolicyPage(); break;
                 case CabinetPage.Decree: BuildDecreePage(); break;
                 default: BuildDiplomacyPage(); break;
+                case CabinetPage.Codex: BuildCodexPage(null); break;
             }
+        }
+
+        /// <summary>法典页：两区（法律 24 条 5 档 / 国策 16 条 3 档）+ 顶部当前国个性与 AI 建议。
+        /// targetKingdom 为空时展示本国（玩家）；否则展示指定国（外交页跳转用）。</summary>
+        private void BuildCodexPage(Kingdom targetKingdom)
+        {
+            var kingdom = targetKingdom != null ? targetKingdom
+                : GameHelpers.FindKingdom(NationEngine.NationKingdomId);
+            if (kingdom == null || kingdom.data == null)
+            {
+                AddLine(UIHelpers.L("cabinet_no_nation"), Muted, 12f);
+                return;
+            }
+            long kid = kingdom.data.id;
+            bool own = NationEngine.NationKingdomId == kid;
+            AddLine(UIHelpers.Lf("cabinet_codex_nation", GameHelpers.SafeKingdomName(kingdom)), UIStyles.Gold, 13f);
+            int style = CodexEngine.GetStyle(kid);
+            AddLine(UIHelpers.Lf("cabinet_codex_style", UIHelpers.L(CodexEngine.StyleKeys[style])), UIStyles.Info, 12f);
+            AddDivider(DividerColor);
+
+            // 法律区
+            foreach (var cat in CodexEngine.LawCategories)
+            {
+                AddLine(UIHelpers.L("codex_cat_" + cat.Category), UIStyles.Gold, 12f);
+                foreach (var key in cat.Keys)
+                {
+                    BuildLawRow(kingdom, key);
+                }
+            }
+            AddLine("", Muted, 6f);
+
+            // 国策区
+            AddLine(UIHelpers.L("cabinet_codex_policy_hdr"), UIStyles.Gold, 12f);
+            foreach (var key in CodexEngine.PolicyKeys)
+            {
+                BuildPolicyRow2(kingdom, key);
+            }
+        }
+
+        private void BuildLawRow(Kingdom kingdom, string key)
+        {
+            int level = CodexEngine.GetLawLevel(kingdom.data.id, key);
+            string name = UIHelpers.L(key);
+            AddLine(name, level > 0 ? UIStyles.Positive : UIStyles.TextPrimary, 11f);
+            var row = NewRow(2);
+            // 档位按钮（0..4）
+            for (int lv = 0; lv < CodexEngine.LawTiers; lv++)
+            {
+                int target = lv;
+                AddRowButton(row, UIHelpers.Lf("codex_lv" + lv),
+                    lv == level ? BtnGood : BtnColor,
+                    () =>
+                    {
+                        string msg; bool ok = CodexEngine.SetLawLevel(kingdom, key, target, out msg);
+                        GameHelpers.NotifyLocalized(msg);
+                        if (ok) RefreshNow();
+                    });
+            }
+            AddRowButton(row, UIHelpers.L("codex_mutex_tip"), Muted, () => { });
+        }
+
+        private void BuildPolicyRow2(Kingdom kingdom, string key)
+        {
+            int level = CodexEngine.GetPolicyLevel(kingdom.data.id, key);
+            string name = UIHelpers.L(key);
+            AddLine(name, level > 0 ? UIStyles.Info : UIStyles.TextPrimary, 11f);
+            var row = NewRow(2);
+            for (int lv = 0; lv < CodexEngine.PolicyTiers; lv++)
+            {
+                int target = lv;
+                AddRowButton(row, UIHelpers.Lf("codex_pol_lv" + lv),
+                    lv == level ? BtnGood : BtnColor,
+                    () =>
+                    {
+                        string msg; bool ok = CodexEngine.SetPolicyLevel(kingdom, key, target, out msg);
+                        GameHelpers.NotifyLocalized(msg);
+                        if (ok) RefreshNow();
+                    });
+            }
+            AddRowSpacer(row);
         }
 
         // ===== 未认领：国家列表 =====

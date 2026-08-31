@@ -70,6 +70,10 @@ bool log = UnrestConfig.Instance.LogToWorldLog;
 
                     // 花掉超出阈值部分的三分之二（扩大个人消费），单次上限提高到 400（支撑大额消费如武器批发）
                     int spend = Mathf.Clamp((money - WealthyThreshold) * 2 / 3, 10, 400);
+                    // 法典：消费乘数（低税/庆典放大，紧缩/赎金外交收缩）
+                    float consumeMult = actor.kingdom != null && actor.kingdom.data != null
+                        ? CodexEngine.GetMods(actor.kingdom.data.id).Consumer : 1f;
+                    if (consumeMult != 1f) spend = Mathf.Clamp((int)(spend * consumeMult), 10, 600);
 
                     // 七类消费按情境权重选择（战时多买武器、和平多投资、高基尼多施舍）
                     SpendKind kind = PickSpendKindByContext(actor);

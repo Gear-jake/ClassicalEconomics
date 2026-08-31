@@ -101,6 +101,12 @@ namespace EconomyMod.Core
                             try { cityId = city.id; } catch { }
                             // 中央银行家·粮仓：本国粮仓所在城市灾害财富蒸发 ×0.7
                             if (loss > 0 && NationEngine.IsGranaryCity(cityId)) loss = Mathf.RoundToInt(loss * NationEngine.GranaryLossFactor);
+                            // 法典：灾害抗性（医疗/护林等降低蒸发）
+                            if (loss > 0)
+                            {
+                                float dr = CodexEngine.GetMods(k.data.id).DisasterResist;
+                                if (dr != 1f) loss = Mathf.RoundToInt(loss * dr);
+                            }
                             if (loss > 0)
                             {
                                 try { city.takeResource("gold", loss); } catch { }

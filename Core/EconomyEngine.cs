@@ -79,6 +79,11 @@ namespace EconomyMod.Core
                     TradeBalance = ks.TradeBalance,
                     LocalPrice = ks.LocalPrice
                 };
+                // 法典：基尼平移（济贫抑富 / 自由市场拉大）
+                float gshift = CodexEngine.GetMods(ks.KingdomId).GiniShift;
+                if (gshift != 0f)
+                    KingdomStats[ks.KingdomId].GiniCoefficient = UnityEngine.Mathf.Clamp(
+                        KingdomStats[ks.KingdomId].GiniCoefficient + gshift, 0f, 1f);
             }
         }
 

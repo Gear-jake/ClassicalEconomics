@@ -20,6 +20,13 @@ namespace EconomyMod.Core
         public const byte CodeOther = 6;  // 其他职业
 
         /// <summary>职业代码 → 财富生产率倍率（单一来源：后台线程的纯数据表）。</summary>
+        /// <summary>法典工资乘数（义务教育/征兵等聚合）。</summary>
+        private static float WageMult(Actor actor)
+        {
+            if (actor == null || actor.kingdom == null || actor.kingdom.data == null) return 1f;
+            return CodexEngine.GetMods(actor.kingdom.data.id).Wage;
+        }
+
         public static float ProductivityOf(byte code) => TradeSimulationWorker.ProductivityOf(code);
 
         /// <summary>读取 Actor 的原生公民职业并映射为职业代码（0=无业）；半销毁对象返回 0。</summary>
@@ -52,7 +59,7 @@ namespace EconomyMod.Core
             if (code == CodeNone) return;
             var cfg = UnrestConfig.Instance;
             if (cfg == null || !cfg.LaborEnabled) return;
-            int wage = Mathf.Max(1, Mathf.RoundToInt(cfg.LaborWageBase * ProductivityOf(code)));
+            int wage = Mathf.Max(1, Mathf.RoundToInt(cfg.LaborWageBase * ProductivityOf(code) * WageMult(actor)));
             if (wage <= 0) return;
             try { actor.addMoney(wage); } catch (System.Exception) { }
         }
