@@ -215,7 +215,7 @@ namespace EconomyMod.UI
             int level = CodexEngine.GetLawLevel(kingdom.data.id, key);
             string name = UIHelpers.L(key);
             AddLine(name, level > 0 ? UIStyles.Positive : UIStyles.TextPrimary, 10f);
-            var row = NewRow(CodexEngine.LawTiers, 22f);
+            var row = NewRow(CodexEngine.LawTiers, 22f, fill: true);
             // 档位按钮（0..4，小号横排）
             for (int lv = 0; lv < CodexEngine.LawTiers; lv++)
             {
@@ -402,7 +402,7 @@ namespace EconomyMod.UI
 
             for (int i = 0; i < defs.Length; i += 3)
             {
-                var row = NewRow(3, 24f);
+                var row = NewRow(3, 24f, fill: true);
                 for (int j = i; j < i + 3 && j < defs.Length; j++)
                 {
                     var d = defs[j];
@@ -486,26 +486,26 @@ namespace EconomyMod.UI
             AddDivider(DividerColor);
 
             AddLine(UIHelpers.L("cabinet_dip_actions"), UIStyles.Gold, 12f);
-            var row1 = NewRow(3, 26f);
+            var row1 = NewRow(3, 26f, fill: true);
             AddRowButton(row1, UIHelpers.L("cabinet_dip_war"), BtnBad, () =>
             {
                 string msg; bool ok = NationDiplomacy.DeclareWar(target, out msg);
                 GameHelpers.NotifyLocalized(msg, name);
                 if (ok) RefreshNow();
-            }, 110f);
+            }, 110f, fill: true);
             AddRowButton(row1, UIHelpers.L("cabinet_dip_peace"), BtnColor, () =>
             {
                 string msg; bool ok = NationDiplomacy.SueForPeace(target, out msg);
                 GameHelpers.NotifyLocalized(msg, name);
                 if (ok) RefreshNow();
-            }, 110f);
+            }, 110f, fill: true);
             AddRowButton(row1, UIHelpers.L("cabinet_dip_alliance"), BtnGood, () =>
             {
                 string msg; bool ok = NationDiplomacy.FormAlliance(target, out msg);
                 GameHelpers.NotifyLocalized(msg, name);
                 if (ok) RefreshNow();
-            }, 110f);
-            var row2 = NewRow(3, 26f);
+            }, 110f, fill: true);
+            var row2 = NewRow(3, 26f, fill: true);
             int pactTier = NationDiplomacy.PactTier(kid);
             AddRowButton(row2, pactTier >= 0
                 ? UIHelpers.Lf("cabinet_dip_pact_on", pactTier + 1)
@@ -522,7 +522,7 @@ namespace EconomyMod.UI
                 string msg; bool ok = NationDiplomacy.GiveGift(target, out msg);
                 GameHelpers.NotifyLocalized(msg, name);
                 if (ok) RefreshNow();
-            }, 110f);
+            }, 110f, fill: true);
         }
 
         private void BuildDiplomacyList()
@@ -711,7 +711,7 @@ namespace EconomyMod.UI
             CurLines.Add(UIHelpers.CreateDivider(CurPage.transform, color));
         }
 
-        private GameObject NewRow(int expectButtons, float height = 28f)
+        private GameObject NewRow(int expectButtons, float height = 28f, bool fill = false)
         {
             var row = new GameObject("CabinetRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             row.transform.SetParent(CurPage.transform, false);
@@ -720,7 +720,9 @@ namespace EconomyMod.UI
             le.flexibleWidth = 1f;
             var hlg = row.GetComponent<HorizontalLayoutGroup>();
             hlg.spacing = 4;
-            hlg.childForceExpandWidth = false;   // 紧凑：按钮按 preferredWidth 排布，不拉满整行
+            // fill=true：子按钮均分整行（随窗口拖拽缩放自适应）；
+            // fill=false：紧凑——按钮按固定宽排布，不拉满整行
+            hlg.childForceExpandWidth = fill;
             hlg.childForceExpandHeight = true;
             hlg.childControlWidth = true;
             hlg.childControlHeight = true;
@@ -728,12 +730,12 @@ namespace EconomyMod.UI
             return row;
         }
 
-        private void AddRowButton(GameObject row, string label, Color bg, System.Action onClick, float width = 120f)
+        private void AddRowButton(GameObject row, string label, Color bg, System.Action onClick, float width = 120f, bool fill = false)
         {
             var btn = UIHelpers.CreateButton(label, row.transform, width, 24, _gameFont, bg, 10f);
             var le = btn.gameObject.AddComponent<LayoutElement>();
             le.preferredWidth = width;
-            le.flexibleWidth = 0f;
+            le.flexibleWidth = fill ? 1f : 0f; // fill=true 均分剩余（随窗口缩放）
             le.preferredHeight = 24f;
             btn.onClick.AddListener(() => onClick());
         }
