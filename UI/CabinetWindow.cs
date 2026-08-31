@@ -139,8 +139,9 @@ namespace EconomyMod.UI
 
         public override void RefreshNow()
         {
-            // 只重建当前页；其余页保持隐藏
-            foreach (var go in CurLines) Destroy(go);
+            // 整页彻底重建：销毁当前页所有子物体（防止 ChartCard 等因注册遗漏累积成黑块）
+            for (int i = CurPage.transform.childCount - 1; i >= 0; i--)
+                Destroy(CurPage.transform.GetChild(i).gameObject);
             CurLines.Clear();
 
             var cfg = UnrestConfig.Instance;
@@ -795,12 +796,14 @@ namespace EconomyMod.UI
         }
 
         /// <summary>本国 GDP 折线图（历史最近 40 期；复用 ChartMeshGraphic 顶点图表，宽度随窗口）。</summary>
+        /// <summary>与 HUD 概览共用同一数据源（HistoryService 快照）与 ChartMeshGraphic 渲染组件；
+        /// 此处仅抽取本国单系列序列，不重复实现绘图逻辑。</summary>
         private void BuildGdpChart()
         {
             long mine = NationEngine.NationKingdomId;
             if (mine == 0) return;
             var snaps = HistoryService.GetRecent(40);
-            if (snaps == null || snaps.Count < 3)
+            if (snaps == null || snaps.Count < 3 || HasNationData(snaps, mine) < 2)
             {
                 AddLine(UIHelpers.L("cabinet_gdp_chart_short"), Muted, 11f);
                 return;
@@ -832,11 +835,13 @@ namespace EconomyMod.UI
             }
 
             var chartCard = UIComponents.CreateChartCard(CurPage.transform, 560f, 130f);
+            chartCard.gameObject.name = "NationGdpCard";
+            CurLines.Add(chartCard.gameObject); // 先注册：任何后续异常都不会残留
             var el = chartCard.GetComponent<LayoutElement>();
             el.preferredWidth = -1f;
             el.flexibleWidth = 1f; // 随窗口宽度自适应
             var chart = chartCard.gameObject.AddComponent<ChartMeshGraphic>();
-            if (life >= 2)
+            try
             {
                 // 自适应刻度：以实际最小/最大值为界（避免 0 起使波动脉成直线）
                 float vmin = float.MaxValue;
@@ -855,7 +860,23 @@ namespace EconomyMod.UI
                     values[values.Length - 1].ToString("N0"),
                     vmin.ToString("N0"), vmax2.ToString("N0")), Muted, 11f);
             }
-            CurLines.Add(chartCard.gameObject);
+            catch (System.Exception) { }
+        }
+
+        /// <summary>快照中本国拥有 GDP 数据的期数（该国有数据 ≥2 期才画曲线）。</summary>
+        private static int HasNationData(System.Collections.Generic.List<EconomyMod.Models.EconomySnapshot> snaps, long kingdomId)
+        {
+            int life = 0;
+            for (int i = 0; i < snaps.Count; i++)
+            {
+                var sn = snaps[i];
+                if (sn.Kingdoms == null) continue;
+                for (int j = 0; j < sn.Kingdoms.Count; j++)
+                {
+                    if (sn.Kingdoms[j].KingdomId == kingdomId) { life++; break; }
+                }
+            }
+            return life;
         }
 
         private void BuildRecordSection()
