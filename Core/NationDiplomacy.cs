@@ -5,10 +5,10 @@ using EconomyMod.Services;
 namespace EconomyMod.Core
 {
     /// <summary>
-    /// 外交（经济+外交大臣 v0.98）：以本国（NationEngine 认领国）名义对目标国家执行
-    /// 宣战 / 求和 / 结盟 / 外交赠礼 / 双边贸易协定。全部动作实时生效（不等待年度结算），
-    /// 经原版 DiplomacyManager / WarManager / AllianceManager 反射调用（与 RulerBox 的
-    /// DiplomacyActionsWindow 同源 API），任一 API 缺失/异常时 fail-closed 并提示。
+    /// 外交（经济+外交大臣）：以本国（NationEngine 认领国）名义对目标国家执行
+    /// 宣战 / 求和 / 结盟 / 外交赠礼 / 双边贸易协定。全部动作实时生效（不等待年度结算）。
+    /// 直接编译期调用原版 DiplomacyManager / WarManager / AllianceManager（与 RulerBox 的
+    /// DiplomacyActionsWindow 同源 API，均为公开成员），异常时 fail-closed 并提示，不再依赖反射探测。
     /// 赠礼产生本模组"外交好感"（原版无公开好感写入 API），与结盟门槛共同构成赠礼的实际意义。
     /// </summary>
     public static class NationDiplomacy
@@ -25,94 +25,42 @@ namespace EconomyMod.Core
         public const int GiftGoodwill = 25;         // 每次赠礼好感
         public const int GoodwillCap = 200;         // 好感上限
 
-        // ===== 反射缓存（全部 fail-closed）=====
-        private static System.Reflection.MethodInfo _startWarMethod;   // DiplomacyManager.startWar(Kingdom, Kingdom, WarTypeAsset, bool)
-        private static System.Reflection.MethodInfo _endWarMethod;     // WarManager.endWar(War, WarWinner)
-        private static System.Reflection.MethodInfo _getWarsMethod;    // WarManager.getWars(Kingdom)
-        private static System.Reflection.MethodInfo _newAllianceMethod;  // AllianceManager.newAlliance(Kingdom, Kingdom)
-        private static System.Reflection.MethodInfo _joinAllianceMethod; // Alliance.join(Kingdom)
-        private static System.Reflection.MethodInfo _dissolveAllianceMethod; // AllianceManager.dissolveAlliance(Alliance)
-        private static System.Reflection.MethodInfo _getRelationMethod; // DiplomacyManager.getRelation(Kingdom, Kingdom)
-        private static System.Reflection.MethodInfo _getOpinionMethod;  // DiplomacyRelation.getOpinion(Kingdom, Kingdom)
-        private static System.Reflection.MethodInfo _hasAllianceMethod; // Kingdom.hasAlliance()
-        private static System.Reflection.MethodInfo _getAllianceMethod; // Kingdom.getAlliance()
-        private static System.Reflection.MethodInfo _isEnemyMethod;     // Kingdom.isEnemy(Kingdom)
-        private static System.Reflection.FieldInfo _opinionTotalField;  // Opinion.total
-        private static object _warWinnerPeace;                          // WarWinner.Peace 枚举值
+        // startWar 在编译期引用 DLL 中不存在（运行时有，与 RulerBox 运行时编译不同）：
+        // 运行时反射定位一次并缓存；拿不到则宣战 fail-closed。
+        private static System.Reflection.MethodInfo _startWarMethod;
+        private static bool _startWarProbed;
 
-        private static bool _probed;
-
-        /// <summary>首次使用时探测全部反射成员（只探测一次，结果缓存）。</summary>
-        private static void EnsureProbed()
+        private static System.Reflection.MethodInfo ResolveStartWar()
         {
-            if (_probed) return;
-            _probed = true;
+            if (_startWarProbed) return _startWarMethod;
+            _startWarProbed = true;
             try
             {
-                const System.Reflection.BindingFlags F =
-                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
-                const System.Reflection.BindingFlags FS = F | System.Reflection.BindingFlags.Static;
-
-                _startWarMethod = typeof(DiplomacyManager).GetMethod("startWar", F);
-                _getRelationMethod = typeof(DiplomacyManager).GetMethod("getRelation", F);
-
-                var worldType = typeof(World);
-                var warsField = worldType.GetField("wars", FS) ?? (System.Reflection.MemberInfo)worldType.GetProperty("wars", FS);
-                var warsType = warsField is System.Reflection.FieldInfo fw ? fw.FieldType : ((System.Reflection.PropertyInfo)warsField).PropertyType;
-                _endWarMethod = warsType.GetMethod("endWar", F);
-                _getWarsMethod = warsType.GetMethod("getWars", F);
-
-                var alliancesMember = worldType.GetField("alliances", FS) ?? (System.Reflection.MemberInfo)worldType.GetProperty("alliances", FS);
-                var alliancesType = alliancesMember is System.Reflection.FieldInfo fa ? fa.FieldType : ((System.Reflection.PropertyInfo)alliancesMember).PropertyType;
-                _newAllianceMethod = alliancesType.GetMethod("newAlliance", F);
-                _dissolveAllianceMethod = alliancesType.GetMethod("dissolveAlliance", F);
-
-                var kingdomType = typeof(Kingdom);
-                _hasAllianceMethod = kingdomType.GetMethod("hasAlliance", F);
-                _getAllianceMethod = kingdomType.GetMethod("getAlliance", F);
-                _isEnemyMethod = kingdomType.GetMethod("isEnemy", F);
-                if (_getAllianceMethod != null)
-                {
-                    var allianceType = _getAllianceMethod.ReturnType;
-                    _joinAllianceMethod = allianceType.GetMethod("join", F);
-                }
-
-                if (_getRelationMethod != null)
-                {
-                    var relationType = _getRelationMethod.ReturnType;
-                    _getOpinionMethod = relationType.GetMethod("getOpinion", F);
-                    if (_getOpinionMethod != null)
-                        _opinionTotalField = _getOpinionMethod.ReturnType.GetField("total", F);
-                }
-
-                // WarWinner.Peace：枚举值经运行时定位（本程序集构建期不可见）
-                foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
-                {
-                    System.Type[] types;
-                    try { types = asm.GetTypes(); } catch (System.Exception) { continue; }
-                    foreach (var t in types)
-                    {
-                        if (t != null && t.Name == "WarWinner" && t.IsEnum)
-                        {
-                            try { _warWinnerPeace = System.Enum.Parse(t, "Peace"); } catch (System.Exception) { }
-                            break;
-                        }
-                    }
-                    if (_warWinnerPeace != null) break;
-                }
+                _startWarMethod = typeof(DiplomacyManager).GetMethod("startWar",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (_startWarMethod == null)
+                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 外交：DiplomacyManager.startWar 运行时未找到");
             }
-            catch (System.Exception) { }
+            catch (System.Exception e)
+            {
+                UnityEngine.Debug.LogWarning("[ClassicalEconomics] 外交：startWar 定位失败 " + e.Message);
+            }
+            return _startWarMethod;
         }
 
-        /// <summary>外交可用性（所有关键反射成员就位）。</summary>
-        private static bool DiplomacyAvailable
+        /// <summary>解析宣战战争资产：首选 whisper_of_war，缺失时尝试常见候选（游戏版本差异兜底）。</summary>
+        private static WarTypeAsset ResolveWarAsset()
         {
-            get
+            foreach (var id in new string[] { "whisper_of_war", "war", "rebellion", "invasion" })
             {
-                EnsureProbed();
-                return _startWarMethod != null && _endWarMethod != null && _getWarsMethod != null
-                    && _newAllianceMethod != null;
+                try
+                {
+                    var a = AssetManager.war_types_library.get(id);
+                    if (a != null) return a;
+                }
+                catch (System.Exception) { }
             }
+            return null;
         }
 
         private static Kingdom Mine()
@@ -121,20 +69,17 @@ namespace EconomyMod.Core
             return id != 0 ? GameHelpers.FindKingdom(id) : null;
         }
 
-        /// <summary>目标国与本国的原版好感（不可用时为 0）。</summary>
+        /// <summary>目标国与本国的原版好感（异常时为 0）。</summary>
         public static int GetRelationScore(Kingdom target)
         {
             var mine = Mine();
             if (mine == null || target == null || target.data == null) return 0;
-            EnsureProbed();
             try
             {
-                if (_getRelationMethod == null) return 0;
-                var relation = _getRelationMethod.Invoke(World.world.diplomacy, new object[] { mine, target });
-                if (relation == null || _getOpinionMethod == null) return 0;
-                var opinion = _getOpinionMethod.Invoke(relation, new object[] { target, mine });
-                if (opinion == null || _opinionTotalField == null) return 0;
-                return System.Convert.ToInt32(_opinionTotalField.GetValue(opinion));
+                var relation = World.world.diplomacy.getRelation(mine, target);
+                if (relation == null) return 0;
+                var opinion = relation.getOpinion(target, mine);
+                return opinion != null ? opinion.total : 0;
             }
             catch (System.Exception) { return 0; }
         }
@@ -146,28 +91,21 @@ namespace EconomyMod.Core
             return _goodwill.TryGetValue(kingdomId, out g) ? g : 0;
         }
 
-        /// <summary>是否与目标国处于战争。</summary>
+        /// <summary>是否与目标国处于战争（isEnemy；异常时回退遍历战争列表）。</summary>
         public static bool IsAtWarWith(Kingdom target)
         {
             var mine = Mine();
             if (mine == null || target == null) return false;
-            EnsureProbed();
-            if (_isEnemyMethod != null)
+            try
             {
-                try { return (bool)_isEnemyMethod.Invoke(mine, new object[] { target }); }
-                catch (System.Exception) { }
-            }
-            // 回退：遍历战争列表
-            var wars = GetActiveWars(mine);
-            foreach (var w in wars)
-            {
-                try
+                if (mine.isEnemy(target)) return true;
+                foreach (var w in GetActiveWars(mine))
                 {
-                    if (IsWarBetween(w, mine, target)) return true;
+                    if (!w.hasEnded() && (w.isAttacker(target) || w.isDefender(target))) return true;
                 }
-                catch (System.Exception) { }
+                return false;
             }
-            return false;
+            catch (System.Exception) { return false; }
         }
 
         /// <summary>宣战：解散共同联盟（背叛）+ startWar(whisper_of_war)。</summary>
@@ -177,28 +115,34 @@ namespace EconomyMod.Core
             var mine = Mine();
             if (mine == null || target == null || target.data == null) { msgKey = "toast_dip_no_nation"; return false; }
             if (UnrestConfig.Instance == null || !UnrestConfig.Instance.NationPlayEnabled) { msgKey = "toast_dip_no_nation"; return false; }
-            if (!DiplomacyAvailable) { msgKey = "toast_dip_unavailable"; return false; }
             if (IsAtWarWith(target)) { msgKey = "toast_dip_already_war"; return false; }
 
             try
             {
                 // 共同联盟因背叛瓦解
-                if (HasAlliance(mine) && HasAlliance(target) && SameAlliance(mine, target))
+                if (mine.hasAlliance() && target.hasAlliance() && mine.getAlliance() == target.getAlliance())
                 {
-                    var alliance = GetAlliance(mine);
-                    if (alliance != null && _dissolveAllianceMethod != null)
-                    {
-                        try { _dissolveAllianceMethod.Invoke(World.world.alliances, new object[] { alliance }); } catch (System.Exception) { }
-                    }
+                    try { World.world.alliances.dissolveAlliance(mine.getAlliance()); } catch (System.Exception) { }
                 }
 
-                var warAsset = AssetManager.war_types_library.get("whisper_of_war");
-                if (warAsset == null) { msgKey = "toast_dip_unavailable"; return false; }
-                _startWarMethod.Invoke(World.world.diplomacy, new object[] { mine, target, warAsset, true });
+                var warAsset = ResolveWarAsset();
+                var startWar = ResolveStartWar();
+                if (warAsset == null || startWar == null)
+                {
+                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 外交：宣战不可用 warAsset=" + (warAsset != null) + " startWar=" + (startWar != null));
+                    msgKey = "toast_dip_unavailable";
+                    return false;
+                }
+                startWar.Invoke(World.world.diplomacy, new object[] { mine, target, warAsset, true });
                 EventStreamService.Record(EventStreamService.TypeNationDiplomacy, target.data.name, 1);
                 return true;
             }
-            catch (System.Exception) { msgKey = "toast_dip_failed"; return false; }
+            catch (System.Exception e)
+            {
+                UnityEngine.Debug.LogWarning("[ClassicalEconomics] 外交：宣战失败 " + e.Message);
+                msgKey = "toast_dip_failed";
+                return false;
+            }
         }
 
         /// <summary>求和：我方军力 ≥ 对方 → 免费和谈；否则需按军力差支付赎金（金库）。</summary>
@@ -207,32 +151,33 @@ namespace EconomyMod.Core
             msgKey = "toast_dip_peace_ok";
             var mine = Mine();
             if (mine == null || target == null || target.data == null) { msgKey = "toast_dip_no_nation"; return false; }
-            if (!DiplomacyAvailable) { msgKey = "toast_dip_unavailable"; return false; }
             if (!IsAtWarWith(target)) { msgKey = "toast_dip_not_war"; return false; }
 
             try
             {
-                var wars = GetActiveWars(mine);
-                object activeWar = null;
-                foreach (var w in wars)
+                var wars = World.world.wars.getWars(mine);
+                War activeWar = null;
+                if (wars != null)
                 {
-                    if (IsWarBetween(w, mine, target)) { activeWar = w; break; }
+                    foreach (var w in wars)
+                    {
+                        if (!w.hasEnded() && (w.isAttacker(target) || w.isDefender(target))) { activeWar = w; break; }
+                    }
                 }
-                if (activeWar == null || _warWinnerPeace == null) { msgKey = "toast_dip_failed"; return false; }
+                if (activeWar == null) { msgKey = "toast_dip_failed"; return false; }
 
                 int myPower = mine.countTotalWarriors();
                 int theirPower = target.countTotalWarriors();
                 if (myPower >= theirPower)
                 {
-                    _endWarMethod.Invoke(World.world.wars, new object[] { activeWar, _warWinnerPeace });
+                    World.world.wars.endWar(activeWar, WarWinner.Peace);
                 }
                 else
                 {
                     long ransom = System.Math.Min(5000L, (theirPower - myPower) * 5L);
                     if (ransom <= 0) ransom = 1;
-                    if (NationEngine.Treasury < ransom) { msgKey = "toast_dip_peace_poor"; return false; }
                     if (!NationEngine.TrySpend(ransom)) { msgKey = "toast_dip_peace_poor"; return false; }
-                    _endWarMethod.Invoke(World.world.wars, new object[] { activeWar, _warWinnerPeace });
+                    World.world.wars.endWar(activeWar, WarWinner.Peace);
                 }
                 EventStreamService.Record(EventStreamService.TypeNationDiplomacy, target.data.name, 2);
                 return true;
@@ -246,32 +191,27 @@ namespace EconomyMod.Core
             msgKey = "toast_dip_alliance_ok";
             var mine = Mine();
             if (mine == null || target == null || target.data == null) { msgKey = "toast_dip_no_nation"; return false; }
-            if (!DiplomacyAvailable) { msgKey = "toast_dip_unavailable"; return false; }
             if (IsAtWarWith(target)) { msgKey = "toast_dip_alliance_war"; return false; }
-            if (HasAlliance(mine) && HasAlliance(target) && SameAlliance(mine, target)) { msgKey = "toast_dip_alliance_exists"; return false; }
+            if (mine.hasAlliance() && target.hasAlliance() && mine.getAlliance() == target.getAlliance()) { msgKey = "toast_dip_alliance_exists"; return false; }
 
             int score = GetRelationScore(target) + GetGoodwill(target.data.id);
             if (score < 0) { msgKey = "toast_dip_alliance_refused"; return false; }
 
             try
             {
-                bool hasMine = HasAlliance(mine);
-                bool hasTheirs = HasAlliance(target);
+                bool hasMine = mine.hasAlliance();
+                bool hasTheirs = target.hasAlliance();
                 if (!hasMine && !hasTheirs)
                 {
-                    _newAllianceMethod.Invoke(World.world.alliances, new object[] { mine, target });
+                    World.world.alliances.newAlliance(mine, target);
                 }
                 else if (hasMine && !hasTheirs)
                 {
-                    var mineAlliance = GetAlliance(mine);
-                    if (mineAlliance == null || _joinAllianceMethod == null) { msgKey = "toast_dip_failed"; return false; }
-                    _joinAllianceMethod.Invoke(mineAlliance, new object[] { target });
+                    mine.getAlliance().join(target);
                 }
                 else if (!hasMine && hasTheirs)
                 {
-                    var theirAlliance = GetAlliance(target);
-                    if (theirAlliance == null || _joinAllianceMethod == null) { msgKey = "toast_dip_failed"; return false; }
-                    _joinAllianceMethod.Invoke(theirAlliance, new object[] { mine });
+                    target.getAlliance().join(mine);
                 }
                 else { msgKey = "toast_dip_alliance_both"; return false; }
                 EventStreamService.Record(EventStreamService.TypeNationDiplomacy, target.data.name, 3);
@@ -378,59 +318,19 @@ namespace EconomyMod.Core
             _goodwill.Clear();
         }
 
-        // ===== 反射辅助 =====
+        // ===== 辅助 =====
 
-        private static List<object> GetActiveWars(Kingdom kingdom)
+        private static List<War> GetActiveWars(Kingdom kingdom)
         {
-            var result = new List<object>();
-            EnsureProbed();
-            if (_getWarsMethod == null) return result;
+            var result = new List<War>();
             try
             {
-                var wars = _getWarsMethod.Invoke(World.world.wars, new object[] { kingdom }) as System.Collections.IEnumerable;
+                var wars = World.world.wars.getWars(kingdom);
                 if (wars == null) return result;
                 foreach (var w in wars) result.Add(w);
             }
             catch (System.Exception) { }
             return result;
-        }
-
-        private static bool IsWarBetween(object war, Kingdom a, Kingdom b)
-        {
-            if (war == null) return false;
-            var t = war.GetType();
-            const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
-            foreach (var name in new string[] { "isAttacker", "isDefender" })
-            {
-                var m = t.GetMethod(name, F);
-                if (m == null) continue;
-                bool hitA = false, hitB = false;
-                try { hitA = (bool)m.Invoke(war, new object[] { a }); } catch (System.Exception) { }
-                try { hitB = (bool)m.Invoke(war, new object[] { b }); } catch (System.Exception) { }
-                if (hitA && hitB) return true;
-            }
-            return false;
-        }
-
-        private static bool HasAlliance(Kingdom k)
-        {
-            EnsureProbed();
-            if (_hasAllianceMethod == null || k == null) return false;
-            try { return (bool)_hasAllianceMethod.Invoke(k, null); } catch (System.Exception) { return false; }
-        }
-
-        private static object GetAlliance(Kingdom k)
-        {
-            EnsureProbed();
-            if (_getAllianceMethod == null || k == null) return null;
-            try { return _getAllianceMethod.Invoke(k, null); } catch (System.Exception) { return null; }
-        }
-
-        private static bool SameAlliance(Kingdom a, Kingdom b)
-        {
-            var aa = GetAlliance(a);
-            var ab = GetAlliance(b);
-            return aa != null && aa == ab;
         }
     }
 }
