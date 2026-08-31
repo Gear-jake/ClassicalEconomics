@@ -226,7 +226,7 @@ namespace EconomyMod.UI
                         string msg; bool ok = CodexEngine.SetLawLevel(kingdom, key, target, out msg);
                         GameHelpers.NotifyLocalized(msg);
                         if (ok) RefreshNow();
-                    }, 0.9f);
+                    }, 86f);
             }
             // AI 建议（仅玩家国）：显示 当前→建议，点击采纳
             if (NationEngine.NationKingdomId == kingdom.data.id)
@@ -241,7 +241,7 @@ namespace EconomyMod.UI
                         string msg; bool ok = CodexEngine.SetLawLevel(kingdom, key, stLv, out msg);
                         GameHelpers.NotifyLocalized(msg);
                         if (ok) RefreshNow();
-                    }, 0.55f);
+                    }, 56f);
                 }
             }
             AddRowSpacer(row);
@@ -527,7 +527,7 @@ namespace EconomyMod.UI
                 AddRowButton(btnRow, UIHelpers.L("cabinet_enable"), BtnGood, () =>
                 {
                     if (NationEngine.EnablePolicy(kind, 0, SafeYear())) RefreshNow();
-                }, 0.9f);
+                }, 90f);
                 AddRowSpacer(btnRow);
             }
             else if (tier < NationEngine.TierCount - 1)
@@ -535,11 +535,11 @@ namespace EconomyMod.UI
                 AddRowButton(btnRow, UIHelpers.L("cabinet_upgrade"), BtnGood, () =>
                 {
                     if (NationEngine.EnablePolicy(kind, tier + 1, SafeYear())) RefreshNow();
-                }, 0.9f);
+                }, 90f);
                 AddRowSpacer(btnRow);
             }
             AddRowButton(btnRow, UIHelpers.L("cabinet_disable"), BtnBad,
-                () => { if (NationEngine.DisablePolicy(kind)) RefreshNow(); }, 0.9f);
+                () => { if (NationEngine.DisablePolicy(kind)) RefreshNow(); }, 90f);
             if (btnRow.transform.childCount == 1) AddRowSpacer(btnRow);
         }
 
@@ -553,7 +553,7 @@ namespace EconomyMod.UI
             nameTxt.GetComponent<LayoutElement>().flexibleWidth = 1f;
             var costTxt = UIHelpers.CreateText(costText, row.transform, 10f, Muted, _gameFont, 18f);
             costTxt.GetComponent<LayoutElement>().flexibleWidth = 1f;
-            AddRowButton(row, UIHelpers.L("cabinet_execute"), cooling ? BtnColor : BtnGood, () => action(), 0.8f);
+            AddRowButton(row, UIHelpers.L("cabinet_execute"), cooling ? BtnColor : BtnGood, () => action(), 100f);
         }
 
         private void BuildBuildingRows()
