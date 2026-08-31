@@ -1,0 +1,102 @@
+[h1]Classical Economics — Full Changelog v0.13.0 → v1.2.1[/h1]
+[b]WorldBox macroeconomic simulation mod | Current version 1.2.1 | Requires NeoModLoader (NML)[/b]
+
+Since 0.13.0 the mod has grown from an "economic statistics" layer into a full national-governance simulation: performance governance, playable government (Central Banker), diplomacy and a national law codex that every AI kingdom evolves on its own — with every effect genuinely wired to the engine and a complete four-language UI. Per-version changelog below.
+
+[h2]Performance & stability foundation (0.13.x)[/h2]
+[list]
+[*]v0.13.1 Memory lifecycle: releases static cache references on world switch / main menu; trade-edge cache evicts dead cities/kingdoms; compute buffers locked until background task fully exits; hot-reload no longer duplicates ticker/UI
+[*]v0.13.2 Performance: deterministic sparse trade graph (hard cap); binary-locator near-neighbor search; O(1) kingdom index; per-kingdom aggregated payments
+[*]v0.13.9 Performance: shared inheritance/damage scan (population-level hash writes halved); exact lower-bound pruning for nearest neighbors; unified cycle-based cooldown eviction
+[/list]
+
+[h2]v0.90 Civilization generalization[/h2]
+[list]
+[*]Every race (Fire/Ice Demons, aliens, dragons...) can found a kingdom (species-smartness check removed); four-language UI; Steam Workshop release
+[/list]
+
+[h2]v0.91 Annual performance governance[/h2]
+[list]
+[*]Frame-budgeted yearly settlement: 4 ms/frame budget, 2 s window, over-budget cuts spending → banking → other (taxes never reduced)
+[*]PerfDiagnostics annual instrumentation, sliced inheritance scans, annual spending/banking caps
+[/list]
+
+[h2]v0.92 Automatic memory cleanup[/h2]
+[list]
+[*]Idle List trim + rebuild-and-swap for 14 static dictionaries; results via three channels (top banner / panel memory rows / log)
+[*]Managed-heap vs Unity-used memory split so you can tell game-native growth from the mod
+[/list]
+
+[h2]v0.93 Localization completion[/h2]
+[list]
+[*]All four floating windows refresh titles on language switch; 18 hardcoded top banners localized; event descriptions fixed; toolbar single source of truth
+[/list]
+
+[h2]v0.94[/h2]
+[list]
+[*]"Population" stat card removed from the overview (breaks immersion with population-multiplier mods)
+[/list]
+
+[h2]v0.95 Central Banker (playable government)[/h2]
+[list]
+[*]Claim a nation (single-nation, 10-year switch cooldown); royal treasury (20% city-warehouse seed + periodic levy)
+[*]6 ongoing policies × 3-tier slot system, 3 one-shot decrees, market/granary world buildings (destroyable by wars and disasters)
+[*]Track record (before/after Gini & average wealth per policy)
+[/list]
+
+[h2]v0.96 Trade realism[/h2]
+[list]
+[*]Trade edge costs now use real vanilla A* path length (detours around mountains/seas; can be disabled to fall back to straight-line)
+[*]Inheritance child-buffer compressed to fixed arrays
+[/list]
+
+[h2]v0.97–v0.98 Entry point & diplomacy[/h2]
+[list]
+[*]v0.97 Ledger button injected at the top-right of vanilla nation/city windows (manual Harmony patch + injection into already-open windows)
+[*]v0.98 Diplomacy: declare war, sue for peace (ransom when weaker), form alliances, send gifts, bilateral trade pacts (2 slots) — all real-time
+[*]HUD auto real-time refresh once a nation is claimed
+[/list]
+
+[h2]v0.99–v1.0.0 Hotkey & consolidated release[/h2]
+[list]
+[*]v0.99 Map hotkey (default G, rebindable in settings; same polling pattern as RulerBox's K)
+[*]v1.0.0 Consolidated release: hard gate for identical four-language key sets, all new strings localized, README & Steam docs updated
+[/list]
+
+[h2]v1.0.1–v1.0.2 Fixes[/h2]
+[list]
+[*]v1.0.1 Treasury received no gold: citizen tax + founding grant added (city warehouses are often empty; gold lives in citizens' pockets)
+[*]v1.0.2 Diplomacy interface unavailable: startWar switched to runtime reflection + war-type asset candidate fallback
+[/list]
+
+[h2]v1.1.0 RulerBox-style cabinet[/h2]
+[list]
+[*]Cabinet rebuilt as a four-tab hub (Finance / Policies / Decrees & Build / Diplomacy), 600×760, each page gets full content width
+[/list]
+
+[h2]v1.1.1 Vanilla building placement[/h2]
+[list]
+[*]Build page offers 10 vanilla buildings (houses T1/T3/T5, barracks, watch tower, well, mine, statue, temple, bonfire)
+[*]RulerBox-style placement mode: click the map to place repeatedly, right-click to cancel; fee derived from building cost, auto-refund on failure
+[/list]
+
+[h2]v1.2.0 National law codex[/h2]
+[list]
+[*]Every kingdom (AI included): 28 laws × 5 tiers + 16 policies × 3 tiers (beyond RulerBox's 38 items)
+[*]AI evolves annually from national situation (finance/Gini/war/population/disaster) + 6 national natures; the player's nation is player-controlled
+[*]Effects aggregated via one LawMods layer and wired to 10 engines (production/trade/price/Gini/unrest/consumption/disaster/build cost/wages/military)
+[*]5 mutual-exclusion pairs, paid upgrades & free downgrades, codex persisted in saves, cabinet codex page
+[/list]
+
+[h2]v1.2.1 Code-review fixes[/h2]
+[list]
+[*]Critical: AI evolution never ran (year guard set before the tick call) — reordered
+[*]Critical: background thread raced the shared dictionary — snapshots taken at collect time (≈16 k lookups per cycle eliminated)
+[*]Event tiering fixed (major reforms only from this-tick changes); player edits no longer pollute the diplomacy stream; military balancing via threshold scaling
+[*]Spec gaps filled: 5-year mutex cooldown, one-click adopt of AI suggestions, national nature shown in diplomacy rows
+[/list]
+
+[b]Installation:[/b] Install NML first, put the EconomyMod folder into WorldBox/Mods/, enable in-game.
+[b]Note:[/b] Built entirely on vanilla mechanics, no external assets; four-language UI (Simplified/Traditional Chinese, English, Russian).
+
+Author: Jake

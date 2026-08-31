@@ -3,7 +3,7 @@
 > A complete macroeconomic simulation mod for WorldBox — wealth tracking, economic cycles, kingdom trade, social unrest and sapient spending.
 
 **Author**: Jake
-**Version**: 1.0.0
+**Version**: 1.2.1
 **Type**: Macro-economy / Simulation enhancement
 **Target**: WorldBox 0.51.2+
 
@@ -25,6 +25,26 @@
 - **4-language UI**: 简体中文 / 繁體中文 / English / Русский
 
 Everything is built on **vanilla game mechanics** — no external resources, all computation runs on a background thread.
+
+## National Law Codex (v1.2.0)
+
+- **Every kingdom runs its own laws & policies**: 28 laws x 5 tiers (economy/society/military/justice/environment/ideology) + 16 policies x 3 tiers (fiscal/welfare/military/diplomacy) - 44 items, beyond RulerBox's 38.
+- **AI nations evolve on their own**: yearly evaluation from national situation (finance/Gini/war/population/disaster) + 6 national natures + 2% annual drift; the player's nation stays player-controlled (codex page offers one-click adopt of AI suggestions).
+- **Effects truly wired**: one LawMods aggregation layer feeding 10 engines (production/trade/price/Gini/unrest/consumption/disaster/build cost/wages/military); the Test-CodexLaws gate forces every tier of every item to modify at least one multiplier - no dead modifiers like RulerBox's.
+- **Mutex & cost**: 5 mutual-exclusion law pairs (conscription<->standing army etc., 5-year AI cooldown); paid upgrades (GDP x 0.5% x tier; AI pays from city warehouses + citizens), free downgrades; codex persisted to saves (rb_codex_*).
+
+## Diplomacy (v0.98, real-time)
+
+- Declare war / sue for peace (ransom when weaker) / alliances (opinion gate) / gifts (real gold + goodwill) / bilateral trade pacts (+10% flow per tier, 2 slots)
+
+## Shortcuts
+
+- **Map hotkey G** (rebindable in settings; blank disables): hover a kingdom -> claim / open cabinet
+- Ledger button at the top-right of vanilla nation/city windows (manual Harmony patch)
+
+## Changelog
+
+Full changelog v0.13.0 -> v1.2.1 (Steam-ready, all four languages): `docs/STEAM_CHANGELOG_0.13_to_1.2.1_{zh,zh_tw,en,ru}.txt`
 
 ## Gameplay: Central Banker (v1.0.0)
 
