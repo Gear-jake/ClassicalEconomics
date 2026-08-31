@@ -30,58 +30,91 @@ namespace EconomyMod.Core
 
         // ===== 性能优化：复用消费缓冲，避免 GC 分配 =====
         private static readonly List<Actor> _cityPool = new List<Actor>();
+        private static readonly Dictionary<long, bool> _kingdomWarCache = new Dictionary<long, bool>();
+        private static readonly Dictionary<City, Actor> _poorestCityActorCache = new Dictionary<City, Actor>();
+        private const int BuildCooldownCycles = 50;
+        private static readonly Dictionary<long, int> _lastBuildCycle = new Dictionary<long, int>();
+        private static readonly List<long> _expiredCityIds = new List<long>();
 
         /// <summary>每年调用一次：富裕智慧生物按财富比例消费。
         /// 富人列表由 DataCollector.Collect 在单遍遍历中顺带收集（WealthyPool），
         /// 本方法不再全量扫描，仅打乱 + 逐个消费。</summary>
         public static void RunOncePerYear()
         {
-            if (World.world == null) return;
-            var actors = DataCollector.WealthyPool;
-            if (actors.Count == 0) return;
-
-            // 打乱富人列表，避免每轮都优先处理同一批
-            for (int i = actors.Count - 1; i > 0; i--)
+            ClearWorldReferences();
+            PruneExpiredCityActions(EconomyEngine.CycleIndex);
+            try
             {
-                int j = _rng.Next(i + 1);
-                var tmp = actors[i]; actors[i] = actors[j]; actors[j] = tmp;
-            }
+                if (World.world == null) return;
+                var actors = DataCollector.WealthyPool;
+                if (actors.Count == 0) return;
 
-            bool log = UnrestConfig.Instance.LogToWorldLog;
-            foreach (var actor in actors)
-            {
-                int money;
-                try { money = Mathf.Max(0, Mathf.RoundToInt(actor.money)); }
-                catch (System.Exception) { continue; } // 半销毁对象可能读取失败
-                if (money <= WealthyThreshold) continue;
-
-                // 花掉超出阈值部分的三分之二（扩大个人消费），单次上限提高到 400（支撑大额消费如武器批发）
-                int spend = Mathf.Clamp((money - WealthyThreshold) * 2 / 3, 10, 400);
-
-                // 七类消费按情境权重选择（战时多买武器、和平多投资、高基尼多施舍）
-                SpendKind kind = PickSpendKindByContext(actor);
-                bool spent = false;
-                string note = "";
-                spent = kind switch
+                // 打乱富人列表，避免每轮都优先处理同一批
+                for (int i = actors.Count - 1; i > 0; i--)
                 {
-                    SpendKind.BuyWeapon         => TryBuyWeapon(actor, spend, out note),
-                    SpendKind.BuildInvestment   => TryBuildInvestment(actor, spend, out note),
-                    SpendKind.CraftArsenal      => TryCraftArsenal(actor, spend, out note),
-                    SpendKind.WholesaleWeapons  => TryWholesaleWeapons(actor, spend, out note),
-                    SpendKind.EraEvent           => TryEraEvent(actor, spend, out note),
-                    SpendKind.Charity            => TryCharity(actor, spend, out note),
-                    _                           => TryPayTax(actor, spend, out note),
-                };
-                if (!spent && kind != SpendKind.PayTax)
-                {
-                    spent = TryPayTax(actor, spend, out note);
+                    int j = _rng.Next(i + 1);
+                    var tmp = actors[i]; actors[i] = actors[j]; actors[j] = tmp;
                 }
 
-                if (spent && log)
+bool log = UnrestConfig.Instance.LogToWorldLog;
+                // 年度消费操作上限：每年最多处理 cap 个富裕生物（默认 5000，与现状同量级，可配置调低限流）
+                int cap = UnrestConfig.Instance.SpendingCapPerYear;
+                int processed = 0;
+                foreach (var actor in actors)
                 {
-                    Debug.Log($"[ClassicalEconomics] 消费 {GameHelpers.SafeName(actor)} 花费={spend} {note}");
+                    if (++processed > cap) break;
+                    int money;
+                    try { money = Mathf.Max(0, Mathf.RoundToInt(actor.money)); }
+                    catch (System.Exception) { continue; } // 半销毁对象可能读取失败
+                    if (money <= WealthyThreshold) continue;
+
+                    // 花掉超出阈值部分的三分之二（扩大个人消费），单次上限提高到 400（支撑大额消费如武器批发）
+                    int spend = Mathf.Clamp((money - WealthyThreshold) * 2 / 3, 10, 400);
+
+                    // 七类消费按情境权重选择（战时多买武器、和平多投资、高基尼多施舍）
+                    SpendKind kind = PickSpendKindByContext(actor);
+                    bool spent = false;
+                    string note = "";
+                    spent = kind switch
+                    {
+                        SpendKind.BuyWeapon         => TryBuyWeapon(actor, spend, out note),
+                        SpendKind.BuildInvestment   => TryBuildInvestment(actor, spend, out note),
+                        SpendKind.CraftArsenal      => TryCraftArsenal(actor, spend, out note),
+                        SpendKind.WholesaleWeapons  => TryWholesaleWeapons(actor, spend, out note),
+                        SpendKind.EraEvent           => TryEraEvent(actor, spend, out note),
+                        SpendKind.Charity            => TryCharity(actor, spend, out note),
+                        _                           => TryPayTax(actor, spend, out note),
+                    };
+                    if (!spent && kind != SpendKind.PayTax)
+                    {
+                        spent = TryPayTax(actor, spend, out note);
+                    }
+
+                    if (spent && log)
+                    {
+                        Debug.Log($"[ClassicalEconomics] 消费 {GameHelpers.SafeName(actor)} 花费={spend} {note}");
+                    }
                 }
             }
+            finally
+            {
+                ClearWorldReferences();
+            }
+        }
+
+        /// <summary>清除年度消费过程中持有的世界对象引用和查询结果。</summary>
+        public static void ClearWorldReferences()
+        {
+            _cityPool.Clear();
+            _poorestCityActorCache.Clear();
+            _kingdomWarCache.Clear();
+        }
+
+        public static void Reset()
+        {
+            ClearWorldReferences();
+            _lastBuildCycle.Clear();
+            _expiredCityIds.Clear();
         }
 
         /// <summary>
@@ -153,10 +186,15 @@ namespace EconomyMod.Core
         private static System.Reflection.PropertyInfo _curKingProp;
         private static System.Reflection.PropertyInfo _personProp;
         private static System.Reflection.MethodInfo _hasNegativeStatusMethod;
+        private static readonly object[] _hasNegativeStatusArgs = { "war" };
 
         /// <summary>反射检测王国是否处于战争状态（国王有"war"负面状态）；失败返回 false。</summary>
         private static bool IsKingdomAtWar(Kingdom kingdom)
         {
+            long kingdomId = SafeKingdomId(kingdom);
+            if (_kingdomWarCache.TryGetValue(kingdomId, out bool cached)) return cached;
+
+            bool atWar = false;
             try
             {
                 if (_curKingProp == null)
@@ -183,9 +221,14 @@ namespace EconomyMod.Core
                         System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
                 }
                 if (_hasNegativeStatusMethod == null) return false;
-                return (bool)_hasNegativeStatusMethod.Invoke(person, new object[] { "war" });
+                atWar = (bool)_hasNegativeStatusMethod.Invoke(person, _hasNegativeStatusArgs);
             }
-            catch (System.Exception) { return false; }
+            catch (System.Exception) { }
+            finally
+            {
+                _kingdomWarCache[kingdomId] = atWar;
+            }
+            return atWar;
         }
 
         /// <summary>购买武器：金币先转给城市领袖（军械收入），再反射造真实武器（先付款后交货，杜绝免费武器）。</summary>
@@ -216,6 +259,8 @@ namespace EconomyMod.Core
             long tId = SafeId(target);
             if (target == null || tId == 0L || tId == aId) return false;
             if (!DeductAndGive(actor, target, spend)) return false;
+            try { if (actor.city != null) _poorestCityActorCache.Remove(actor.city); }
+            catch (System.Exception) { }
             note = "慈善施舍（接济穷人）";
             return true;
         }
@@ -231,9 +276,12 @@ namespace EconomyMod.Core
             {
                 if (_towerAsset == null) _towerAsset = AssetManager.buildings.get("watch_tower_human");
                 if (_towerAsset == null) return false;
+                long cityId;
+                if (!CanUseCityAction(actor, _lastBuildCycle, BuildCooldownCycles, out cityId)) return false;
                 int toCity = spend / 2;
                 if (!TransferToCity(actor, toCity)) return false;
                 actor.addMoney(-(spend - toCity));
+                CommitCityAction(_lastBuildCycle, cityId);
                 // addBuilding 为 internal 方法，用反射调用
                 Building b = AddBuildingViaReflection(_towerAsset, actor.current_tile);
                 if (b == null)
@@ -265,9 +313,7 @@ namespace EconomyMod.Core
             int craftCount = Mathf.Clamp(spend / 30, 3, 5);
             int success = 0;
             for (int i = 0; i < craftCount; i++)
-            {
                 if (CraftRandomWeapon(actor)) success++;
-            }
             EventStreamService.Record(EventStreamService.TypeCraftArsenal, GameHelpers.SafeKingdomName(actor.kingdom), success);
             note = "打造军械（" + success + "件装备入城）";
             return true;
@@ -289,9 +335,7 @@ namespace EconomyMod.Core
             int craftCount = Mathf.Clamp(spend / 40, 6, 10);
             int success = 0;
             for (int i = 0; i < craftCount; i++)
-            {
                 if (CraftRandomWeapon(actor)) success++;
-            }
             EventStreamService.Record(EventStreamService.TypeWholesale, GameHelpers.SafeKingdomName(actor.kingdom), success);
             note = "武器批发（" + success + "件装备入城）";
             return true;
@@ -353,12 +397,21 @@ namespace EconomyMod.Core
         /// <summary>寻找同城金币最少的智慧生物（使用复用缓冲）。</summary>
         private static Actor FindPoorestCityActor(Actor actor)
         {
+            City city;
+            try { city = actor.city; }
+            catch (System.Exception) { return null; }
+            if (city == null) return null;
+
+            if (_poorestCityActorCache.TryGetValue(city, out var cached))
+            {
+                if (cached == null || SafeId(cached) != SafeId(actor)) return cached;
+            }
+
             var candidates = _cityPool;
             candidates.Clear();
             try
             {
-                var city = actor.city;
-                if (city == null || city.units == null) return null;
+                if (city.units == null) return null;
                 candidates.AddRange(city.units);
             }
             catch (System.Exception) { return null; }
@@ -367,8 +420,25 @@ namespace EconomyMod.Core
             float minMoney = float.MaxValue;
             foreach (var c in candidates)
             {
-                if (c == null || c.id == actor.id) continue;
-                if (c.asset == null || !c.asset.civ) continue;
+                if (c == null) continue;
+                if (!GameHelpers.IsCivilizedActor(c)) continue;
+                try
+                {
+                    if (c.money < minMoney) { minMoney = c.money; poorest = c; }
+                }
+                catch (System.Exception) { }
+            }
+
+            if (!_poorestCityActorCache.ContainsKey(city))
+                _poorestCityActorCache[city] = poorest;
+            if (SafeId(poorest) != SafeId(actor)) return poorest;
+
+            poorest = null;
+            minMoney = float.MaxValue;
+            foreach (var c in candidates)
+            {
+                if (c == null || SafeId(c) == SafeId(actor)) continue;
+                if (!GameHelpers.IsCivilizedActor(c)) continue;
                 try
                 {
                     if (c.money < minMoney) { minMoney = c.money; poorest = c; }
@@ -395,6 +465,40 @@ namespace EconomyMod.Core
                 return true;
             }
             catch (System.Exception) { return false; }
+        }
+
+        private static bool CanUseCityAction(Actor actor, Dictionary<long, int> cooldowns,
+            int cooldownCycles, out long cityId)
+        {
+            cityId = 0L;
+            if (actor == null || actor.city == null) return false;
+            WorldTile tile;
+            try { tile = actor.city.getTile(false); }
+            catch (System.Exception) { return false; }
+            if (tile == null) return false;
+
+            cityId = ((long)tile.x << 32) | (uint)tile.y;
+            int cycle = EconomyEngine.CycleIndex;
+            int last;
+            return !cooldowns.TryGetValue(cityId, out last) || cycle - last >= cooldownCycles;
+        }
+
+        private static void CommitCityAction(Dictionary<long, int> cooldowns, long cityId)
+        {
+            cooldowns[cityId] = EconomyEngine.CycleIndex;
+        }
+
+        private static void PruneExpiredCityActions(int cycle)
+        {
+            PruneCooldowns(_lastBuildCycle, cycle, BuildCooldownCycles);
+        }
+
+        private static void PruneCooldowns(Dictionary<long, int> cooldowns, int cycle, int cooldownCycles)
+        {
+            _expiredCityIds.Clear();
+            foreach (var entry in cooldowns)
+                if (cycle - entry.Value >= cooldownCycles) _expiredCityIds.Add(entry.Key);
+            for (int i = 0; i < _expiredCityIds.Count; i++) cooldowns.Remove(_expiredCityIds[i]);
         }
 
         private static MethodInfo _addBuildingMethod;

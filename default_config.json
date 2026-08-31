@@ -331,6 +331,18 @@
       "Callback": "EconomyConfigCallbacks:OnRealTimeIntervalChanged"
     },
     {
+      "Id": "real_time_refresh_threshold",
+      "Type": "TEXT",
+      "TextVal": "2000",
+      "Callback": "EconomyConfigCallbacks:OnRealTimeThresholdChanged"
+    },
+    {
+      "Id": "real_time_refresh_budget",
+      "Type": "TEXT",
+      "TextVal": "2000",
+      "Callback": "EconomyConfigCallbacks:OnRealTimeBudgetChanged"
+    },
+    {
       "Id": "money_velocity",
       "Type": "TEXT",
       "TextVal": "0.5",
@@ -383,6 +395,108 @@
       "Type": "TEXT",
       "TextVal": "0.2",
       "Callback": "EconomyConfigCallbacks:OnCrisisContagionThresholdChanged"
+    },
+    {
+      "Id": "spending_cap_per_year",
+      "Type": "TEXT",
+      "TextVal": "5000",
+      "Callback": "EconomyConfigCallbacks:OnSpendingCapPerYearChanged"
+    },
+    {
+      "Id": "banking_default_cap_per_year",
+      "Type": "TEXT",
+      "TextVal": "500",
+      "Callback": "EconomyConfigCallbacks:OnBankingDefaultCapPerYearChanged"
+    },
+    {
+      "Id": "banking_contagion_cap_per_year",
+      "Type": "TEXT",
+      "TextVal": "500",
+      "Callback": "EconomyConfigCallbacks:OnBankingContagionCapPerYearChanged"
+    },
+    {
+      "Id": "frame_budget_ms",
+      "Type": "TEXT",
+      "TextVal": "4",
+      "Callback": "EconomyConfigCallbacks:OnFrameBudgetChanged"
+    },
+    {
+      "Id": "cycle_window_ms",
+      "Type": "TEXT",
+      "TextVal": "2000",
+      "Callback": "EconomyConfigCallbacks:OnCycleWindowChanged"
+    },
+    {
+      "Id": "inheritance_scan_per_frame",
+      "Type": "TEXT",
+      "TextVal": "2000",
+      "Callback": "EconomyConfigCallbacks:OnInheritanceScanPerFrameChanged"
+    },
+    {
+      "Id": "perf_diagnostics_enabled",
+      "Type": "SWITCH",
+      "BoolVal": false,
+      "Callback": "EconomyConfigCallbacks:OnPerfDiagnosticsEnabledChanged"
+    },
+    {
+      "Id": "cycle_alloc_budget",
+      "Type": "TEXT",
+      "TextVal": "4096",
+      "Callback": "EconomyConfigCallbacks:OnCycleAllocBudgetChanged"
+    },
+    {
+      "Id": "memory_cleanup_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnMemoryCleanupEnabledChanged"
+    },
+    {
+      "Id": "memory_cleanup_force_gc",
+      "Type": "SWITCH",
+      "BoolVal": false,
+      "Callback": "EconomyConfigCallbacks:OnMemoryCleanupForceGcChanged"
+    },
+    {
+      "Id": "memory_cleanup_interval_seconds",
+      "Type": "TEXT",
+      "TextVal": "30",
+      "Callback": "EconomyConfigCallbacks:OnMemoryCleanupIntervalChanged"
+    },
+    {
+      "Id": "memory_cleanup_notify_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnMemoryCleanupNotifyEnabledChanged"
+    },
+    {
+      "Id": "nation_play_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnNationPlayEnabledChanged"
+    },
+    {
+      "Id": "treasury_income_ratio",
+      "Type": "TEXT",
+      "TextVal": "5",
+      "Callback": "EconomyConfigCallbacks:OnTreasuryIncomeRatioChanged"
+    },
+    {
+      "Id": "policy_slots",
+      "Type": "TEXT",
+      "TextVal": "3",
+      "Callback": "EconomyConfigCallbacks:OnPolicySlotsChanged"
+    },
+    {
+      "Id": "trade_astar_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnTradeAstarEnabledChanged"
+    },
+    {
+      "Id": "nation_claim_hotkey",
+      "Type": "TEXT",
+      "TextVal": "G",
+      "Callback": "EconomyConfigCallbacks:OnNationClaimHotkeyChanged"
     }
   ]
 }

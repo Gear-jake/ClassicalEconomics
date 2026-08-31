@@ -1,8 +1,7 @@
 [h1]Classical Economics[/h1]
-[b]A macroeconomic simulation mod for WorldBox | v0.13.1[/b]
-[b]Requires:[/b] WorldBox 0.51.2+ and NeoModLoader (NML)
+[b]A macroeconomic simulation mod for WorldBox | v1.0.0[/b][b]Requires:[/b] WorldBox 0.51.2+ and NeoModLoader (NML)
 
-Gives your world a real economy. The mod tracks the wealth of ALL sapient species (including aliens and dragons), then simulates a full macroeconomic system on top of it:
+Gives your world a real economy. The mod tracks the wealth of every creature that has built a city or belongs to a kingdom (including aliens, dragons, Fire Demons and Ice Demons), then simulates a full macroeconomic system on top of it:
 
 [list]
 [*]Macro statistics: global GDP, average wealth, Gini coefficient, price index (CPI), per-kingdom breakdown
@@ -27,5 +26,14 @@ Gives your world a real economy. The mod tracks the wealth of ALL sapient specie
 [b]Compatibility:[/b] Built entirely on vanilla mechanics, no external resources; all statistics computed on a background thread (zero main-thread cost). Fully compatible with the Optime optimization mod — the compatibility layer injects null-guards at runtime and never modifies Optime.
 
 UI languages: 简体中文 / 繁體中文 / English / Русский
+
+[b]v1.0.0 new content[/b]
+[list]
+[*][b]Central Banker gameplay[/b] Claim a kingdom and serve as its economy minister: a real royal treasury (levies and spending), 6 ongoing policies (tax cuts/hikes, poor relief, propaganda, trade pacts, tariffs; 3-tier slot system), emergency relief & national festival decrees, market & granary buildings on the map (destroyed by wars and disasters)
+[*][b]Diplomacy[/b] Declare war, sue for peace (pay ransom when weaker), form alliances, send gifts, and sign bilateral trade pacts (+10% bilateral flow per tier) - all effective in real time
+[*][b]Map hotkey G[/b] Hover a kingdom and press G to claim it / open the cabinet (rebindable in settings; blank disables)
+[*][b]Performance[/b] Frame-budgeted annual settlement, automatic memory cleanup, real A* trade-path costs (detours around mountains and seas)
+[*][b]Full localization[/b] Key sets identical across Simplified/Traditional Chinese, English and Russian; the whole UI switches language instantly
+[/list]
 
 Author: Jake

@@ -41,6 +41,7 @@ namespace EconomyMod.Core
         /// <summary>重置（新地图/新游戏）：清空震荡状态与收复战争跟踪，避免旧世界残留泄漏进新地图（M7）。</summary>
         public static void Reset()
         {
+            ClearWorldReferences();
             _states.Clear();
             _rebelWars.Clear();
             _sustainTimer = 0f;
@@ -65,6 +66,8 @@ namespace EconomyMod.Core
         /// </summary>
         public static void Evaluate()
         {
+            try
+            {
             var cfg = UnrestConfig.Instance;
             if (!cfg.Enabled) return;
 
@@ -88,6 +91,9 @@ namespace EconomyMod.Core
 
                 if (stats.GiniCoefficient >= cfg.GiniThreshold)
                 {
+                    // 宣传政策（中央银行家）：本国高基尼下暂缓积累与触发（基尼回落路径不受影响）
+                    if (NationEngine.PropagandaActive(kid)) continue;
+
                     // 高基尼：进入/维持震荡累积状态
                     if (!_states.TryGetValue(kid, out var st))
                     {
@@ -106,7 +112,7 @@ namespace EconomyMod.Core
                             st.HasRebelled = true;
                             st.RebelYear = currentYear; // 记录叛乱触发年：革命延迟从此年起算（非高基尼起始年）
                             EventStreamService.Record(EventStreamService.TypeUnrest, stats.KingdomName, affected);
-                            GameHelpers.Notify($"[动荡] <{stats.KingdomName}> 社会动荡爆发，{affected} 座城市暴动");
+                            GameHelpers.NotifyLocalized("toast_unrest_start", stats.KingdomName, affected);
                             if (cfg.LogToWorldLog)
                             {
                                 Debug.Log($"[ClassicalEconomics] 社会震荡爆发 王国<{stats.KingdomName}> " +
@@ -127,7 +133,7 @@ namespace EconomyMod.Core
                             {
                                 st.HasUprising = true;
                                 EventStreamService.Record(EventStreamService.TypeUprising, stats.KingdomName, result);
-                                GameHelpers.Notify($"[起义] <{stats.KingdomName}> 街头起义爆发！{result} 名富豪被处决，国王被推翻");
+                                GameHelpers.NotifyLocalized("toast_uprising", stats.KingdomName, result);
                                 if (cfg.LogToWorldLog)
                                 {
                                     Debug.Log($"[ClassicalEconomics] 街头起义 王国<{stats.KingdomName}> " +
@@ -167,6 +173,18 @@ namespace EconomyMod.Core
                 if (!seen.Contains(kv.Key)) removeIds.Add(kv.Key);
             foreach (var id in removeIds) _states.Remove(id);
             // 收复战争由 EconomyTickRunner.Update 每帧维持（高频），此处不再每年调用
+            }
+            finally
+            {
+                ClearWorldReferences();
+            }
+        }
+
+        /// <summary>清空仅用于当前世界的城市和 Actor 引用，保留纯 ID 动荡状态。</summary>
+        public static void ClearWorldReferences()
+        {
+            _cityPool.Clear();
+            _candidatePool.Clear();
         }
 
         // 持续收复战争的高频维持节流（每帧由 Update 驱动，1 秒节流）
@@ -255,12 +273,12 @@ namespace EconomyMod.Core
             string kName = GameHelpers.SafeKingdomName(kingdom);
             if (viaPeace)
             {
-                GameHelpers.Notify($"[动荡] <{kName}> 与叛军达成和谈，暴动结束，王国恢复正常");
+                GameHelpers.NotifyLocalized("toast_unrest_peace", kName);
                 EventStreamService.Record(EventStreamService.TypeUnrestPeace, kName, 0);
             }
             else
             {
-                GameHelpers.Notify($"[动荡] <{kName}> 暴动平息，城市已收回，王国恢复正常");
+                GameHelpers.NotifyLocalized("toast_unrest_resolved", kName);
                 EventStreamService.Record(EventStreamService.TypeUnrestResolved, kName, 0);
             }
             if (UnrestConfig.Instance.LogToWorldLog)
@@ -403,6 +421,8 @@ namespace EconomyMod.Core
         /// </summary>
         public static int Incite(Kingdom kingdom)
         {
+            try
+            {
             if (kingdom == null || kingdom.units == null || kingdom.units.Count == 0) return 0;
             if (!EconomyEngine.KingdomStats.TryGetValue(kingdom.data.id, out var stats))
             {
@@ -418,6 +438,11 @@ namespace EconomyMod.Core
                 }
             }
             return affected;
+            }
+            finally
+            {
+                ClearWorldReferences();
+            }
         }
 
         /// <summary>
@@ -428,6 +453,8 @@ namespace EconomyMod.Core
         /// </summary>
         public static int TriggerCivilWar(Kingdom kingdom)
         {
+            try
+            {
             if (kingdom == null || kingdom.units == null || kingdom.units.Count == 0) return 0;
             if (!EconomyEngine.KingdomStats.TryGetValue(kingdom.data.id, out var stats))
             {
@@ -439,6 +466,11 @@ namespace EconomyMod.Core
                 Debug.Log($"[ClassicalEconomics] 内战爆发 王国<{stats.KingdomName}> 影响={affected}");
             }
             return affected;
+            }
+            finally
+            {
+                ClearWorldReferences();
+            }
         }
 
         /// <summary>
@@ -495,6 +527,28 @@ namespace EconomyMod.Core
         }
 
         /// <summary>
+        /// 国庆庆典（中央银行家法令）：清除本国动荡特质与积累状态。
+        /// 不处理收复战争（战争归 SustainRebelWars 管理），不做再分配（与镇压的本质区别）。
+        /// 返回是否清除了什么。
+        /// </summary>
+        public static bool TryFestivalClear(Kingdom kingdom)
+        {
+            if (kingdom == null || kingdom.data == null) return false;
+            bool cleared = false;
+            try
+            {
+                if (kingdom.hasTrait(UnrestTraitId))
+                {
+                    kingdom.removeTrait(UnrestTraitId);
+                    cleared = true;
+                }
+            }
+            catch (System.Exception) { }
+            cleared |= _states.Remove(kingdom.data.id);
+            return cleared;
+        }
+
+        /// <summary>
         /// 计算本次暴动的城市数量：随机值，且受贫富差距影响——
         /// 基尼系数超过阈值越多，可暴动城市越多；差距越小（刚过阈值）则越少（最低 1 座）。
         /// 返回 [1, 按贫富差距放大后的上限] 之间的随机整数。
@@ -528,7 +582,7 @@ namespace EconomyMod.Core
             int civCount = 0;
             if (kingdom.units != null)
                 foreach (var a in kingdom.units)
-                    if (a != null && a.isAlive() && a.asset != null && a.asset.civ) civCount++;
+                    if (GameHelpers.IsCivilizedActor(a)) civCount++;
             if (civCount < 4) return 0; // 人口过少不触发（避免误杀国王/唯一富户）
 
             int richCount = Mathf.Max(1, Mathf.RoundToInt(civCount * cfg.KillRichRatio));
@@ -664,7 +718,7 @@ namespace EconomyMod.Core
                 foreach (var actor in kingdom.units)
                 {
                     if (actor == null || !actor.isAlive()) continue;
-                    if (actor.asset == null || !actor.asset.civ) continue;
+                    if (!GameHelpers.IsCivilizedActor(actor)) continue;
                     candidates.Add(actor);
                 }
             }

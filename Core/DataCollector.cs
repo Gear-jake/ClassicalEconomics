@@ -25,7 +25,7 @@ namespace EconomyMod.Core
         public static readonly List<RichEntryData> TopRich = new List<RichEntryData>(10);
 
         /// <summary>地理贸易网络：本周期 cityId → City 引用映射（仅主线程寻路用，每周期复用防 GC）。</summary>
-        private static readonly Dictionary<long, City> _cityRefs = new Dictionary<long, City>(128);
+        private static Dictionary<long, City> _cityRefs = new Dictionary<long, City>(128);
 
         /// <summary>
         /// 采集时顺带收集的"富裕"智慧生物（wealth &gt; SpendingEngine.WealthyThreshold），
@@ -36,6 +36,9 @@ namespace EconomyMod.Core
         /// <summary>富豪税"贫困线以下"公民缓冲（收税单遍顺带收集，避免 ApplyWealthTax 再全量遍历两遍）。</summary>
         private static readonly List<Actor> _poorPool = new List<Actor>(256);
 
+        /// <summary>富豪税"税线以上"富人缓冲（收税单遍顺带收集，二遍仅遍历此池扣税，避免再全量遍历一遍）。</summary>
+        private static readonly List<Actor> _richPool = new List<Actor>(256);
+
         // 富豪榜条目对象池：每年采集最多新建 0 个对象（复用池中条目）
         private static readonly List<RichEntryData> _entryPool = new List<RichEntryData>(10);
 
@@ -43,10 +46,21 @@ namespace EconomyMod.Core
         public static void ClearWorldReferences()
         {
             for (int i = 0; i < TopRich.Count; i++) ReturnEntry(TopRich[i]);
-            TopRich.Clear();
+TopRich.Clear();
             WealthyPool.Clear();
             _poorPool.Clear();
+            _richPool.Clear();
             _cityRefs.Clear();
+        }
+
+        private static void AddPositiveMoney(Actor actor, long amount)
+        {
+            while (actor != null && amount > 0)
+            {
+                int chunk = (int)System.Math.Min(amount, int.MaxValue);
+                actor.addMoney(chunk);
+                amount -= chunk;
+            }
         }
 
         /// <summary>
@@ -54,12 +68,13 @@ namespace EconomyMod.Core
         /// 读取原生 money/loot 字段（只读），并顺带读取公民职业。
         /// 主线程仅"采集"：将纯数据（财富/王国/职业）写入 TradeSimulationWorker 缓冲，
         /// 全部统计计算在后台线程完成；富豪榜/富池等需 Actor 引用的池仍在主线程维护。
-        /// 仅采集开智文明种族（actor.asset.civ == true），排除野兽动物。
+        /// 仅采集已建城或已建国的文明生物，排除未参与文明的野兽动物。
         /// applySideEffects=false 用于实时刷新（跳过工资发放等年度副作用，只做统计）。
         /// postCycle=false 用于按钮同步路径（采集后由调用方 ComputeAndConsumeSync 同步计算，不投递后台任务）。
         /// 返回后台统计是否提交成功（false = 已有周期在途，调用方应稍后重试）。
+        /// maxUnits 为实时刷新预算：单次最多记录该数量的单位（默认 int.MaxValue 全量采集，语义不变）。
         /// </summary>
-        public static bool Collect(bool applySideEffects = true, bool postCycle = true)
+        public static bool Collect(bool applySideEffects = true, bool postCycle = true, int maxUnits = int.MaxValue)
         {
             // 在途周期存在时拒绝本次采集：PostCycle 会被拒（数据滞留缓冲被下轮 BeginCycle 清空），
             // 且调用方随后的同步计算会以 _generation++ 作废在途任务，破坏年度周期（S2 根因防护）。
@@ -70,16 +85,18 @@ namespace EconomyMod.Core
             WealthyPool.Clear();
 
             TradeSimulationWorker.BeginCycle();
+            GameHelpers.RefreshKingdomIndex();
 
             var aliveList = World.world != null && World.world.units != null
                 ? World.world.units.units_only_alive : null;
             if (aliveList != null)
             {
+                int processed = 0;
                 foreach (var actor in aliveList)
                 {
                     if (actor == null || !actor.isAlive())
                         continue;
-                    if (actor.asset == null || !actor.asset.civ)
+                    if (!GameHelpers.IsCivilizedActor(actor))
                         continue;
 
                     float wealth;
@@ -106,6 +123,9 @@ namespace EconomyMod.Core
 
                     // 劳动分工：按职业发放工资（劳动创造财富）。实时刷新跳过此副作用。
                     if (applySideEffects) LaborEngine.PayWage(actor, jobCode);
+
+                    // 实时刷新预算：单次最多记录 maxUnits 个已采集单位（默认 int.MaxValue，不截断）
+                    if (++processed >= maxUnits) break;
                 }
             }
 
@@ -196,7 +216,8 @@ namespace EconomyMod.Core
         /// "超出部分×税率"征税（每人单次上限自身财富 MaxRatio），均分给所有
         /// "财富 &lt; 人均×贫困线"的公民。覆盖全人口而非 TopN，规模与劳动工资
         /// 同量级，直接、持续地降低全球基尼系数。
-        /// 每年一次全量遍历（读 money 只读 + 少量 addMoney），低频可接受。
+        /// 合并遍历：一遍收穷/收富缓冲，二遍仅对富人缓冲扣税，穷人缓冲分发
+        /// （原为两遍全量遍历 + 一遍穷人缓冲，现仅一遍全量遍历）。
         /// 依赖本周期全球人均（EconomyEngine.AvgWealth），须在后台统计消费后调用。
         /// </summary>
         public static void ApplyWealthTax()
@@ -218,15 +239,29 @@ namespace EconomyMod.Core
                 ? World.world.units.units_only_alive : null;
             if (aliveList == null) return;
 
-            // 单遍：对超税线者收税（立即扣款）+ 顺带收集贫困线以下公民到复用缓冲。
-            // 原来分三遍遍历（收税/统计穷人/发钱），现合并为一遍全量 + 一遍穷人数（远小于全量）。
-            long totalTax = 0;
+            // 第一遍（唯一全量遍历）：同时收集贫困线以下与税线以上两个缓冲。
+            // 因 taxLine ≥ avg > poorLine = avg × 0.8，两池互斥，单遍分类与原两遍分类逐位一致。
             var poor = _poorPool;
+            var rich = _richPool;
             poor.Clear();
+            rich.Clear();
             foreach (var actor in aliveList)
             {
                 if (actor == null || !actor.isAlive()) continue;
-                if (actor.asset == null || !actor.asset.civ) continue;
+                if (!GameHelpers.IsCivilizedActor(actor)) continue;
+                float w;
+                if (!GameHelpers.TryGetWealth(actor, out w)) continue;
+                if (w < poorLine) poor.Add(actor);
+                else if (w > taxLine) rich.Add(actor);
+            }
+            // 先确认存在接收者，再执行扣款，避免税款因贫困池为空而消失。
+            if (poor.Count == 0) return;
+
+            long totalTax = 0;
+            // 第二遍：仅对富人缓冲扣税（不再遍历全量 aliveList）。
+            foreach (var actor in rich)
+            {
+                if (actor == null || !actor.isAlive()) continue;
                 float w;
                 if (!GameHelpers.TryGetWealth(actor, out w)) continue;
                 if (w > taxLine)
@@ -234,18 +269,14 @@ namespace EconomyMod.Core
                     long tax = (long)Mathf.Min((w - taxLine) * ratio, w * MaxRatio);
                     if (tax > 0)
                     {
-                        try { actor.addMoney(-(int)tax); totalTax += tax; } catch (System.Exception) { }
+                        int charged = (int)System.Math.Min(tax, int.MaxValue);
+                        try { actor.addMoney(-charged); totalTax += charged; } catch (System.Exception) { }
                     }
-                }
-                else if (w < poorLine)
-                {
-                    poor.Add(actor); // 收集穷人，第二遍只遍历缓冲
                 }
             }
             if (totalTax <= 0) return;
 
             int poorCount = poor.Count;
-            if (poorCount <= 0) return;
 
             // 第二遍：税款均分给贫困线以下公民（只遍历穷人缓冲，余数补给第一个）。
             // 注意：per==0（税款总额 < 贫困人口数）时仍须分发——余数=totalTax 全部补给第一个穷人，
@@ -258,7 +289,7 @@ namespace EconomyMod.Core
                 if (actor == null || !actor.isAlive()) continue;
                 long give = per + (i == 0 ? remainder : 0);
                 if (give <= 0) continue;
-                try { actor.addMoney((int)give); } catch (System.Exception) { }
+                try { AddPositiveMoney(actor, give); } catch (System.Exception) { }
             }
 
             GameHelpers.Log($"[ClassicalEconomics] 年度累进税：征税 {totalTax} 金币 → {poorCount} 名贫困公民（人均+{per}）");
@@ -309,7 +340,47 @@ namespace EconomyMod.Core
 
         private static void ReturnEntry(RichEntryData e)
         {
-            if (_entryPool.Count < 16) _entryPool.Add(e);
+            if (e == null) return;
+            e.Name = null;
+            e.Kingdom = null;
+            e.Wealth = 0f;
+            e.Id = 0L;
+if (_entryPool.Count < 16) _entryPool.Add(e);
         }
+
+        // ===== 静态缓冲缩容（MemoryCleanupEngine 空闲期调用；只缩容，不清内容，语义不变）=====
+
+        private static int TrimList<T>(List<T> list)
+        {
+            try
+            {
+                if (list.Capacity > 4096 && list.Capacity > list.Count * 4)
+                {
+                    list.TrimExcess();
+                    return 1;
+                }
+            }
+            catch (System.Exception) { }
+            return 0;
+        }
+
+        /// <summary>对全部静态 List 缓冲/缓存执行 TrimExcess，返回实际收缩的列表数；
+        /// _cityRefs 由 MemoryCleanupEngine 通过 ForTrim 访问器重建缩容。</summary>
+        public static int TrimMemory()
+        {
+            int shrunk = 0;
+            shrunk += TrimList(TopRich);
+            shrunk += TrimList(WealthyPool);
+            shrunk += TrimList(_poorPool);
+            shrunk += TrimList(_richPool);
+            shrunk += TrimList(_entryPool);
+            return shrunk;
+        }
+
+        /// <summary>供 MemoryCleanupEngine 重建缩容时读取当前引用（仅空闲期调用，绝不与采集周期并发）。</summary>
+        internal static Dictionary<long, City> CityRefsForTrim => _cityRefs;
+
+        /// <summary>将重建后的紧凑字典换回（仅 MemoryCleanupEngine 空闲期调用）。</summary>
+        internal static void ReplaceCityRefsForTrim(Dictionary<long, City> compact) { _cityRefs = compact; }
     }
 }

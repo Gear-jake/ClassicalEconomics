@@ -33,7 +33,7 @@ namespace EconomyMod.Models
 
         // ===== 贸易净额排名（v0.13：城市 + 国家）=====
         public long TotalExport;                                    // 全图出口总额（各边出口之和）
-        public List<TradeBalance> CityBalances = new List<TradeBalance>();    // 按城市净额
-        public List<TradeBalance> KingdomBalances = new List<TradeBalance>(); // 按国家净额
+        public List<TradeBalance> CityBalances;    // 按城市净额
+        public List<TradeBalance> KingdomBalances; // 按国家净额
     }
 }

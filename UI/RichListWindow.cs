@@ -47,6 +47,13 @@ namespace EconomyMod.UI
             BuildList();
         }
 
+        /// <summary>语言切换：标题走基类；内容为键控文案，可见时立即重建。</summary>
+        public override void RefreshAllTexts()
+        {
+            base.RefreshAllTexts();
+            if (_visible && _panelRoot != null) RefreshNow();
+        }
+
         private void BuildList()
         {
             // 直接使用采集器已维护好的 Top10 缓存，避免每年再次全量遍历世界单位

@@ -21,3 +21,7 @@ errors.txt
 
 # Steam 创意工坊上传脚本（含本机绝对路径，机器特定，不入库）
 steam_workshop_build.vdf
+
+# 工作区产物（不入库）
+.omo/
+evidence/

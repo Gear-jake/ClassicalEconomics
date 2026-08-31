@@ -79,9 +79,17 @@ namespace EconomyMod.Services
             "era_duration_years", "collapse_drop_ratio", "collapse_duration_years",
             "flourish_military_ratio", "flourish_periods", "labor_enabled", "labor_wage_base",
             "trade_power_enabled", "trade_surplus_ratio", "trade_deficit_ratio",
-            "real_time_refresh", "real_time_interval", "money_velocity", "inflation_bubble_boost",
+            "real_time_refresh", "real_time_interval", "real_time_refresh_threshold", "real_time_refresh_budget", "money_velocity", "inflation_bubble_boost",
             "disaster_enabled", "disaster_wealth_loss", "disaster_mine_bonus", "banking_enabled",
-            "credit_rate", "default_rate_depression", "crisis_contagion_threshold"
+            "credit_rate", "default_rate_depression", "crisis_contagion_threshold",
+            "spending_cap_per_year", "banking_default_cap_per_year", "banking_contagion_cap_per_year",
+            "frame_budget_ms", "cycle_window_ms",
+            "inheritance_scan_per_frame",
+            "perf_diagnostics_enabled", "cycle_alloc_budget",
+            "memory_cleanup_enabled", "memory_cleanup_force_gc", "memory_cleanup_interval_seconds",
+            "memory_cleanup_notify_enabled",
+            "nation_play_enabled", "treasury_income_ratio", "policy_slots",
+            "trade_astar_enabled", "nation_claim_hotkey"
         };
 
         /// <summary>
@@ -197,6 +205,8 @@ namespace EconomyMod.Services
                 // 实时数据刷新
                 if (group.TryGetValue("real_time_refresh", out var rtr))    u.RealTimeRefresh = rtr.BoolVal;
                 if (group.TryGetValue("real_time_interval", out var rti))   u.RealTimeInterval = ParseFloat(rti.TextVal, u.RealTimeInterval, 1f, 60f);
+                if (group.TryGetValue("real_time_refresh_threshold", out var rtt)) u.RealTimeRefreshThreshold = ParseInt(rtt.TextVal, u.RealTimeRefreshThreshold, 100, 100000);
+                if (group.TryGetValue("real_time_refresh_budget", out var rtb))    u.RealTimeRefreshBudget = ParseInt(rtb.TextVal, u.RealTimeRefreshBudget, 100, 100000);
                 // 货币供给与价格指数（CPI）
                 if (group.TryGetValue("money_velocity", out var mv))         u.MoneyVelocity = ParseFloat(mv.TextVal, u.MoneyVelocity, 0.1f, 2f);
                 if (group.TryGetValue("inflation_bubble_boost", out var ibb)) u.InflationBubbleBoost = ParseFloat(ibb.TextVal, u.InflationBubbleBoost, 0f, 0.5f);
@@ -209,6 +219,28 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("credit_rate", out var cr))                 u.CreditRate = ParseFloat(cr.TextVal, u.CreditRate, 0.01f, 0.5f);
                 if (group.TryGetValue("default_rate_depression", out var drd)) u.DefaultRateDepression = ParseFloat(drd.TextVal, u.DefaultRateDepression, 0.1f, 0.8f);
                 if (group.TryGetValue("crisis_contagion_threshold", out var cct)) u.CrisisContagionThreshold = ParseFloat(cct.TextVal, u.CrisisContagionThreshold, 0.05f, 0.5f);
+                // 年度操作上限（性能保护）
+                if (group.TryGetValue("spending_cap_per_year", out var scp))          u.SpendingCapPerYear = ParseInt(scp.TextVal, u.SpendingCapPerYear, 1, 100000);
+                if (group.TryGetValue("banking_default_cap_per_year", out var bdc))   u.BankingDefaultCapPerYear = ParseInt(bdc.TextVal, u.BankingDefaultCapPerYear, 1, 100000);
+                if (group.TryGetValue("banking_contagion_cap_per_year", out var bcc)) u.BankingContagionCapPerYear = ParseInt(bcc.TextVal, u.BankingContagionCapPerYear, 1, 100000);
+                if (group.TryGetValue("inheritance_scan_per_frame", out var ispf)) u.InheritanceScanPerFrame = ParseInt(ispf.TextVal, u.InheritanceScanPerFrame, 1, 100000);
+                // 年度收尾分帧（计划任务 7）
+                if (group.TryGetValue("frame_budget_ms", out var fbm)) u.FrameBudgetMs = ParseInt(fbm.TextVal, u.FrameBudgetMs, 1, 100);
+                if (group.TryGetValue("cycle_window_ms", out var cwm)) u.CycleWindowMs = ParseInt(cwm.TextVal, u.CycleWindowMs, 100, 10000);
+                // 年度收尾性能诊断（计划任务 1）
+                if (group.TryGetValue("perf_diagnostics_enabled", out var pde)) u.PerfDiagnosticsEnabled = pde.BoolVal;
+                if (group.TryGetValue("cycle_alloc_budget", out var cab)) u.CycleAllocBudget = ParseInt(cab.TextVal, u.CycleAllocBudget, 1, 1048576);
+                // 自动内存清理（MemoryCleanupEngine）
+                if (group.TryGetValue("memory_cleanup_enabled", out var mce)) u.MemoryCleanupEnabled = mce.BoolVal;
+                if (group.TryGetValue("memory_cleanup_force_gc", out var mcfg)) u.MemoryCleanupForceGc = mcfg.BoolVal;
+                if (group.TryGetValue("memory_cleanup_interval_seconds", out var mci)) u.MemoryCleanupIntervalSeconds = ParseInt(mci.TextVal, u.MemoryCleanupIntervalSeconds, 5, 300);
+                if (group.TryGetValue("memory_cleanup_notify_enabled", out var mcn)) u.MemoryCleanupNotifyEnabled = mcn.BoolVal;
+                // 中央银行家（NationEngine）
+                if (group.TryGetValue("nation_play_enabled", out var npe)) u.NationPlayEnabled = npe.BoolVal;
+                if (group.TryGetValue("treasury_income_ratio", out var tir)) u.TreasuryIncomeRatio = ParseInt(tir.TextVal, u.TreasuryIncomeRatio, 1, 20);
+                if (group.TryGetValue("policy_slots", out var psl)) u.PolicySlots = ParseInt(psl.TextVal, u.PolicySlots, 1, 5);
+                if (group.TryGetValue("trade_astar_enabled", out var tae)) u.TradeAstarEnabled = tae.BoolVal;
+                if (group.TryGetValue("nation_claim_hotkey", out var nch) && !string.IsNullOrWhiteSpace(nch.TextVal)) u.NationClaimHotkey = nch.TextVal.Trim().ToUpperInvariant();
             }
             catch (System.Exception e)
             {
@@ -253,10 +285,12 @@ namespace EconomyMod.Services
         public static void OnLanguageChanged(string pValue)
         {
             UnrestConfig.Instance.Language = NormalizeLanguage(pValue);
-            // 语言切换后：刷新设置窗口标签 + 悬浮窗静态文本 + 重新注入按钮 tooltip（4 语言）
+            // 语言切换后：刷新设置窗口标签 + 四个悬浮窗标题/静态文本 + 重新注入按钮 tooltip（4 语言）
             try { RegisterConfigLocale(); } catch (System.Exception) { }
             try { EconomyHUD.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { TradeShareWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
+            try { EventWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
+            try { RichListWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { EconomyUI.ReapplyTooltips(); } catch (System.Exception) { }
         }
 
@@ -521,9 +555,9 @@ namespace EconomyMod.Services
 
         // ===== 贸易军力回调 =====
 
-        public static void OnTradePowerEnabledChanged(string pValue)
+        public static void OnTradePowerEnabledChanged(bool pValue)
         {
-            UnrestConfig.Instance.TradePowerEnabled = pValue == "true" || pValue == "1";
+            UnrestConfig.Instance.TradePowerEnabled = pValue;
         }
 
         public static void OnTradeSurplusRatioChanged(string pValue)
@@ -558,6 +592,16 @@ namespace EconomyMod.Services
         public static void OnRealTimeIntervalChanged(string pValue)
         {
             UnrestConfig.Instance.RealTimeInterval = ParseFloat(pValue, UnrestConfig.Instance.RealTimeInterval, 1f, 60f);
+        }
+
+        public static void OnRealTimeThresholdChanged(string pValue)
+        {
+            UnrestConfig.Instance.RealTimeRefreshThreshold = ParseInt(pValue, UnrestConfig.Instance.RealTimeRefreshThreshold, 100, 100000);
+        }
+
+        public static void OnRealTimeBudgetChanged(string pValue)
+        {
+            UnrestConfig.Instance.RealTimeRefreshBudget = ParseInt(pValue, UnrestConfig.Instance.RealTimeRefreshBudget, 100, 100000);
         }
 
         // ===== 货币供给与价格指数（CPI）回调 =====
@@ -609,6 +653,102 @@ namespace EconomyMod.Services
         public static void OnCrisisContagionThresholdChanged(string pValue)
         {
             UnrestConfig.Instance.CrisisContagionThreshold = ParseFloat(pValue, UnrestConfig.Instance.CrisisContagionThreshold, 0.05f, 0.5f);
+        }
+
+        // ===== 年度操作上限（性能保护）回调 =====
+
+        public static void OnSpendingCapPerYearChanged(string pValue)
+        {
+            UnrestConfig.Instance.SpendingCapPerYear = ParseInt(pValue, UnrestConfig.Instance.SpendingCapPerYear, 1, 100000);
+        }
+
+        public static void OnBankingDefaultCapPerYearChanged(string pValue)
+        {
+            UnrestConfig.Instance.BankingDefaultCapPerYear = ParseInt(pValue, UnrestConfig.Instance.BankingDefaultCapPerYear, 1, 100000);
+        }
+
+        public static void OnBankingContagionCapPerYearChanged(string pValue)
+        {
+            UnrestConfig.Instance.BankingContagionCapPerYear = ParseInt(pValue, UnrestConfig.Instance.BankingContagionCapPerYear, 1, 100000);
+        }
+
+        public static void OnInheritanceScanPerFrameChanged(string pValue)
+        {
+            UnrestConfig.Instance.InheritanceScanPerFrame = ParseInt(pValue, UnrestConfig.Instance.InheritanceScanPerFrame, 1, 100000);
+        }
+
+        // ===== 年度收尾分帧（计划任务 7）回调 =====
+
+        public static void OnFrameBudgetChanged(string pValue)
+        {
+            UnrestConfig.Instance.FrameBudgetMs = ParseInt(pValue, UnrestConfig.Instance.FrameBudgetMs, 1, 100);
+        }
+
+        public static void OnCycleWindowChanged(string pValue)
+        {
+            UnrestConfig.Instance.CycleWindowMs = ParseInt(pValue, UnrestConfig.Instance.CycleWindowMs, 100, 10000);
+        }
+
+        // ===== 年度收尾性能诊断（计划任务 1）回调 =====
+
+        public static void OnPerfDiagnosticsEnabledChanged(bool pValue)
+        {
+            UnrestConfig.Instance.PerfDiagnosticsEnabled = pValue;
+        }
+
+        public static void OnCycleAllocBudgetChanged(string pValue)
+        {
+            UnrestConfig.Instance.CycleAllocBudget = ParseInt(pValue, UnrestConfig.Instance.CycleAllocBudget, 1, 1048576);
+        }
+
+        // ===== 自动内存清理（MemoryCleanupEngine）回调 =====
+
+        public static void OnMemoryCleanupEnabledChanged(bool pValue)
+        {
+            UnrestConfig.Instance.MemoryCleanupEnabled = pValue;
+        }
+
+        public static void OnMemoryCleanupForceGcChanged(bool pValue)
+        {
+            UnrestConfig.Instance.MemoryCleanupForceGc = pValue;
+        }
+
+        public static void OnMemoryCleanupIntervalChanged(string pValue)
+        {
+            UnrestConfig.Instance.MemoryCleanupIntervalSeconds = ParseInt(pValue, UnrestConfig.Instance.MemoryCleanupIntervalSeconds, 5, 300);
+        }
+
+        public static void OnMemoryCleanupNotifyEnabledChanged(bool pValue)
+        {
+            UnrestConfig.Instance.MemoryCleanupNotifyEnabled = pValue;
+        }
+
+        // ===== 中央银行家（NationEngine）回调 =====
+
+        public static void OnNationPlayEnabledChanged(bool pValue)
+        {
+            UnrestConfig.Instance.NationPlayEnabled = pValue;
+        }
+
+        public static void OnTreasuryIncomeRatioChanged(string pValue)
+        {
+            UnrestConfig.Instance.TreasuryIncomeRatio = ParseInt(pValue, UnrestConfig.Instance.TreasuryIncomeRatio, 1, 20);
+        }
+
+        public static void OnPolicySlotsChanged(string pValue)
+        {
+            UnrestConfig.Instance.PolicySlots = ParseInt(pValue, UnrestConfig.Instance.PolicySlots, 1, 5);
+        }
+
+        public static void OnTradeAstarEnabledChanged(bool pValue)
+        {
+            UnrestConfig.Instance.TradeAstarEnabled = pValue;
+        }
+
+        public static void OnNationClaimHotkeyChanged(string pValue)
+        {
+            var v = (pValue ?? "").Trim();
+            UnrestConfig.Instance.NationClaimHotkey = string.IsNullOrEmpty(v) ? "" : v.ToUpperInvariant();
         }
     }
 }

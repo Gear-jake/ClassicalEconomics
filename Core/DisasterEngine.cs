@@ -97,11 +97,17 @@ namespace EconomyMod.Core
                             int gold;
                             try { gold = city.getResourcesAmount("gold"); } catch { gold = 0; }
                             int loss = Mathf.RoundToInt(gold * lossRatio);
+                            long cityId = 0;
+                            try { cityId = city.id; } catch { }
+                            // 中央银行家·粮仓：本国粮仓所在城市灾害财富蒸发 ×0.7
+                            if (loss > 0 && NationEngine.IsGranaryCity(cityId)) loss = Mathf.RoundToInt(loss * NationEngine.GranaryLossFactor);
                             if (loss > 0)
                             {
                                 try { city.takeResource("gold", loss); } catch { }
                                 LastWealthLost += loss;
                                 LastDisasterCityCount++;
+                                // 中央银行家：灾害可摧毁本国市场/粮仓建筑（无赔偿，风险真实）
+                                NationEngine.DestroyCityBuildings(cityId, "toast_nation_destroyed_disaster");
 
                                 // 繁荣期受灾区域矿产产出加成（火山矿产刺激）
                                 if (isBoom && mineBonus > 0f)
@@ -130,7 +136,7 @@ namespace EconomyMod.Core
             {
                 GameHelpers.Log($"[ClassicalEconomics] 灾害经济冲击：{LastDisasterCityCount}座城市受灾，财富蒸发{LastWealthLost}金币" +
                                  (isBoom ? $"，火山矿产刺激+{Mathf.RoundToInt(LastWealthLost * mineBonus)}金币" : ""));
-                GameHelpers.Notify($"[经济] 灾害冲击！{LastDisasterCityCount}座城市受灾，财富蒸发{LastWealthLost}金币");
+                GameHelpers.NotifyLocalized("toast_disaster", LastDisasterCityCount, LastWealthLost);
                 EventStreamService.Record(EventStreamService.TypeDisaster, "", LastDisasterCityCount);
             }
         }

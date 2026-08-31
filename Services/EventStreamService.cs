@@ -42,6 +42,12 @@ namespace EconomyMod.Services
         public const string TypeDisaster     = "ev_disaster";       // 灾害经济冲击（P2）
         public const string TypeBanking      = "ev_banking";        // 银行信贷违约/危机传染（P2）
         public const string TypeBubbleBurst  = "ev_bubble_burst";   // 经济泡沫破裂（P1）
+        public const string TypeNationClaim    = "ev_nation_claim";    // 中央银行家：认领国家
+        public const string TypeNationPolicy   = "ev_nation_policy";   // 中央银行家：持续政策启用/取消
+        public const string TypeNationRelief   = "ev_nation_relief";   // 中央银行家：紧急救济
+        public const string TypeNationFestival = "ev_nation_festival"; // 中央银行家：国庆庆典
+        public const string TypeNationBuild    = "ev_nation_build";    // 中央银行家：兴建建筑
+        public const string TypeNationDiplomacy = "ev_nation_diplomacy"; // 中央银行家：外交动作（1宣战2求和3结盟4赠礼5协定6解约）
 
         /// <summary>
         /// 是否为重大事件（史书级）：低频高价值，走独立环形缓冲防被高频事件覆盖。
@@ -74,7 +80,6 @@ namespace EconomyMod.Services
             public string TypeKey;
             public string KingdomName; // 可为空（如全球性饥荒）
             public long Value;
-            public string Narrative; // 叙事文本（经济史书风格）
         }
 
         // 普通事件环形数组缓冲：_head 指向下一个写入位置，_count 为当前条数（≤Capacity）
@@ -94,67 +99,59 @@ namespace EconomyMod.Services
         private static readonly List<EventEntry> _recentPool = new List<EventEntry>(Capacity);
         private static readonly List<EventEntry> _majorRecentPool = new List<EventEntry>(MajorCapacity);
 
-        // 事件条目对象池：Clear() 时回收全部条目复用（消除每年几十次 new 的 GC 分配）。
-        // 注意：环形覆盖时旧条目直接丢弃不还池（条目最终由 GC 回收），注释与实现保持一致。
+        // 事件条目对象池：Clear() 后供下一世界复用；环满后直接原位改写槽位对象。
         private static readonly List<EventEntry> _entryPool = new List<EventEntry>(Capacity + MajorCapacity);
+
+        /// <summary>事件流变更版本，供 UI 跳过无变化的重复重建。</summary>
+        public static int Version { get; private set; }
 
         /// <summary>记录一条事件：按类型分流到重大/普通环形缓冲。</summary>
         public static void Record(string typeKey, string kingdomName, long value)
         {
-            var entry = RentEntry();
+            if (!IsKnownType(typeKey)) return;
+
+            bool major = IsMajorType(typeKey);
+            int slot = major ? _majorHead : _head;
+            var entry = major ? _majorEvents[slot] : _events[slot];
+            if (entry == null) entry = RentEntry();
             entry.GameYear = EconomyModMain.GetCurrentGameYear();
             entry.TypeKey = typeKey;
             entry.KingdomName = string.IsNullOrEmpty(kingdomName) ? "" : kingdomName;
             entry.Value = value;
-            entry.Narrative = BuildNarrative(typeKey, entry.KingdomName, value, entry.GameYear);
-            // 环形写入：覆盖最老条目（若已满），O(1)
-            if (IsMajorType(typeKey))
+            // 环形写入：满环直接复用被覆盖槽位的对象，稳定期零 EventEntry 分配。
+            if (major)
             {
-                _majorEvents[_majorHead] = entry;
+                _majorEvents[slot] = entry;
                 _majorHead = (_majorHead + 1) % MajorCapacity;
                 if (_majorCount < MajorCapacity) _majorCount++;
             }
             else
             {
-                _events[_head] = entry;
+                _events[slot] = entry;
                 _head = (_head + 1) % Capacity;
                 if (_count < Capacity) _count++;
             }
 
             _typeCounts.TryGetValue(typeKey, out int c);
-            _typeCounts[typeKey] = c + 1;
+            _typeCounts[typeKey] = c < int.MaxValue ? c + 1 : int.MaxValue;
+            unchecked { Version++; }
         }
 
-        /// <summary>
-        /// 构建经济史书风格叙事文本（E5 叙事化）：把机械事件记录转为带年份/王国的叙述语句。
-        /// </summary>
-        private static string BuildNarrative(string typeKey, string kingdomName, long value, int year)
+        private static bool IsKnownType(string typeKey)
         {
-            string k = string.IsNullOrEmpty(kingdomName) ? "世界" : kingdomName;
             switch (typeKey)
             {
-                case TypeUnrest:        return $"{year}年，{k}动荡四起，贫富差距引发叛乱";
-                case TypeIncite:        return $"{year}年，{k}被外部势力煽动，叛乱爆发";
-                case TypeSuppress:      return $"{year}年，{k}叛乱被镇压，秩序恢复";
-                case TypePlunder:       return $"{year}年，{k}遭战争掠夺，财富损失{value}金币";
-                case TypeRevolution:    return $"{year}年，{k}爆发革命，旧政权被推翻";
-                case TypeUprising:      return $"{year}年，{k}街头起义，断头台落下，富人遭到清算";
-                case TypeBuildInv:      return $"{year}年，{k}大兴土木，投资{value}金币建设防御";
-                case TypeCraftArsenal:  return $"{year}年，{k}打造军械{value}件，军备扩张";
-                case TypeWholesale:     return $"{year}年，{k}大量批发武器{value}件";
-                case TypeEraGolden:     return $"{year}年，{k}迎来盛世，国泰民安";
-                case TypeEraRevival:    return $"{year}年，{k}迎来复兴，百废待兴";
-                case TypeEraFlourish:   return $"{year}年，{k}进入强盛期，军力鼎盛";
-                case TypeCollapse:      return $"{year}年，{k}经济崩溃，民不聊生";
-                case TypePolicy:        return $"{year}年，{k}推行贫富调节政策";
-                case TypeUnrestPeace:   return $"{year}年，{k}暴动和谈，局势缓和";
-                case TypeUnrestResolved: return $"{year}年，{k}收回叛乱城市，内乱平定";
-                case TypePolicyFail:    return $"{year}年，{k}改革失败，统治者付出代价";
-                case TypeKingInherit:   return $"{year}年，{k}王位更迭，新王即位";
-                case TypeDisaster:      return $"{year}年，{k}遭天灾冲击，{value}座城市财富蒸发";
-                case TypeBanking:       return $"{year}年，{k}爆发信贷危机，损失{value}金币";
-                case TypeBubbleBurst:   return $"{year}年，经济泡沫破裂！{value}%财富蒸发，波及全文明";
-                default:                return $"{year}年，{k}发生经济事件（{typeKey}）";
+                case TypeUnrest: case TypeIncite: case TypeSuppress: case TypePlunder:
+                case TypeRevolution: case TypeUprising: case TypeBuildInv: case TypeCraftArsenal:
+                case TypeWholesale: case TypeEraGolden: case TypeEraRevival: case TypeEraFlourish:
+                case TypeCollapse: case TypePolicy: case TypeUnrestPeace: case TypeUnrestResolved:
+                case TypePolicyFail: case TypeKingInherit: case TypeDisaster: case TypeBanking:
+                case TypeBubbleBurst:
+                case TypeNationClaim: case TypeNationPolicy: case TypeNationRelief:
+                case TypeNationFestival: case TypeNationBuild: case TypeNationDiplomacy:
+                    return true;
+                default:
+                    return false;
             }
         }
 
@@ -177,7 +174,7 @@ namespace EconomyMod.Services
             int take = count > _count ? _count : count;
             if (take <= 0) return result;
 
-            int start = (_head - _count + Capacity) % Capacity;
+            int start = (_head - take + Capacity) % Capacity;
             for (int i = 0; i < take; i++)
             {
                 int idx = (start + i) % Capacity;
@@ -194,7 +191,7 @@ namespace EconomyMod.Services
             int take = count > _majorCount ? _majorCount : count;
             if (take <= 0) return result;
 
-            int start = (_majorHead - _majorCount + MajorCapacity) % MajorCapacity;
+            int start = (_majorHead - take + MajorCapacity) % MajorCapacity;
             for (int i = 0; i < take; i++)
             {
                 int idx = (start + i) % MajorCapacity;
@@ -236,7 +233,7 @@ namespace EconomyMod.Services
                 int idx = (start + i) % Capacity;
                 var e = _events[idx];
                 _events[idx] = null;
-                if (e != null && _entryPool.Count < (Capacity + MajorCapacity) * 2) _entryPool.Add(e); // 回收复用
+                ReturnEntry(e);
             }
             _head = 0;
             _count = 0;
@@ -248,7 +245,7 @@ namespace EconomyMod.Services
                 int idx = (mstart + i) % MajorCapacity;
                 var e = _majorEvents[idx];
                 _majorEvents[idx] = null;
-                if (e != null && _entryPool.Count < (Capacity + MajorCapacity) * 2) _entryPool.Add(e); // 回收复用
+                ReturnEntry(e);
             }
             _majorHead = 0;
             _majorCount = 0;
@@ -256,6 +253,17 @@ namespace EconomyMod.Services
             _typeCounts.Clear();
             _recentPool.Clear();
             _majorRecentPool.Clear();
+            unchecked { Version++; }
+        }
+
+        private static void ReturnEntry(EventEntry entry)
+        {
+            if (entry == null) return;
+            entry.GameYear = 0;
+            entry.TypeKey = null;
+            entry.KingdomName = null;
+            entry.Value = 0L;
+            if (_entryPool.Count < Capacity + MajorCapacity) _entryPool.Add(entry);
         }
     }
 }

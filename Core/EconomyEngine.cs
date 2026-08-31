@@ -38,7 +38,18 @@ namespace EconomyMod.Core
         /// <summary>
         /// 重置周期序号（新地图/新游戏时调用，下一次采集从 #1 重新计数）。
         /// </summary>
-        public static void ResetCycle() => CycleIndex = 0;
+        public static void ResetCycle()
+        {
+            GlobalGDP = 0f;
+            AvgWealth = 0f;
+            AliveActorCount = 0;
+            CycleIndex = 0;
+            GiniCoefficient = 0f;
+            TotalTradeVolume = 0L;
+            TotalProduction = 0f;
+            KingdomStats.Clear();
+            _topKingdomPool.Clear();
+        }
 
         /// <summary>
         /// 主线程发布后台计算结果（由 TradeSimulationWorker.TryConsume / 手动采集调用）。

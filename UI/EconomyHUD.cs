@@ -16,7 +16,6 @@ namespace EconomyMod.UI
 
         private Button _btnOverview, _btnChart;
         private Image _btnOverviewImg, _btnChartImg;
-        private Text _titleText;
 
         // 图表网格内边距（UI 单位，与 ChartMeshGraphic.margin 及刻度 Text 对齐）
         private const float ChartUiMargin = 4f;
@@ -71,6 +70,27 @@ namespace EconomyMod.UI
             _currentSection = Section.PickTarget;
             UpdateTabButtons();
             RefreshCurrentSection();
+        }
+
+        public override void OnWorldUnavailable()
+        {
+            base.OnWorldUnavailable();
+            ClearWorldCaches();
+            _currentSection = Section.Overview;
+            UpdateTabButtons();
+        }
+
+        private static void ClearWorldCaches()
+        {
+            for (int i = 0; i < _seriesPool.Count; i++) _seriesPool[i].Values.Clear();
+            for (int i = 0; i < _chartSeriesEntryPool.Count; i++) _chartSeriesEntryPool[i].Values.Clear();
+            _seriesPool.Clear();
+            _chartSeriesEntryPool.Clear();
+            _rankBuf.Clear();
+            _dynIndex.Clear();
+            _dynLastSeen.Clear();
+            _dynSeenBuf.Clear();
+            _keepIds.Clear();
         }
 
         /// <summary>
@@ -158,6 +178,12 @@ namespace EconomyMod.UI
         public void RefreshCurrentSection()
         {
             ClearContent();
+            // 结算期标记：年度收尾在途时面板顶部固定提示行（完成后随刷新消失）
+            if (AnnualPipeline.IsSettling)
+            {
+                AddLine(UIHelpers.L("settling_marker"), color: UIStyles.Warning);
+                AddLine(UIHelpers.L("settling_hint"), color: UIStyles.Warning);
+            }
             switch (_currentSection)
             {
                 case Section.Overview: BuildOverview(); break;
@@ -174,10 +200,10 @@ namespace EconomyMod.UI
         /// 标题与标签页文本在 BuildPanel() 中只创建一次，语言切换后需整体重建，
         /// 否则只剩内容区变化而标题/标签页停留在旧语言。
         /// </summary>
-        public void RefreshAllTexts()
+        public override void RefreshAllTexts()
         {
             if (_panelRoot == null) return;
-            if (_titleText != null) _titleText.text = UIHelpers.L("economy_title");
+            base.RefreshAllTexts(); // 标题（基类 _titleText）
             if (_btnOverview != null) SetButtonText(_btnOverview, UIHelpers.L("tab_overview"));
             if (_btnChart != null) SetButtonText(_btnChart, UIHelpers.L("tab_chart"));
             UpdateTabButtons();
@@ -812,16 +838,40 @@ namespace EconomyMod.UI
             AddLine("");
 
             // 核心指标卡（单行，窗口缩放保证不溢出；v0.9.1 恢复单行布局）
+            // 不显示人口：配合人口倍数类模组时单位数会被放大，数字失真且出戏（v0.94 移除）
             var stats = new (string, string, Color)[]
             {
                 ("GDP", EconomyEngine.GlobalGDP.ToString("F0"), UIStyles.Gold),
-                ("人均", EconomyEngine.AvgWealth.ToString("F1"), UIStyles.Info),
-                ("人口", EconomyEngine.AliveActorCount.ToString(), UIStyles.TextPrimary),
-                ("基尼", EconomyEngine.GiniCoefficient.ToString("F3"), GiniColor(EconomyEngine.GiniCoefficient)),
-                ("贸易", EconomyEngine.TotalTradeVolume.ToString("F0"), UIStyles.Positive),
-                ("泡沫", EconomyCycleModulator.BubbleValue.ToString("F0"), UIStyles.Warning)
+                (UIHelpers.L("col_avg"), EconomyEngine.AvgWealth.ToString("F1"), UIStyles.Info),
+                (UIHelpers.L("col_gini"), EconomyEngine.GiniCoefficient.ToString("F3"), GiniColor(EconomyEngine.GiniCoefficient)),
+                (UIHelpers.L("stat_trade"), EconomyEngine.TotalTradeVolume.ToString("F0"), UIStyles.Positive),
+                (UIHelpers.L("stat_bubble"), EconomyCycleModulator.BubbleValue.ToString("F0"), UIStyles.Warning)
             };
             _lines.Add(UIComponents.CreateStatGrid(_content.transform, stats, _gameFont, contentW));
+
+            // 内存状态行（清理开启时显示）：把"模组+游戏共享的托管堆"与"游戏本体 Unity 原生内存"
+            // 分项展示，用于判断内存增长来源；上次清理信息来自 MemoryCleanupEngine
+            var mcCfg = UnrestConfig.Instance;
+            if (mcCfg != null && mcCfg.MemoryCleanupEnabled)
+            {
+                string cleanupLine = MemoryCleanupEngine.LastCleanupRealtime < 0f
+                    ? UIHelpers.L("hud_mem_cleanup_pending")
+                    : UIHelpers.Lf("hud_mem_cleanup", FormatSessionTime(MemoryCleanupEngine.LastCleanupRealtime),
+                        MemoryCleanupEngine.FormatMb(System.Math.Max(0L, MemoryCleanupEngine.LastFreedBytes)),
+                        MemoryCleanupEngine.LastShrunkCount.ToString());
+                _lines.Add(UIComponents.CreateStatusRow(_content.transform, cleanupLine,
+                    UIStyles.TextMuted, _gameFont, contentW));
+
+                long unityUsed = MemoryCleanupEngine.UnityUsedBytes;
+                long unityReserved = MemoryCleanupEngine.UnityReservedBytes;
+                _lines.Add(UIComponents.CreateStatusRow(_content.transform,
+                    UIHelpers.Lf("hud_mem_usage",
+                        MemoryCleanupEngine.FormatMb(MemoryCleanupEngine.ManagedHeapBytes),
+                        unityUsed < 0 ? UIHelpers.L("hud_mem_na") : MemoryCleanupEngine.FormatMb(unityUsed),
+                        unityReserved < 0 ? UIHelpers.L("hud_mem_na") : MemoryCleanupEngine.FormatMb(unityReserved)),
+                    UIStyles.TextMuted, _gameFont, contentW));
+                AddLine("");
+            }
 
             // 王国排行
             _lines.Add(UIComponents.CreateSectionHeader(_content.transform,
@@ -885,6 +935,14 @@ namespace EconomyMod.UI
             return gini >= 0.7f ? UIStyles.Danger : gini >= 0.55f ? UIStyles.Warning : UIStyles.TextSecondary;
         }
 
+        /// <summary>会话运行时长（Time.realtimeSinceStartup 秒）格式化为 HH:mm:ss 或 mm:ss。</summary>
+        private static string FormatSessionTime(float realtimeSeconds)
+        {
+            int t = Mathf.Max(0, (int)realtimeSeconds);
+            int h = t / 3600, m = (t % 3600) / 60, s = t % 60;
+            return h > 0 ? $"{h:D2}:{m:D2}:{s:D2}" : $"{m:D2}:{s:D2}";
+        }
+
         /// <summary>
         /// 国家选择页：列出所有王国，每个王国提供"煽动"与"镇压"两个按钮，
         /// 可针对特定国家单独生效。由 Tab 内煽动（火焰）/镇压（盾牌）工具按钮调用 ShowKingdomPicker() 打开。
@@ -937,9 +995,11 @@ namespace EconomyMod.UI
                 // 煽动按钮（红）
                 var btnIncite = UIHelpers.CreateButton(UIHelpers.L("picker_incite"), _content.transform, -1, 30,
                     _gameFont, UIStyles.Danger);
-                var inciteTarget = kingdom;
+                long inciteTargetId = kingdom.data.id;
                 btnIncite.onClick.AddListener(() =>
                 {
+                    var inciteTarget = GameHelpers.FindKingdom(inciteTargetId);
+                    if (inciteTarget == null) return;
                     int n = UnrestEngine.Incite(inciteTarget);
                     // 同步刷新统计：仅当无在途周期时执行。直接调 Collect() 会投递后台周期但无人消费
                     // （_cyclePending 未置位），导致 _posting 永久滞留、年度周期停摆（S2 根因）。
@@ -959,9 +1019,11 @@ namespace EconomyMod.UI
                 // 镇压按钮（蓝）
                 var btnSuppress = UIHelpers.CreateButton(UIHelpers.L("picker_suppress"), _content.transform, -1, 30,
                     _gameFont, UIStyles.Info);
-                var suppressTarget = kingdom;
+                long suppressTargetId = kingdom.data.id;
                 btnSuppress.onClick.AddListener(() =>
                 {
+                    var suppressTarget = GameHelpers.FindKingdom(suppressTargetId);
+                    if (suppressTarget == null) return;
                     int n = UnrestEngine.Suppress(suppressTarget);
                     // 同步刷新统计：仅当无在途周期时执行（同煽动按钮，S2 修复）
                     if (!TradeSimulationWorker.IsBusy())
@@ -1021,6 +1083,7 @@ namespace EconomyMod.UI
         private RectTransform _tipRt;
         private Text _tipText;
         private int _pointCount;
+        private int _lastIndex = -1;
         private System.Func<int, string> _textProvider;
 
         public void Init(RectTransform hoverRt, RectTransform lineRt, RectTransform tipRt, Text tipText,
@@ -1032,6 +1095,16 @@ namespace EconomyMod.UI
             _tipText = tipText;
             _pointCount = pointCount;
             _textProvider = textProvider;
+            _lastIndex = -1;
+        }
+
+        private void OnDestroy()
+        {
+            _textProvider = null;
+            _hoverRt = null;
+            _lineRt = null;
+            _tipRt = null;
+            _tipText = null;
         }
 
         public void OnPointerEnter(PointerEventData eventData) { SetVisible(true); OnPointerMove(eventData); }
@@ -1055,10 +1128,14 @@ namespace EconomyMod.UI
             _lineRt.anchoredPosition = new Vector2(localPoint.x + rect.width * 0.5f, 0f);
 
             // Tooltip 内容 + 定位（水平跟随鼠标并 clamp，垂直固定在图表顶部下方 6px）
-            if (_tipText != null && _textProvider != null)
+            if (index != _lastIndex)
             {
-                _tipText.text = _textProvider(index);
-                LayoutRebuilder.ForceRebuildLayoutImmediate(_tipRt); // 文本长度变化 → 刷新面板宽
+                _lastIndex = index;
+                if (_tipText != null && _textProvider != null)
+                {
+                    _tipText.text = _textProvider(index);
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(_tipRt); // 文本长度变化 → 刷新面板宽
+                }
             }
             float tipW = _tipRt != null ? _tipRt.rect.width : 120f;
             float maxX = rect.width - tipW * 0.5f - 2f;
@@ -1069,17 +1146,9 @@ namespace EconomyMod.UI
 
         private void SetVisible(bool visible)
         {
+            _lastIndex = -1;
             if (_lineRt != null) _lineRt.gameObject.SetActive(visible);
-            if (_tipRt != null)
-            {
-                _tipRt.gameObject.SetActive(visible);
-                // 首次显示时强制重算布局，保证 _tipRt.rect 宽度可用（clamp 定位依赖它）
-                if (visible && _tipText != null)
-                {
-                    _tipText.text = _textProvider != null ? _textProvider(0) : "";
-                    LayoutRebuilder.ForceRebuildLayoutImmediate(_tipRt);
-                }
-            }
+            if (_tipRt != null) _tipRt.gameObject.SetActive(visible);
         }
     }
 

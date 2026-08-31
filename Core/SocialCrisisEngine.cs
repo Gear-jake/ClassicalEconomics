@@ -32,6 +32,7 @@ namespace EconomyMod.Core
         private static readonly HashSet<string> _currentWarKeys = new HashSet<string>();
         private static readonly List<string> _staleWarKeys = new List<string>();
         private static readonly List<KingdomStats> _poorestPool = new List<KingdomStats>();
+        private static readonly List<Kingdom> _kingdomPool = new List<Kingdom>(3);
 
         // 战败结算：财富降序比较器（富人优先被扣 → 劫富济贫）
         private static readonly System.Comparison<Actor> _wealthDescCompare = (a, b) => WealthOf(b).CompareTo(WealthOf(a));
@@ -39,17 +40,33 @@ namespace EconomyMod.Core
         /// <summary>每年评估一次（在 UnrestEngine.Evaluate 之后调用）。</summary>
         public static void Evaluate()
         {
-            var cfg = UnrestConfig.Instance;
-            if (!cfg.CycleEnabled) return; // 跟随经济周期开关
-            if (World.world == null || World.world.units == null) return;
+            try
+            {
+                var cfg = UnrestConfig.Instance;
+                if (!cfg.CycleEnabled) return; // 跟随经济周期开关
+                if (World.world == null || World.world.units == null) return;
 
-            WarPlunderCheck(cfg);
-            RevolutionCheck(cfg);
+                WarPlunderCheck(cfg);
+                RevolutionCheck(cfg);
+            }
+            finally
+            {
+                ClearWorldReferences();
+            }
+        }
+
+        /// <summary>清空仅用于当前世界的 Actor 引用，保留战争 ID 跟踪状态。</summary>
+        public static void ClearWorldReferences()
+        {
+            _actorPool.Clear();
+            _actorPool2.Clear();
+            _kingdomPool.Clear();
         }
 
         /// <summary>世界重置（新地图/新游戏）时清空战争跟踪。</summary>
         public static void Reset()
         {
+            ClearWorldReferences();
             _warWinnerCache.Clear();
         }
 
@@ -114,6 +131,8 @@ namespace EconomyMod.Core
             var loserKingdom = GameHelpers.FindKingdom(loserId);
             if (loserKingdom == null || loserKingdom.units == null || loserKingdom.units.Count == 0) return;
             if (winnerKingdom == null || winnerKingdom.units == null || winnerKingdom.units.Count == 0) return;
+            // 中央银行家：本国（或参战方）被掠夺后，其世界建筑被摧毁（无赔偿，战争风险真实）
+            NationEngine.OnKingdomPlundered(loserId);
 
             // 败方成员（复用缓冲），按财富降序 → 富人优先被扣（劫富）
             var loserUnits = SnapshotUnits(loserKingdom, _actorPool);
@@ -131,12 +150,13 @@ namespace EconomyMod.Core
 
             // 2) 劫富济贫：剩余部分从败方（富人优先）抽取，分给败方/胜方贫困公民
             long transfer = steal - evap;
-            long actual = transfer > 0 ? GameHelpers.DeductCoins(loserUnits, transfer) : 0L;
+            var winnerUnits = SnapshotUnits(winnerKingdom, _actorPool2);
+            long actual = 0L;
             long given = 0L;
-            if (actual > 0)
+            if (transfer > 0 && HasPoorRecipients(loserUnits, winnerUnits))
             {
-                var winnerUnits = SnapshotUnits(winnerKingdom, _actorPool2);
-                given = GiveToPoor(loserUnits, winnerUnits, actual);
+                actual = GameHelpers.DeductCoins(loserUnits, transfer);
+                if (actual > 0) given = GiveToPoor(loserUnits, winnerUnits, actual);
             }
 
             GameHelpers.Log($"[ClassicalEconomics] 战争掠夺 {WinnerName(winner)} 胜 掠夺={steal}(损耗{evap}+济贫{given}) 来自<{GameHelpers.SafeKingdomName(loserKingdom)}>");
@@ -162,6 +182,17 @@ namespace EconomyMod.Core
             return n > 0 ? (float)sum / n : 0f;
         }
 
+        private static bool HasPoorRecipients(List<Actor> losers, List<Actor> winners)
+        {
+            float loserLine = AvgWealth(losers) * 0.8f;
+            float winnerLine = AvgWealth(winners) * 0.8f;
+            foreach (var actor in losers)
+                if (actor != null && actor.isAlive() && WealthOf(actor) < loserLine) return true;
+            foreach (var actor in winners)
+                if (actor != null && actor.isAlive() && WealthOf(actor) < winnerLine) return true;
+            return false;
+        }
+
         /// <summary>
         /// 把金额均分给"败方 + 胜方"中低于各自王国人均×0.8 的贫困公民（余数补给第一个）。
         /// 财富从败方富人（已被优先抽取）流向两国的穷人 → 直接降低基尼系数。
@@ -180,21 +211,22 @@ namespace EconomyMod.Core
             if (poorCount <= 0) return 0L;
 
             long per = amount / poorCount;
-            if (per <= 0) return 0L;
             long remain = amount - per * poorCount;
             long given = 0L;
             bool first = true;
             foreach (var a in losers)
             {
                 if (a == null || !a.isAlive() || WealthOf(a) >= lPoor) continue;
-                try { a.addMoney((int)per + (first ? (int)remain : 0)); } catch (System.Exception) { }
-                given += per; first = false;
+                long give = per + (first ? remain : 0L);
+                try { GameHelpers.AddPositiveMoney(a, give); given += give; } catch (System.Exception) { }
+                first = false;
             }
             foreach (var a in winners)
             {
                 if (a == null || !a.isAlive() || WealthOf(a) >= wPoor) continue;
-                try { a.addMoney((int)per + (first ? (int)remain : 0)); } catch (System.Exception) { }
-                given += per; first = false;
+                long give = per + (first ? remain : 0L);
+                try { GameHelpers.AddPositiveMoney(a, give); given += give; } catch (System.Exception) { }
+                first = false;
             }
             return given;
         }
@@ -233,7 +265,7 @@ namespace EconomyMod.Core
             {
                 int civCount = 0;
                 foreach (var a in kingdom.units)
-                    if (a != null && a.isAlive() && a.asset != null && a.asset.civ) civCount++;
+                    if (GameHelpers.IsCivilizedActor(a)) civCount++;
                 if (civCount >= 4)
                 {
                     int richCount = Mathf.Max(1, Mathf.RoundToInt(civCount * cfg.KillRichRatio));
@@ -252,7 +284,7 @@ namespace EconomyMod.Core
             long internalRedist = GameHelpers.RedistributeWithinKingdom(kingdom, 5, 10, 0.40f, 2.5f);
 
             GameHelpers.Log($"[ClassicalEconomics] 革命爆发！<{name}> 旧政权被推翻 击杀{killed}人 处决富豪{richKilled}人 重分配硬币={extracted} 王国内济贫={internalRedist}");
-            GameHelpers.Notify($"[革命] <{name}> 政权彻底崩塌！击杀 {killed} 人，处决富豪 {richKilled} 人");
+            GameHelpers.NotifyLocalized("toast_revolution", name, killed, richKilled);
             EventStreamService.Record(EventStreamService.TypeRevolution, name, killed + richKilled);
             try
             {
@@ -291,9 +323,6 @@ namespace EconomyMod.Core
             long extract = total / 2;
             if (extract <= 0) return 0L;
 
-            // 从王国逐人抽取
-            GameHelpers.DeductCoins(units, extract);
-
             // 分给最穷的 3 个王国（均分）
             var others = _poorestPool;
             others.Clear();
@@ -303,25 +332,45 @@ namespace EconomyMod.Core
                 others.Add(ks);
             }
             others.Sort((x, y) => x.GDP.CompareTo(y.GDP));
-            int receivers = Mathf.Min(3, others.Count);
-            long per = receivers > 0 ? extract / receivers : 0L;
-            for (int i = 0; i < receivers; i++)
+            var receiverKingdoms = _kingdomPool;
+            receiverKingdoms.Clear();
+            for (int i = 0; i < others.Count && receiverKingdoms.Count < 3; i++)
             {
                 var target = GameHelpers.FindKingdom(others[i].KingdomId);
                 if (target == null || target.units == null) continue;
+                bool hasAlive = false;
+                foreach (var actor in target.units)
+                    if (actor != null && actor.isAlive()) { hasAlive = true; break; }
+                if (hasAlive) receiverKingdoms.Add(target);
+            }
+            if (receiverKingdoms.Count == 0) return 0L;
+
+            // 仅在确认接收方后从原王国实际扣款。
+            long actualExtract = GameHelpers.DeductCoins(units, extract);
+            if (actualExtract <= 0) return 0L;
+
+            long perKingdom = actualExtract / receiverKingdoms.Count;
+            long kingdomRemainder = actualExtract - perKingdom * receiverKingdoms.Count;
+            for (int i = 0; i < receiverKingdoms.Count; i++)
+            {
+                var target = receiverKingdoms[i];
                 var tu = SnapshotUnits(target, _actorPool2);
                 int count = 0;
                 foreach (var a in tu) if (a != null && a.isAlive()) count++;
                 if (count == 0) continue;
-                int share = (int)(per / count);
-                if (share <= 0) continue;
+                long kingdomGive = perKingdom + (i == 0 ? kingdomRemainder : 0L);
+                long perActor = kingdomGive / count;
+                long actorRemainder = kingdomGive - perActor * count;
+                bool first = true;
                 foreach (var a in tu)
                 {
                     if (a == null || !a.isAlive()) continue;
-                    try { a.addMoney(share); } catch (System.Exception) { }
+                    long actorGive = perActor + (first ? actorRemainder : 0L);
+                    try { GameHelpers.AddPositiveMoney(a, actorGive); } catch (System.Exception) { }
+                    first = false;
                 }
             }
-            return extract;
+            return actualExtract;
         }
 
         // ===== 反射辅助（战争检测）=====

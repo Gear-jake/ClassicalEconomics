@@ -18,7 +18,6 @@ namespace EconomyMod.UI
         private RectTransform _contentRect;
         private Button _btnKingdom, _btnCity;
         private Image _btnKingdomImg, _btnCityImg;
-        private Text _titleText;
         private bool _showCity; // false=国家 true=城市
 
         private const int TopN = 40; // 每表最多显示条数
@@ -115,10 +114,10 @@ namespace EconomyMod.UI
             BuildTable();
         }
 
-        public void RefreshAllTexts()
+        public override void RefreshAllTexts()
         {
             if (_panelRoot == null) return;
-            if (_titleText != null) _titleText.text = UIHelpers.L(TitleKey);
+            base.RefreshAllTexts(); // 标题（基类 _titleText）
             if (_btnKingdom != null) SetButtonText(_btnKingdom, UIHelpers.L("trade_share_dim_kingdom"));
             if (_btnCity != null) SetButtonText(_btnCity, UIHelpers.L("trade_share_dim_city"));
             UpdateTabButtons();

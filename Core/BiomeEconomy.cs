@@ -36,6 +36,10 @@ namespace EconomyMod.Core
 
         // 王国特长缓存（kingdomId → specialty；王国领土变化小，缓存避免每周期反射）
         private static readonly Dictionary<long, BiomeSpecialty> _cache = new Dictionary<long, BiomeSpecialty>(32);
+        private const int PruneInterval = 256;
+        private static int _queriesUntilPrune = PruneInterval;
+        private static readonly HashSet<long> _currentKingdomIds = new HashSet<long>();
+        private static readonly List<long> _staleKingdomIds = new List<long>(32);
 
         /// <summary>
         /// 获取王国产出特长：优先读取首都城市 tile 的真实 biome，失败回退 ID 哈希。
@@ -44,6 +48,7 @@ namespace EconomyMod.Core
         public static BiomeSpecialty GetSpecialty(long kingdomId)
         {
             if (kingdomId == 0) return BiomeSpecialty.None;
+            MaybePruneStaleKingdoms();
             if (_cache.TryGetValue(kingdomId, out var cached)) return cached;
 
             var specialty = ReadCityBiome(kingdomId);
@@ -62,6 +67,41 @@ namespace EconomyMod.Core
         {
             _cache.Clear();
             _coordCache.Clear();
+            _currentKingdomIds.Clear();
+            _staleKingdomIds.Clear();
+            _queriesUntilPrune = PruneInterval;
+        }
+
+        private static void MaybePruneStaleKingdoms()
+        {
+            if (--_queriesUntilPrune > 0) return;
+            _queriesUntilPrune = PruneInterval;
+
+            var world = World.world;
+            var kingdoms = world != null ? world.kingdoms : null;
+            if (kingdoms == null) return;
+
+            _currentKingdomIds.Clear();
+            foreach (var kingdom in kingdoms)
+            {
+                if (kingdom != null && kingdom.data != null && kingdom.data.id != 0)
+                    _currentKingdomIds.Add(kingdom.data.id);
+            }
+
+            _staleKingdomIds.Clear();
+            foreach (var entry in _cache)
+                if (!_currentKingdomIds.Contains(entry.Key)) _staleKingdomIds.Add(entry.Key);
+            foreach (long kingdomId in _staleKingdomIds)
+                _cache.Remove(kingdomId);
+
+            _staleKingdomIds.Clear();
+            foreach (var entry in _coordCache)
+                if (!_currentKingdomIds.Contains(entry.Key)) _staleKingdomIds.Add(entry.Key);
+            foreach (long kingdomId in _staleKingdomIds)
+                _coordCache.Remove(kingdomId);
+
+            _currentKingdomIds.Clear();
+            _staleKingdomIds.Clear();
         }
 
         /// <summary>
@@ -148,6 +188,7 @@ namespace EconomyMod.Core
             x = float.NaN;
             y = float.NaN;
             if (kingdomId == 0) return false;
+            MaybePruneStaleKingdoms();
             if (_coordCache.TryGetValue(kingdomId, out var cached))
             {
                 x = cached.x; y = cached.y;

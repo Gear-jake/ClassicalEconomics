@@ -12,16 +12,80 @@ namespace EconomyMod.Core
     {
         // ===== 王国查找（SocialCrisisEngine、EconomyCycleModulator 中均有重复实现）=====
 
+        private static readonly Dictionary<long, Kingdom> _kingdomById = new Dictionary<long, Kingdom>();
+        private static object _kingdomIndexWorld;
+        private static object _kingdomIndexSource;
+        private static int _kingdomIndexCount = -1;
+
         /// <summary>按王国 ID 在 World.world.kingdoms 中查找原生 Kingdom 对象；不存在返回 null。</summary>
         public static Kingdom FindKingdom(long kingdomId)
         {
-            if (kingdomId == 0 || World.world == null || World.world.kingdoms == null) return null;
-            foreach (var k in World.world.kingdoms)
+            if (kingdomId == 0) return null;
+
+            var world = World.world;
+            var kingdoms = world != null ? world.kingdoms : null;
+            if (kingdoms == null)
             {
-                if (k != null && k.data != null && k.data.id == kingdomId)
-                    return k;
+                ClearKingdomIndex();
+                return null;
+            }
+
+            bool rebuilt = false;
+            if (!ReferenceEquals(_kingdomIndexWorld, world)
+                || !ReferenceEquals(_kingdomIndexSource, kingdoms)
+                || _kingdomIndexCount != kingdoms.Count)
+            {
+                RebuildKingdomIndex();
+                rebuilt = true;
+            }
+
+            Kingdom kingdom;
+            if (_kingdomById.TryGetValue(kingdomId, out kingdom)) return kingdom;
+
+            // Count 不变的替换无法由轻量标记识别；首次 miss 时补一次重建。
+            if (!rebuilt)
+            {
+                RebuildKingdomIndex();
+                if (_kingdomById.TryGetValue(kingdomId, out kingdom)) return kingdom;
             }
             return null;
+        }
+
+        /// <summary>采集周期开始时刷新索引，覆盖王国数量不变但对象已替换的情况。</summary>
+        public static void RefreshKingdomIndex()
+        {
+            RebuildKingdomIndex();
+        }
+
+        private static void RebuildKingdomIndex()
+        {
+            _kingdomById.Clear();
+            var world = World.world;
+            var kingdoms = world != null ? world.kingdoms : null;
+            if (kingdoms == null)
+            {
+                _kingdomIndexWorld = null;
+                _kingdomIndexSource = null;
+                _kingdomIndexCount = -1;
+                return;
+            }
+
+            foreach (var kingdom in kingdoms)
+            {
+                if (kingdom != null && kingdom.data != null && kingdom.data.id != 0)
+                    _kingdomById[kingdom.data.id] = kingdom;
+            }
+            _kingdomIndexWorld = world;
+            _kingdomIndexSource = kingdoms;
+            _kingdomIndexCount = kingdoms.Count;
+        }
+
+        private static void ClearKingdomIndex()
+        {
+            _kingdomById.Clear();
+            _kingdomIndexWorld = null;
+            _kingdomIndexSource = null;
+            _kingdomIndexCount = -1;
         }
 
         // ===== 安全名称读取（多引擎均有重复实现）=====
@@ -83,6 +147,19 @@ namespace EconomyMod.Core
             try { WorldTip.showNowTop(msg, false); } catch (System.Exception) { }
         }
 
+        /// <summary>
+        /// 本地化版顶部横幅：按 Locales/*.json 的键取当前语言文案并格式化。
+        /// 全部引擎的玩家可见横幅必须走本方法（Test-LocalizationCoverage 禁止
+        /// Notify 直接携带硬编码 CJK 文案）。
+        /// </summary>
+        public static void NotifyLocalized(string key, params object[] args)
+        {
+            string text;
+            try { text = args != null && args.Length > 0 ? string.Format(Services.LocalizationService.Get(key), args) : Services.LocalizationService.Get(key); }
+            catch (System.Exception) { text = key; }
+            Notify(text);
+        }
+
         // ===== 集合快照（避免 foreach 时原生系统修改集合抛异常）=====
 
         /// <summary>将 kingdoms 拷贝到复用的静态缓冲，返回该缓冲；不分配新对象。</summary>
@@ -92,6 +169,7 @@ namespace EconomyMod.Core
         public static void ClearWorldReferences()
         {
             _kingdomSnapshot.Clear();
+            ClearKingdomIndex();
             _redistRich.Clear();
             _redistPoor.Clear();
         }
@@ -101,8 +179,27 @@ namespace EconomyMod.Core
         {
             var list = _kingdomSnapshot;
             list.Clear();
-            if (World.world != null && World.world.kingdoms != null)
-                list.AddRange(World.world.kingdoms);
+            _kingdomById.Clear();
+
+            var world = World.world;
+            var kingdoms = world != null ? world.kingdoms : null;
+            if (kingdoms == null)
+            {
+                _kingdomIndexWorld = null;
+                _kingdomIndexSource = null;
+                _kingdomIndexCount = -1;
+                return list;
+            }
+
+            foreach (var kingdom in kingdoms)
+            {
+                list.Add(kingdom);
+                if (kingdom != null && kingdom.data != null && kingdom.data.id != 0)
+                    _kingdomById[kingdom.data.id] = kingdom;
+            }
+            _kingdomIndexWorld = world;
+            _kingdomIndexSource = kingdoms;
+            _kingdomIndexCount = kingdoms.Count;
             return list;
         }
 
@@ -114,8 +211,7 @@ namespace EconomyMod.Core
             if (kingdom == null || kingdom.units == null) return null;
             foreach (var a in kingdom.units)
             {
-                if (a == null || !a.isAlive()) continue;
-                if (a.asset == null || !a.asset.civ) continue;
+                if (!IsCivilizedActor(a)) continue;
                 return a;
             }
             return null;
@@ -147,7 +243,28 @@ namespace EconomyMod.Core
         {
             wealth = 0f;
             if (a == null) return false;
-            try { wealth = a.money + a.loot; return true; }
+            try
+            {
+                wealth = a.money + a.loot;
+                if (float.IsNaN(wealth) || float.IsInfinity(wealth))
+                {
+                    wealth = 0f;
+                    return false;
+                }
+                return true;
+            }
+            catch (System.Exception) { return false; }
+        }
+
+        public static bool IsCivilizedActor(Actor actor)
+        {
+            if (actor == null) return false;
+            try
+            {
+                if (!actor.isAlive()) return false;
+                if (actor.city != null) return true;
+                return actor.hasKingdom() && actor.kingdom != null;
+            }
             catch (System.Exception) { return false; }
         }
 
@@ -219,13 +336,24 @@ namespace EconomyMod.Core
                 {
                     int coins = Mathf.Max(0, Mathf.RoundToInt(a.money));
                     if (coins <= 0) continue;
-                    int take = Mathf.Min(coins, (int)Mathf.Min(toDeduct, int.MaxValue));
+                    int take = System.Math.Min(coins, (int)System.Math.Min(toDeduct, (long)int.MaxValue));
                     a.addMoney(-take);
                     toDeduct -= take;
                 }
                 catch (System.Exception) { }
             }
             return limit - toDeduct;
+        }
+
+        /// <summary>向 Actor 分块增加正数金币，避免 long 转 int 溢出。</summary>
+        internal static void AddPositiveMoney(Actor actor, long amount)
+        {
+            while (actor != null && amount > 0)
+            {
+                int chunk = (int)System.Math.Min(amount, int.MaxValue);
+                actor.addMoney(chunk);
+                amount -= chunk;
+            }
         }
 
         // ===== 王国内劫富济贫（镇压/暴乱/革命后调用，事件驱动，常态零开销）=====
@@ -251,16 +379,9 @@ namespace EconomyMod.Core
             int count = 0;
             float richEdge = 0f, poorEdge = 0f; // 候选池边界缓存
 
-            // 采样上限：统一大国 units 可达数万，全量遍历会卡顿。只扫描前 MaxScan 个开智单位
-            // （WorldBox units 列表顺序近似随机，采样前 N 个足以覆盖财富 Top/穷极值），
-            // 人均/税线用采样均值近似，避免每次改革/暴动/镇压都几十毫秒遍历。
-            const int MaxScan = 3000;
-            int scanned = 0;
             foreach (var a in kingdom.units)
             {
-                if (a == null || !a.isAlive()) continue;
-                if (a.asset == null || !a.asset.civ) continue;
-                if (++scanned > MaxScan) break;
+                if (!IsCivilizedActor(a)) continue;
                 float w;
                 if (!TryGetWealth(a, out w)) continue;
                 totalWealth += w;
@@ -273,18 +394,8 @@ namespace EconomyMod.Core
             float avg = totalWealth / count;
             float taxLine = Mathf.Max(1f, avg * capMult);
 
-            // 第一遍：计算可征总额（富人中超出税线的富余）
+            // 逐富人扣税，并只累计实际成功扣除额。
             long totalTax = 0;
-            for (int i = 0; i < rich.Count; i++)
-            {
-                float w;
-                if (!TryGetWealth(rich[i], out w)) continue;
-                if (w <= taxLine) continue;
-                totalTax += (long)Mathf.Min((w - taxLine) * taxRatio, w * 0.5f);
-            }
-            if (totalTax <= 0) return 0L;
-
-            // 第二遍：逐富人扣税
             for (int i = 0; i < rich.Count; i++)
             {
                 float w;
@@ -292,19 +403,18 @@ namespace EconomyMod.Core
                 if (w <= taxLine) continue;
                 long tax = (long)Mathf.Min((w - taxLine) * taxRatio, w * 0.5f);
                 if (tax <= 0) continue;
-                try { rich[i].addMoney(-(int)tax); } catch (System.Exception) { }
+                int charged = (int)System.Math.Min(tax, int.MaxValue);
+                try { rich[i].addMoney(-charged); totalTax += charged; } catch (System.Exception) { }
             }
+            if (totalTax <= 0) return 0L;
 
             // 均分给最穷成员（余数补第一名）
             if (poor.Count == 0) return 0L; // 防御：无穷人候选时避免除零（正常路径 count>0 时池必非空）
             long per = totalTax / poor.Count;
-            if (per > 0)
+            for (int i = 0; i < poor.Count; i++)
             {
-                for (int i = 0; i < poor.Count; i++)
-                {
-                    try { poor[i].addMoney((int)per + (i == 0 ? (int)(totalTax - per * poor.Count) : 0)); }
-                    catch (System.Exception) { }
-                }
+                try { AddPositiveMoney(poor[i], per + (i == 0 ? totalTax - per * poor.Count : 0)); }
+                catch (System.Exception) { }
             }
             return totalTax;
         }
@@ -329,7 +439,7 @@ namespace EconomyMod.Core
             foreach (var a in kingdom.units)
             {
                 if (a == null || !a.isAlive()) continue;
-                if (a.asset == null || !a.asset.civ) continue;
+                if (!IsCivilizedActor(a)) continue;
                 float w;
                 if (!TryGetWealth(a, out w)) continue;
                 UpdateTopN(rich, ref richEdge, a, w, richCount, true);   // 最富（越界替换）
@@ -346,20 +456,18 @@ namespace EconomyMod.Core
                 if (w <= 0) continue;
                 long loot = (long)(w * redistRatio);
                 if (loot <= 0) continue;
-                try { rich[i].addMoney(-(int)loot); } catch (System.Exception) { }
-                totalLoot += loot;
+                int charged = (int)System.Math.Min(loot, int.MaxValue);
+                try { rich[i].addMoney(-charged); } catch (System.Exception) { continue; }
+                totalLoot += charged;
             }
             if (totalLoot <= 0) return 0;
 
             // 第二遍：均分给最穷成员（余数补第一名）
             long per = totalLoot / poor.Count;
-            if (per > 0)
+            for (int i = 0; i < poor.Count; i++)
             {
-                for (int i = 0; i < poor.Count; i++)
-                {
-                    try { poor[i].addMoney((int)per + (i == 0 ? (int)(totalLoot - per * poor.Count) : 0)); }
-                    catch (System.Exception) { }
-                }
+                try { AddPositiveMoney(poor[i], per + (i == 0 ? totalLoot - per * poor.Count : 0)); }
+                catch (System.Exception) { }
             }
 
             // 第三遍：处决最富成员（杀富）——跳过与最穷池重叠者（人口极少时避免误杀刚分到钱的穷人）
@@ -383,6 +491,32 @@ namespace EconomyMod.Core
         /// 调用方需提供边界缓存变量（最富集合=最小值 / 最穷集合=最大值），遍历前应初始化为 0。
         /// 由 RedistributeWithinKingdom 使用。
         /// </summary>
+        /// <summary>
+        /// 外交赠礼：把金币均分给目标国存活国民（守恒，余数补第一人），返回实际发放金额。
+        /// 无国民可领时返回 0（调用方应退回金库）。
+        /// </summary>
+        public static long GiveToKingdomMembers(Kingdom kingdom, long amount)
+        {
+            if (kingdom == null || kingdom.units == null || amount <= 0) return 0L;
+            var list = _redistPoor;
+            list.Clear();
+            try
+            {
+                foreach (var a in kingdom.units)
+                    if (a != null && a.isAlive()) list.Add(a);
+            }
+            catch (System.Exception) { }
+            if (list.Count == 0) return 0L;
+            long per = amount / list.Count;
+            long given = 0;
+            for (int i = 0; i < list.Count; i++)
+            {
+                long share = per + (i == 0 ? amount - per * list.Count : 0);
+                if (share > 0) { AddPositiveMoney(list[i], share); given += share; }
+            }
+            return given;
+        }
+
         internal static void UpdateTopN(List<Actor> pool, ref float edge,
             Actor a, float w, int cap, bool richest)
         {
@@ -408,8 +542,15 @@ namespace EconomyMod.Core
                 if (richest ? wi < cur : wi > cur) { cur = wi; edgeIdx = i; }
             }
             pool[edgeIdx] = a;
-            // 重算边界（替换后的新极值）
-            edge = cur;
+            // 重算替换后的真实边界；不能沿用被替换成员的旧边界。
+            edge = 0f;
+            for (int i = 0; i < pool.Count; i++)
+            {
+                float wi;
+                if (!TryGetWealth(pool[i], out wi)) continue;
+                if (i == 0) edge = wi;
+                else edge = richest ? Mathf.Min(edge, wi) : Mathf.Max(edge, wi);
+            }
         }
     }
 }

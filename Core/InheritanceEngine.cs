@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using EconomyMod.Models;
 using UnityEngine;
 
@@ -12,110 +12,186 @@ namespace EconomyMod.Core
     /// </summary>
     public static class InheritanceEngine
     {
-        private class AliveRecord
+        // internal：MemoryCleanupEngine 的 RecordsForTrim 访问器需要在程序集内暴露该类型
+        internal class AliveRecord
         {
             public Actor Actor;      // 引用（兜底）
             public string Name;      // 存活时缓存的名字（死亡后对象清理则不可读）
             public float Money;      // 最近一次存活时读取
             public float Loot;
             public City City;        // 所属城市
-            public List<long> ParentIds = new List<long>();  // 存活时缓存的亲属 id
+            public long ParentId1;
+            public long ParentId2;
             public long SpouseId;
-            public List<long> ChildIds = new List<long>();
-            public int CacheAge;     // 亲属缓存年龄（秒）
+            public long[] ChildIds;  // 定长缓冲（压缩：无 List 对象头与容量冗余；ChildCount 为实际数量）
+            public int ChildCount;
+            public int CacheAge;     // 亲属缓存年龄（3 秒扫描次数）
         }
 
-        private static readonly Dictionary<long, AliveRecord> _records = new Dictionary<long, AliveRecord>();
+        private static Dictionary<long, AliveRecord> _records = new Dictionary<long, AliveRecord>();
         private static float _timer;
+        private static bool _scanActive;  // 扫描窗口进行中（跨帧分摊 3 秒全量扫描）
+        private static int _scanCursor;   // 当前窗口已扫描到的存活列表索引
 
         // ===== 性能优化：复用每秒扫描缓冲，避免每帧 GC 分配 =====
-        private static readonly Dictionary<long, Actor> _aliveMap = new Dictionary<long, Actor>();
-        private static readonly HashSet<long> _seen = new HashSet<long>();
+        private static Dictionary<long, Actor> _aliveMap = new Dictionary<long, Actor>();
         private static readonly List<long> _deadIds = new List<long>();
+        private static readonly List<long> _staleIds = new List<long>();
         private static readonly List<Actor> _heirsPool = new List<Actor>();
         private static readonly List<KeyValuePair<long, float>> _damageCivPool =
             new List<KeyValuePair<long, float>>();
+        private struct DamageShare
+        {
+            public long AttackerId;
+            public int Amount;
+            public decimal Remainder;
+        }
+        private static readonly List<DamageShare> _damageSharePool = new List<DamageShare>(16);
 
         /// <summary>世界重置（新地图/新游戏）时清空记录。</summary>
         public static void Reset()
         {
+            ClearWorldReferences();
+        }
+
+        /// <summary>离开世界时清除所有世界对象引用及扫描状态。</summary>
+        public static void ClearWorldReferences()
+        {
             _records.Clear();
+            _aliveMap.Clear();
+            _deadIds.Clear();
+            _staleIds.Clear();
+            _heirsPool.Clear();
+            _damageCivPool.Clear();
+            _damageSharePool.Clear();
+            _timer = 0f;
+            _scanActive = false;
+            _scanCursor = 0;
             DamageTracker.Reset();
         }
 
-        /// <summary>每帧调用；内部按 3 秒节流执行死亡检测（降低大世界每秒全量扫描开销）。</summary>
+        /// <summary>每帧调用；按 3 秒节流开启扫描窗口，窗口内跨帧分摊全量扫描（每帧最多 2000 个存活单位）。</summary>
         public static void Tick(float deltaTime)
         {
             _timer += deltaTime;
-            if (_timer < 3f) return;
-            _timer = 0f;
 
             // 无世界（主菜单/加载中）时清空记录，避免误判为全员死亡
             if (World.world == null || World.world.units == null)
             {
-                _records.Clear();
-                DamageTracker.Reset();
+                ClearWorldReferences();
                 return;
             }
 
             var aliveList = World.world.units.units_only_alive;
             if (aliveList == null)
             {
-                _records.Clear();
-                DamageTracker.Reset();
+                ClearWorldReferences();
                 return;
             }
 
-            var aliveMap = _aliveMap;
-            var seen = _seen;
-            aliveMap.Clear();
-            seen.Clear();
+            // 3 秒节流：开启一次扫描窗口（旧版在单帧完成全量扫描，现跨帧分摊）
+            if (!_scanActive)
+            {
+                if (_timer < 3f) return;
+                _timer = 0f;
+                _aliveMap.Clear();
+                _scanCursor = 0;
+                _scanActive = true;
+            }
+
+            // 普通帧最多扫描 cap 个条目；窗口累计满 3 秒时本帧扫完剩余部分，
+            // 保留旧版"3 秒内完成一次全量扫描"的截止语义
+            int cap = Mathf.Clamp(UnrestConfig.Instance.InheritanceScanPerFrame, 1, 100000);
+            bool deadline = _timer >= 3f;
+            int scanned = 0;
+            while (_scanCursor < aliveList.Count && (scanned < cap || deadline))
+            {
+                ScanActor(aliveList[_scanCursor]);
+                _scanCursor++;
+                scanned++;
+            }
+
+            if (_scanCursor >= aliveList.Count)
+            {
+                CompleteWindow(aliveList);
+            }
+        }
+
+        /// <summary>扫描单个存活单位：civ 过滤、掉血检测、索引登记与记录刷新/创建（与旧版逐单位体语义一致）。</summary>
+        private static void ScanActor(Actor actor)
+        {
+            if (actor == null) return;
+            // 动物无遗产、不参与灾害经济冲击，跳过（DataCollector 同款 civ 过滤），
+            // 避免每 3 秒对全部动物（往往占总单位数相当比例）做无意义扫描。
+            if (!GameHelpers.IsCivilizedActor(actor)) return;
+            long id;
+            try { id = actor.id; }
+            catch (System.Exception) { return; } // 半销毁对象读取 id 可能抛异常，跳过
+            // 顺带完成掉血检测（伤害追踪与遗产继承共用本次 3 秒全量遍历）
+            DamageTracker.CheckActor(actor);
+            _aliveMap[id] = actor;
+
+            if (_records.TryGetValue(id, out var rec))
+            {
+                // 刷新最近存活状态（死亡瞬间可能被原生逻辑清空，用存活时快照更可靠）
+                try { rec.Name = actor.name; } catch (System.Exception) { }
+                try { rec.Money = actor.money; } catch (System.Exception) { }
+                try { rec.Loot = actor.loot; } catch (System.Exception) { }
+                try { rec.City = actor.city; } catch (System.Exception) { }
+                // 每 30 秒刷新一次亲属缓存（关系会随结婚/生育变化）
+                rec.CacheAge++;
+                if (rec.CacheAge >= 10)
+                {
+                    rec.CacheAge = 0;
+                    CacheRelatives(actor, rec);
+                }
+            }
+            else
+            {
+                var newRec = new AliveRecord { Actor = actor };
+                try { newRec.Name = actor.name; } catch (System.Exception) { }
+                try { newRec.Money = actor.money; } catch (System.Exception) { }
+                try { newRec.Loot = actor.loot; } catch (System.Exception) { }
+                try { newRec.City = actor.city; } catch (System.Exception) { }
+                CacheRelatives(actor, newRec);
+                _records[id] = newRec;
+            }
+        }
+
+        /// <summary>
+        /// 扫描窗口收尾：窗口跨帧期间存活列表可能增删（死亡移除/新出生），
+        /// 先补扫所有仍在存活列表但未登记的单位，再执行不变的死亡判定与遗产分配。
+        /// </summary>
+        private static void CompleteWindow(List<Actor> aliveList)
+        {
+            // 补扫：窗口期间被游标跳过或新出现的存活单位，避免被误判为死亡
             foreach (var actor in aliveList)
             {
                 if (actor == null) continue;
-                // 动物无遗产、不参与灾害经济冲击，跳过（DataCollector 同款 civ 过滤），
-                // 避免每 3 秒对全部动物（往往占总单位数相当比例）做无意义扫描。
-                if (actor.asset == null || !actor.asset.civ) continue;
                 long id;
                 try { id = actor.id; }
                 catch (System.Exception) { continue; } // 半销毁对象读取 id 可能抛异常，跳过
-                // 顺带完成掉血检测（伤害追踪与遗产继承共用本次 3 秒全量遍历）
-                DamageTracker.CheckActor(actor);
-                seen.Add(id);
-                aliveMap[id] = actor;
-
-                if (_records.TryGetValue(id, out var rec))
-                {
-                    // 刷新最近存活状态（死亡瞬间可能被原生逻辑清空，用存活时快照更可靠）
-                    try { rec.Name = actor.name; } catch (System.Exception) { }
-                    try { rec.Money = actor.money; } catch (System.Exception) { }
-                    try { rec.Loot = actor.loot; } catch (System.Exception) { }
-                    try { rec.City = actor.city; } catch (System.Exception) { }
-                    // 每 30 秒刷新一次亲属缓存（关系会随结婚/生育变化）
-                    rec.CacheAge++;
-                    if (rec.CacheAge >= 30)
-                    {
-                        rec.CacheAge = 0;
-                        CacheRelatives(actor, rec);
-                    }
-                }
-                else
-                {
-                    var newRec = new AliveRecord { Actor = actor };
-                    try { newRec.Name = actor.name; } catch (System.Exception) { }
-                    try { newRec.Money = actor.money; } catch (System.Exception) { }
-                    try { newRec.Loot = actor.loot; } catch (System.Exception) { }
-                    try { newRec.City = actor.city; } catch (System.Exception) { }
-                    CacheRelatives(actor, newRec);
-                    _records[id] = newRec;
-                }
+                if (_aliveMap.ContainsKey(id)) continue;
+                ScanActor(actor);
             }
 
+            // 清理陈旧条目：窗口期间已死亡或不再满足开智判定的单位从 aliveMap 移除，
+            // 使其立即进入下方死亡判定（否则会滞留为继承者或推迟死亡处理）
+            var staleIds = _staleIds;
+            staleIds.Clear();
+            foreach (var kv in _aliveMap)
+            {
+                var a = kv.Value;
+                if (a == null || !GameHelpers.IsCivilizedActor(a)) staleIds.Add(kv.Key);
+            }
+            foreach (var id in staleIds) _aliveMap.Remove(id);
+
             // 上次存活、本次消失 => 死亡，执行遗产分配
+            var aliveMap = _aliveMap;
             var deadIds = _deadIds;
             deadIds.Clear();
             foreach (var kv in _records)
-                if (!seen.Contains(kv.Key)) deadIds.Add(kv.Key);
+                if (!aliveMap.ContainsKey(kv.Key)) deadIds.Add(kv.Key);
 
             foreach (var id in deadIds)
             {
@@ -126,6 +202,9 @@ namespace EconomyMod.Core
                 // 否则 _prevHealth/_damage 中自然死亡者的条目无限残留，导致游戏越跑越卡
                 DamageTracker.Remove(id);
             }
+
+            _scanActive = false;
+            _scanCursor = 0;
         }
 
         /// <summary>
@@ -136,9 +215,14 @@ namespace EconomyMod.Core
             // 复用记录内的列表（Clear+Add 代替反复 new List）
             try
             {
-                rec.ParentIds.Clear();
+                rec.ParentId1 = 0L;
+                rec.ParentId2 = 0L;
                 foreach (var p in actor.getParents())
-                    if (p != null) rec.ParentIds.Add(p.id);
+                {
+                    if (p == null) continue;
+                    if (rec.ParentId1 == 0L) rec.ParentId1 = p.id;
+                    else if (rec.ParentId2 == 0L) { rec.ParentId2 = p.id; break; }
+                }
             }
             catch (System.Exception) { }
 
@@ -150,9 +234,19 @@ namespace EconomyMod.Core
 
             try
             {
-                rec.ChildIds.Clear();
+                rec.ChildCount = 0;
                 foreach (var k in actor.getChildren(true))
-                    if (k != null) rec.ChildIds.Add(k.id);
+                {
+                    if (k == null) continue;
+                    if (rec.ChildIds == null) rec.ChildIds = new long[2];
+                    if (rec.ChildCount == rec.ChildIds.Length)
+                    {
+                        var grown = new long[rec.ChildIds.Length * 2];
+                        System.Array.Copy(rec.ChildIds, grown, rec.ChildIds.Length);
+                        rec.ChildIds = grown;
+                    }
+                    rec.ChildIds[rec.ChildCount++] = k.id;
+                }
             }
             catch (System.Exception) { }
         }
@@ -165,7 +259,7 @@ namespace EconomyMod.Core
             {
                 int money = Mathf.Max(0, Mathf.RoundToInt(rec.Money));
                 int loot = Mathf.Max(0, Mathf.RoundToInt(rec.Loot));
-                int total = money + loot;
+                int total = (int)System.Math.Min((long)money + loot, int.MaxValue);
                 if (total <= 0) return; // 无遗产
 
                 // 被击杀：金币按伤害比例分给对其造成过伤害的存活智慧生物（优先于继承链）
@@ -238,47 +332,62 @@ namespace EconomyMod.Core
             civ.Clear();
             foreach (var kv in dmgMap)
             {
-                if (!aliveMap.TryGetValue(kv.Key, out var a)) continue;
-                if (a.asset == null || !a.asset.civ) continue;
+                if (kv.Value <= 0f || float.IsNaN(kv.Value) || float.IsInfinity(kv.Value)) continue;
+                if (!aliveMap.TryGetValue(kv.Key, out var a) || a == null) continue;
+                if (!GameHelpers.IsCivilizedActor(a)) continue;
                 civ.Add(kv);
             }
             if (civ.Count == 0) return false;
 
-            float totalDmg = 0f;
-            foreach (var kv in civ) totalDmg += kv.Value;
-            if (totalDmg <= 0f) return false;
-
-            // 按伤害占比分配（取整后把差额补给伤害最高者）
-            try
+            // 先按伤害确定最高贡献者；同伤害时 id 小者优先，避免字典遍历顺序影响结果。
+            civ.Sort((left, right) =>
             {
-                int assigned = 0;
-                foreach (var kv in civ)
+                int damageOrder = right.Value.CompareTo(left.Value);
+                return damageOrder != 0 ? damageOrder : left.Key.CompareTo(right.Key);
+            });
+
+            // 以最大伤害归一化后转 decimal，既保留比例又避免累计伤害及 total*damage 溢出。
+            double maxDamage = civ[0].Value;
+            var shares = _damageSharePool;
+            shares.Clear();
+            decimal damageSum = 0m;
+            foreach (var kv in civ)
+                damageSum += (decimal)(kv.Value / maxDamage);
+
+            long assigned = 0L;
+            foreach (var kv in civ)
+            {
+                decimal quota = total * (decimal)(kv.Value / maxDamage) / damageSum;
+                int amount = (int)decimal.Floor(quota);
+                shares.Add(new DamageShare
                 {
-                    int amount = Mathf.RoundToInt(total * (kv.Value / totalDmg));
-                    if (amount < 1 && total >= civ.Count) amount = 1; // 保底 1（仅当金币足够覆盖全员，避免因保底超额）
-                    aliveMap[kv.Key].addMoney(amount);
-                    assigned += amount;
-                }
-                if (assigned != total)
-                {
-                    long topId = civ[0].Key;
-                    float maxD = civ[0].Value;
-                    foreach (var kv in civ)
-                    {
-                        if (kv.Value > maxD) { maxD = kv.Value; topId = kv.Key; }
-                    }
-                    int delta = total - assigned;
-                    if (delta > 0)
-                    {
-                        // 正残差补给伤害最高者（Σ 严格 ≤ total）
-                        aliveMap[topId].addMoney(delta);
-                        assigned = total;
-                    }
-                    // delta < 0（保底取整导致的微小超额）不再扣回：
-                    // 原代码 addMoney(负值) 会掠夺伤害最高者（M4 负补偿修复）
-                }
+                    AttackerId = kv.Key,
+                    Amount = amount,
+                    Remainder = quota - amount
+                });
+                assigned += amount;
             }
-            catch (System.Exception) { return false; }
+
+            shares.Sort((left, right) =>
+            {
+                int remainderOrder = right.Remainder.CompareTo(left.Remainder);
+                return remainderOrder != 0 ? remainderOrder : left.AttackerId.CompareTo(right.AttackerId);
+            });
+            int remaining = (int)((long)total - assigned);
+            for (int i = 0; i < remaining; i++)
+            {
+                DamageShare share = shares[i];
+                share.Amount++;
+                shares[i] = share;
+            }
+
+            // 从此处起已确认存在有效伤害来源；单个付款失败时该份额消散，不得回退继承链。
+            foreach (var share in shares)
+            {
+                if (share.Amount <= 0) continue;
+                try { aliveMap[share.AttackerId].addMoney(share.Amount); }
+                catch (System.Exception) { }
+            }
 
             if (UnrestConfig.Instance.LogToWorldLog)
             {
@@ -295,20 +404,18 @@ namespace EconomyMod.Core
             // 复用静态缓冲（HandleDeath 单线程顺序执行，无嵌套调用）
             var heirs = _heirsPool;
             heirs.Clear();
-            foreach (var pid in rec.ParentIds)
-            {
-                if (aliveMap.TryGetValue(pid, out var p) && !heirs.Contains(p))
-                    heirs.Add(p);
-            }
+            Actor p;
+            if (rec.ParentId1 != 0L && aliveMap.TryGetValue(rec.ParentId1, out p)) heirs.Add(p);
+            if (rec.ParentId2 != 0L && aliveMap.TryGetValue(rec.ParentId2, out p) && !heirs.Contains(p)) heirs.Add(p);
             if (heirs.Count > 0) return heirs;
 
             if (rec.SpouseId != 0L && aliveMap.TryGetValue(rec.SpouseId, out var s) && !heirs.Contains(s))
                 heirs.Add(s);
             if (heirs.Count > 0) return heirs;
 
-            foreach (var cid in rec.ChildIds)
+            for (int i = 0; i < rec.ChildCount && rec.ChildIds != null; i++)
             {
-                if (aliveMap.TryGetValue(cid, out var k) && !heirs.Contains(k))
+                if (aliveMap.TryGetValue(rec.ChildIds[i], out var k) && !heirs.Contains(k))
                     heirs.Add(k);
             }
             return heirs;
@@ -320,5 +427,42 @@ namespace EconomyMod.Core
             if (!string.IsNullOrEmpty(rec.Name)) return rec.Name;
             return GameHelpers.SafeName(rec.Actor);
         }
+
+        // ===== 静态缓冲缩容（MemoryCleanupEngine 空闲期调用；只缩容，不清内容，语义不变）=====
+
+        private static int TrimList<T>(List<T> list)
+        {
+            try
+            {
+                if (list.Capacity > 4096 && list.Capacity > list.Count * 4)
+                {
+                    list.TrimExcess();
+                    return 1;
+                }
+            }
+            catch (System.Exception) { }
+            return 0;
+        }
+
+        /// <summary>对全部静态 List 缓冲/缓存执行 TrimExcess，返回实际收缩的列表数；
+        /// _records / _aliveMap 由 MemoryCleanupEngine 通过 ForTrim 访问器重建缩容。</summary>
+        public static int TrimMemory()
+        {
+            int shrunk = 0;
+            shrunk += TrimList(_deadIds);
+            shrunk += TrimList(_staleIds);
+            shrunk += TrimList(_heirsPool);
+            shrunk += TrimList(_damageCivPool);
+            shrunk += TrimList(_damageSharePool);
+            return shrunk;
+        }
+
+        /// <summary>供 MemoryCleanupEngine 重建缩容时读取当前引用（仅空闲期调用，绝不与扫描窗口并发）。</summary>
+        internal static Dictionary<long, AliveRecord> RecordsForTrim => _records;
+        internal static Dictionary<long, Actor> AliveMapForTrim => _aliveMap;
+
+        /// <summary>将重建后的紧凑字典换回（仅 MemoryCleanupEngine 空闲期调用）。</summary>
+        internal static void ReplaceRecordsForTrim(Dictionary<long, AliveRecord> compact) { _records = compact; }
+        internal static void ReplaceAliveMapForTrim(Dictionary<long, Actor> compact) { _aliveMap = compact; }
     }
 }

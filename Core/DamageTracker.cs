@@ -13,9 +13,13 @@ namespace EconomyMod.Core
     /// </summary>
     public static class DamageTracker
     {
-        private static readonly Dictionary<long, Dictionary<long, float>> _damage =
+        private const int MaxAttackersPerVictim = 16;
+        private const int MaxInactiveScans = 10;
+
+        private static Dictionary<long, Dictionary<long, float>> _damage =
             new Dictionary<long, Dictionary<long, float>>();
-        private static readonly Dictionary<long, int> _prevHealth = new Dictionary<long, int>();
+        private static Dictionary<long, int> _prevHealth = new Dictionary<long, int>();
+        private static Dictionary<long, int> _inactiveScans = new Dictionary<long, int>();
 
         private static System.Reflection.PropertyInfo _mainAttackerProp;
 
@@ -37,10 +41,26 @@ namespace EconomyMod.Core
                     {
                         long aid;
                         try { aid = attacker.id; } catch (System.Exception) { aid = 0L; }
-                        if (aid != 0L && aid != id && attacker.asset != null && attacker.asset.civ)
+                        if (aid != 0L && aid != id && GameHelpers.IsCivilizedActor(attacker))
                         {
                             AddDamage(id, aid, prev - cur);
+                            _inactiveScans[id] = 0;
                         }
+                    }
+                }
+                else if (_damage.ContainsKey(id))
+                {
+                    int scans;
+                    _inactiveScans.TryGetValue(id, out scans);
+                    scans++;
+                    if (scans >= MaxInactiveScans)
+                    {
+                        _damage.Remove(id);
+                        _inactiveScans.Remove(id);
+                    }
+                    else
+                    {
+                        _inactiveScans[id] = scans;
                     }
                 }
             }
@@ -80,8 +100,32 @@ namespace EconomyMod.Core
                 map = new Dictionary<long, float>();
                 _damage[victimId] = map;
             }
-            map.TryGetValue(attackerId, out float cur);
-            map[attackerId] = cur + dmg;
+
+            float currentDamage;
+            if (map.TryGetValue(attackerId, out currentDamage))
+            {
+                map[attackerId] = currentDamage + dmg;
+                return;
+            }
+
+            if (map.Count >= MaxAttackersPerVictim)
+            {
+                long weakestAttackerId = 0L;
+                float weakestDamage = float.MaxValue;
+                foreach (var entry in map)
+                {
+                    if (entry.Value < weakestDamage
+                        || (entry.Value == weakestDamage && entry.Key > weakestAttackerId))
+                    {
+                        weakestAttackerId = entry.Key;
+                        weakestDamage = entry.Value;
+                    }
+                }
+                if (dmg <= weakestDamage) return;
+                map.Remove(weakestAttackerId);
+            }
+
+            map[attackerId] = dmg;
         }
 
         /// <summary>获取受害者的伤害来源记录（attackerId -> 伤害值）。</summary>
@@ -97,6 +141,7 @@ namespace EconomyMod.Core
         {
             _damage.Remove(victimId);
             _prevHealth.Remove(victimId);
+            _inactiveScans.Remove(victimId);
         }
 
         /// <summary>世界重置（新地图/新游戏）或离开世界时清空。</summary>
@@ -104,6 +149,18 @@ namespace EconomyMod.Core
         {
             _damage.Clear();
             _prevHealth.Clear();
+            _inactiveScans.Clear();
+            _mainAttackerProp = null;
         }
+
+        /// <summary>供 MemoryCleanupEngine 重建缩容时读取当前引用（仅空闲期调用，绝不与存活扫描并发）。</summary>
+        internal static Dictionary<long, Dictionary<long, float>> DamageForTrim => _damage;
+        internal static Dictionary<long, int> PrevHealthForTrim => _prevHealth;
+        internal static Dictionary<long, int> InactiveScansForTrim => _inactiveScans;
+
+        /// <summary>将重建后的紧凑字典换回（仅 MemoryCleanupEngine 空闲期调用）。</summary>
+        internal static void ReplaceDamageForTrim(Dictionary<long, Dictionary<long, float>> compact) { _damage = compact; }
+        internal static void ReplacePrevHealthForTrim(Dictionary<long, int> compact) { _prevHealth = compact; }
+        internal static void ReplaceInactiveScansForTrim(Dictionary<long, int> compact) { _inactiveScans = compact; }
     }
 }

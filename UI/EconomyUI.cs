@@ -1,6 +1,7 @@
 ﻿using NeoModLoader.General;
 using NeoModLoader.General.UI.Tab;
 using UnityEngine;
+using UnityEngine.UI;
 using EconomyMod.Core;
 using EconomyMod.Models;
 using EconomyMod.Services;
@@ -13,8 +14,12 @@ namespace EconomyMod.UI
     /// </summary>
     public static class EconomyUI
     {
-        private static PowersTab _tab;
+private static PowersTab _tab;
         private static bool _initialized;
+        // 结算期按钮引用与状态（年度收尾在途时禁用，完成后恢复；由 EconomyTickRunner.Update 每帧驱动）
+        private static PowerButton _btnCollect;
+        private static PowerButton _btnCyclePhase;
+        private static bool _settling;
 
         /// <summary>
         /// 判断当前界面语言是否为中文系（简/繁）。
@@ -25,40 +30,25 @@ namespace EconomyMod.UI
             return Services.LocalizationService.IsChinese;
         }
 
-        /// <summary>已注册的按钮 tooltip 定义（用于语言切换时重新注入）。</summary>
+        /// <summary>已注册的按钮 tooltip（标题/描述取自 Locales/*.json 的 id 与 id+"_description" 键，语言切换后重新注入）。</summary>
         private class TooltipInfo
         {
             public PowerButton Btn;
             public string Id;
-            public string ZhTitle, ZhDesc;
-            public string ZhTwTitle, ZhTwDesc;
-            public string EnTitle, EnDesc;
-            public string RuTitle, RuDesc;
         }
 
         private static readonly System.Collections.Generic.List<TooltipInfo> _tooltips =
             new System.Collections.Generic.List<TooltipInfo>();
 
         /// <summary>
-        /// 注册并注入按钮 tooltip；记录文案，供 <see cref="ReapplyTooltips"/> 在语言切换后重新注入。
-        /// 支持 4 语言：简中 / 繁中 / 英文 / 俄文。
+        /// 注册并注入按钮 tooltip；文案来源为 Locales/*.json（键 id 与 id_description），
+        /// 供 <see cref="ReapplyTooltips"/> 在语言切换后重新注入。
         /// </summary>
-        private static void RegisterTooltip(PowerButton btn, string id,
-            string zhTitle, string zhDesc,
-            string zhTwTitle, string zhTwDesc,
-            string enTitle, string enDesc,
-            string ruTitle, string ruDesc)
+        private static void RegisterTooltip(PowerButton btn, string id)
         {
             if (btn == null) return;
-            _tooltips.Add(new TooltipInfo
-            {
-                Btn = btn, Id = id,
-                ZhTitle = zhTitle, ZhDesc = zhDesc,
-                ZhTwTitle = zhTwTitle, ZhTwDesc = zhTwDesc,
-                EnTitle = enTitle, EnDesc = enDesc,
-                RuTitle = ruTitle, RuDesc = ruDesc
-            });
-            SetTooltip(btn, id, zhTitle, zhDesc, zhTwTitle, zhTwDesc, enTitle, enDesc, ruTitle, ruDesc);
+            _tooltips.Add(new TooltipInfo { Btn = btn, Id = id });
+            SetTooltip(btn, id);
         }
 
         /// <summary>
@@ -68,11 +58,11 @@ namespace EconomyMod.UI
         public static void ReapplyTooltips()
         {
             RegisterTabLocale();
+            EventWindow.Instance?.InvalidateContent();
             foreach (var t in _tooltips)
             {
                 if (t.Btn == null) continue;
-                SetTooltip(t.Btn, t.Id, t.ZhTitle, t.ZhDesc, t.ZhTwTitle, t.ZhTwDesc,
-                    t.EnTitle, t.EnDesc, t.RuTitle, t.RuDesc);
+                SetTooltip(t.Btn, t.Id);
             }
         }
 
@@ -82,18 +72,14 @@ namespace EconomyMod.UI
         // 并可能在工具提示路径引发空键异常。故必须在运行时用 LM.AddToCurrentLocale 注入。
         private const string TabNameKey = "Classical Economics";
         private const string TabDescKey = "Classical Economics Tab";
+        // Tab 名称/描述在 Locales/*.json 中的键（LM 查找键与其分离，避免键名带空格进 json）
+        private const string TabNameLocaleKey = "tab_economy_name";
+        private const string TabDescLocaleKey = "tab_economy_desc";
 
         private static void RegisterTabLocale()
         {
-            string lang = Services.LocalizationService.CurrentLanguage;
-            string name = lang == "zh_tw" ? "古典經濟學"
-                : lang == "ru" ? "Классическая экономика"
-                : lang == "en" ? "Classical Economics" : "古典经济学";
-            string desc = lang == "zh_tw" ? "古典經濟學工具欄"
-                : lang == "ru" ? "Панель классической экономики"
-                : lang == "en" ? "Classical Economics Toolbar" : "古典经济学工具栏";
-            LM.AddToCurrentLocale(TabNameKey, name);
-            LM.AddToCurrentLocale(TabDescKey, desc);
+            LM.AddToCurrentLocale(TabNameKey, Services.LocalizationService.Get(TabNameLocaleKey));
+            LM.AddToCurrentLocale(TabDescKey, Services.LocalizationService.Get(TabDescLocaleKey));
             LM.ApplyLocale(false);
         }
 
@@ -105,22 +91,13 @@ namespace EconomyMod.UI
         /// 2) 设置 TipButton.textOnClick/textOnClickDescription，
         ///    CreateSimpleButton 创建的 Library 类型按钮 godPower 为 null，
         ///    反射修改 GodPower.name 无效，必须走 TipButton。
+        /// 文案来源：Locales/*.json 的 id 与 id_description 键（Test-LocalizationCoverage 门禁校验）。
         /// </summary>
-        private static void SetTooltip(PowerButton btn, string id,
-            string zhTitle, string zhDesc,
-            string zhTwTitle, string zhTwDesc,
-            string enTitle, string enDesc,
-            string ruTitle, string ruDesc)
+        private static void SetTooltip(PowerButton btn, string id)
         {
             if (btn == null) return;
-            // 按当前语言选择文案（zh/zh_tw/en/ru）
-            string lang = Services.LocalizationService.CurrentLanguage;
-            string title = lang == "zh_tw" ? zhTwTitle
-                : lang == "ru" ? ruTitle
-                : lang == "en" ? enTitle : zhTitle;
-            string desc = lang == "zh_tw" ? zhTwDesc
-                : lang == "ru" ? ruDesc
-                : lang == "en" ? enDesc : zhDesc;
+            string title = Services.LocalizationService.Get(id);
+            string desc = Services.LocalizationService.Get(id + "_description");
             // 直接写入当前语言的本地化字典（同时注册到 locales[language]，
             // 语言切换后 NML 的 ApplyLocale 会重新应用，保持持久）
             LM.AddToCurrentLocale(id, title);
@@ -149,6 +126,8 @@ namespace EconomyMod.UI
             EventWindow.Create();
             // 创建贸易份额趋势悬浮窗（各国各城市出口份额趋势，独立窗口）
             TradeShareWindow.Create();
+            // 创建内阁面板（中央银行家：国家认领/金库/政策/法令/记录）
+            CabinetWindow.Create();
 
             // 创建底部工具栏 Tab（带金币图标）；
             // 先注入 Tab 名称/描述本地化键（vanilla LTM 按 key 查找，缺失会打印 missing text 日志）
@@ -162,11 +141,7 @@ namespace EconomyMod.UI
                 () => EconomyHUD.Instance?.Toggle(),
                 IconLoader.Get("ledger"),
                 _tab.transform, Vector2.zero);
-            RegisterTooltip(btn, "economy_toggle",
-                "经济概览", "切换经济主面板显隐",
-                "經濟概覽", "切換經濟主面板顯隱",
-                "Economy Overview", "Toggle the main economy panel",
-                "Экономика", "Переключить главную панель экономики");
+            RegisterTooltip(btn, "economy_toggle");
             PowerButtonCreator.AddButtonToTab(btn, _tab, null);
 
             // 创建"干预王国"工具按钮（合并原煽动+镇压）：打开国家选择列表，
@@ -176,11 +151,7 @@ namespace EconomyMod.UI
                 () => EconomyHUD.Instance?.ShowKingdomPicker(),
                 IconLoader.Get("flame"),
                 _tab.transform, Vector2.zero);
-            RegisterTooltip(btnIntervene, "economy_intervene",
-                "干预王国", "选择王国进行煽动或镇压",
-                "干預王國", "選擇王國進行煽動或鎮壓",
-                "Intervene", "Select a kingdom to incite or suppress",
-                "Вмешательство", "Выберите королевство для подстрекательства или подавления");
+            RegisterTooltip(btnIntervene, "economy_intervene");
             PowerButtonCreator.AddButtonToTab(btnIntervene, _tab, null);
 
             // 创建"立即采集"工具按钮（带刷新图标）：手动执行一次数据采集与重算
@@ -192,12 +163,9 @@ namespace EconomyMod.UI
                 },
                 IconLoader.Get("collect"),
                 _tab.transform, Vector2.zero);
-            RegisterTooltip(btnCollect, "economy_collect",
-                "立即采集", "手动执行一次数据采集与经济重算",
-                "立即採集", "手動執行一次數據採集與經濟重算",
-                "Collect Now", "Manually run data collection and recalculation",
-                "Собрать", "Запустить сбор данных и пересчёт экономики");
+            RegisterTooltip(btnCollect, "economy_collect");
             PowerButtonCreator.AddButtonToTab(btnCollect, _tab, null);
+            _btnCollect = btnCollect;
 
             // 创建"清除历史"工具按钮（带垃圾桶图标）：清空历史快照（内存 + history.json）
             var btnClear = PowerButtonCreator.CreateSimpleButton(
@@ -209,11 +177,7 @@ namespace EconomyMod.UI
                 },
                 IconLoader.Get("trash"),
                 _tab.transform, Vector2.zero);
-            RegisterTooltip(btnClear, "economy_clear",
-                "清除历史", "清空所有历史快照数据",
-                "清除歷史", "清空所有歷史快照數據",
-                "Clear History", "Wipe all historical snapshot data",
-                "Очистить", "Стереть все исторические данные");
+            RegisterTooltip(btnClear, "economy_clear");
             PowerButtonCreator.AddButtonToTab(btnClear, _tab, null);
 
             // 创建"全球富豪榜"工具按钮（带皇冠图标，与悬浮窗按钮并列），
@@ -223,11 +187,7 @@ namespace EconomyMod.UI
                 () => RichListWindow.Instance?.Toggle(),
                 IconLoader.Get("crown"),
                 _tab.transform, Vector2.zero);
-            RegisterTooltip(btnRich, "economy_rich",
-                "全球富豪榜", "查看财富排行",
-                "全球富豪榜", "查看財富排行",
-                "Rich List", "View the wealthiest actors",
-                "Богатейшие", "Просмотр самых богатых");
+            RegisterTooltip(btnRich, "economy_rich");
             PowerButtonCreator.AddButtonToTab(btnRich, _tab, null);
 
             // 创建"经济事件"工具按钮（带铃铛图标）：切换事件流悬浮窗显隐
@@ -236,11 +196,7 @@ namespace EconomyMod.UI
                 () => EventWindow.Instance?.Toggle(),
                 IconLoader.Get("bell"),
                 _tab.transform, Vector2.zero);
-            RegisterTooltip(btnEvents, "economy_events",
-                "经济事件", "切换事件流悬浮窗",
-                "經濟事件", "切換事件流懸浮窗",
-                "Economy Events", "Toggle the event stream window",
-                "События", "Переключить окно событий");
+            RegisterTooltip(btnEvents, "economy_events");
             PowerButtonCreator.AddButtonToTab(btnEvents, _tab, null);
 
             // 创建"贸易净额"工具按钮（复用金币图标）：切换贸易净额排名悬浮窗显隐
@@ -249,11 +205,7 @@ namespace EconomyMod.UI
                 () => TradeShareWindow.Instance?.Toggle(),
                 IconLoader.Get("coin"),
                 _tab.transform, Vector2.zero);
-            RegisterTooltip(btnShare, "economy_trade_share",
-                "贸易净额", "查看各城市/国家净贸易额（出口−进口）排名",
-                "貿易淨額", "查看各城市/國家淨貿易額（出口−進口）排名",
-                "Trade Balance", "Net trade balance (exports − imports) by city/kingdom",
-                "Торговый баланс", "Чистый баланс (экспорт − импорт) по городам/странам");
+            RegisterTooltip(btnShare, "economy_trade_share");
             PowerButtonCreator.AddButtonToTab(btnShare, _tab, null);
 
             // 创建"切换经济阶段"按钮（循环切换：繁荣→衰退→萧条→复苏→繁荣）
@@ -275,14 +227,37 @@ namespace EconomyMod.UI
                 },
                 IconLoader.Get("phase_boom"),
                 _tab.transform, Vector2.zero);
-            RegisterTooltip(btnCyclePhase, "economy_cycle_phase",
-                "切换阶段", "循环切换经济周期阶段（繁荣→衰退→萧条→复苏）",
-                "切換階段", "循環切換經濟週期階段（繁榮→衰退→蕭條→復甦）",
-                "Cycle Phase", "Cycle through economic phases (Boom→Recession→Depression→Recovery)",
-                "Сменить фазу", "Цикл фаз экономики (Бум→Спад→Депрессия→Восстановление)");
+            RegisterTooltip(btnCyclePhase, "economy_cycle_phase");
             PowerButtonCreator.AddButtonToTab(btnCyclePhase, _tab, null);
+            _btnCyclePhase = btnCyclePhase;
+
 
             Debug.Log("[ClassicalEconomics] EconomyUI 初始化完成（悬浮HUD + 煽动工具 + 富豪榜工具 + 事件流窗口 + 阶段切换）");
+        }
+
+        /// <summary>
+        /// 结算期 UI 状态：年度收尾在途时禁用"立即采集/手动切阶段"按钮并刷新面板标记，
+        /// 完成后恢复。由 EconomyTickRunner.Update 每帧驱动（既有逐帧路径）。
+        /// </summary>
+        public static void ApplySettlingState(bool settling)
+        {
+            if (_settling == settling) return;
+            _settling = settling;
+            SetButtonInteractable(_btnCollect, settling);
+            SetButtonInteractable(_btnCyclePhase, settling);
+            if (EconomyHUD.Instance != null && EconomyHUD.Instance.IsVisible)
+            {
+                EconomyHUD.Instance.RefreshCurrentSection();
+            }
+        }
+
+        private static void SetButtonInteractable(PowerButton btn, bool settling)
+        {
+            if (btn == null) return;
+            var b = btn.GetComponent<Button>();
+            if (b == null) return;
+            if (settling) b.interactable = false;
+            else b.interactable = true;
         }
 
         /// <summary>
@@ -307,6 +282,15 @@ namespace EconomyMod.UI
             {
                 TradeShareWindow.Instance.RefreshNow();
             }
+        }
+
+        /// <summary>返回主菜单时释放所有窗口动态内容及其中的按钮委托。</summary>
+        public static void OnWorldUnavailable()
+        {
+            EconomyHUD.Instance?.OnWorldUnavailable();
+            RichListWindow.Instance?.OnWorldUnavailable();
+            EventWindow.Instance?.OnWorldUnavailable();
+            TradeShareWindow.Instance?.OnWorldUnavailable();
         }
     }
 }

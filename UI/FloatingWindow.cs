@@ -31,6 +31,7 @@ namespace EconomyMod.UI
         protected readonly List<GameObject> _lines = new List<GameObject>();
         protected Font _gameFont;
         protected bool _visible;
+        protected Text _titleText;
 
         protected static T CreateWindow<T>(string goName) where T : FloatingWindow
         {
@@ -51,6 +52,13 @@ namespace EconomyMod.UI
         public void Hide() { _visible = false; if (_panelRoot != null) _panelRoot.SetActive(false); }
         public bool IsVisible => _visible;
 
+        /// <summary>世界退出时隐藏窗口并销毁动态内容，释放按钮委托及其捕获对象。</summary>
+        public virtual void OnWorldUnavailable()
+        {
+            Hide();
+            ClearContent();
+        }
+
         protected virtual void Awake()
         {
             _gameFont = LocalizedTextManager.current_font;
@@ -67,11 +75,20 @@ namespace EconomyMod.UI
                 AnchorMin, AnchorMax, Pivot, AnchoredPosition, Size, BgColor);
             _panelRoot = _panelRect.gameObject;
             UIHelpers.CreateDragArea(_panelRect, _panelRect, Padding + 36);
-            UIHelpers.CreateWindowTitle(_panelRect, UIHelpers.L(TitleKey), _gameFont,
+            _titleText = UIHelpers.CreateWindowTitle(_panelRect, UIHelpers.L(TitleKey), _gameFont,
                 UIStyles.Gold, TitleFontSize, Padding, TitleLineHeight);
             UIHelpers.CreateResizeHandles(_panelRect, OnPanelResized);
             UIHelpers.CreateCloseButton(_panelRect, _gameFont, Hide);
             _content = UIHelpers.CreateScrollContent(_panelRect, Padding, Padding + 32f).gameObject;
+        }
+
+        /// <summary>
+        /// 语言切换后刷新窗口文本。基类只重写标题（BuildPanel 仅在启动时执行一次，
+        /// 标题不会随 RefreshNow 重建）；子类重写时先调 base 再刷各自的按钮/内容。
+        /// </summary>
+        public virtual void RefreshAllTexts()
+        {
+            if (_titleText != null) _titleText.text = UIHelpers.L(TitleKey);
         }
 
         /// <summary>缩放结束后回调（子类可重写以重建自适应内容）。</summary>

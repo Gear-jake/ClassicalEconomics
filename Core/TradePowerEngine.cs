@@ -28,6 +28,8 @@ namespace EconomyMod.Core
         /// <summary>每年评估（FinishCycle 里、EraEngine 之后调用）。</summary>
         public static void Evaluate()
         {
+            try
+            {
             var cfg = UnrestConfig.Instance;
             if (cfg == null || !cfg.TradePowerEnabled) return;
             if (World.world == null) return;
@@ -63,6 +65,17 @@ namespace EconomyMod.Core
             foreach (var kid in _state.Keys)
                 if (!stats.ContainsKey(kid)) _staleIds.Add(kid);
             foreach (var kid in _staleIds) _state.Remove(kid);
+            }
+            finally
+            {
+                ClearWorldReferences();
+            }
+        }
+
+        /// <summary>清空仅用于当前世界的 Actor 引用，保留王国 ID 档位状态。</summary>
+        public static void ClearWorldReferences()
+        {
+            _memberPool.Clear();
         }
 
         /// <summary>计算顺差率 = 净顺差 / GDP（GDP≤0 时为 0，中性）。</summary>
@@ -91,7 +104,7 @@ namespace EconomyMod.Core
             foreach (var a in kingdom.units)
             {
                 if (a == null || !a.isAlive()) continue;
-                if (a.asset == null || !a.asset.civ) continue;
+                if (!GameHelpers.IsCivilizedActor(a)) continue;
                 pool.Add(a);
             }
             for (int i = 0; i < pool.Count; i++)
@@ -110,7 +123,7 @@ namespace EconomyMod.Core
             foreach (var a in kingdom.units)
             {
                 if (a == null || !a.isAlive()) continue;
-                if (a.asset == null || !a.asset.civ) continue;
+                if (!GameHelpers.IsCivilizedActor(a)) continue;
                 pool.Add(a);
             }
             for (int i = 0; i < pool.Count; i++)
@@ -123,6 +136,7 @@ namespace EconomyMod.Core
         /// <summary>重置（新地图/新游戏）。</summary>
         public static void Reset()
         {
+            ClearWorldReferences();
             _state.Clear();
         }
     }

@@ -38,11 +38,13 @@ namespace EconomyMod.Core
 
         // 冷却清理复用缓冲（避免每年分配）
         private static readonly List<long> _cooldownExpired = new List<long>();
+        private static readonly List<City> _cityPool = new List<City>();
 
         /// <summary>重置（新地图/新游戏）：清空改革冷却记录，避免旧世界冷却泄漏进新地图（M7）。</summary>
         public static void Reset()
         {
             _cooldown.Clear();
+            _cityPool.Clear();
         }
 
         /// <summary>
@@ -137,7 +139,7 @@ namespace EconomyMod.Core
                     int poorCount = Mathf.Max(10, Mathf.RoundToInt(pop * 0.02f));  // 2% 穷人（最少 10）
                     GameHelpers.RedistributeWithinKingdom(kingdom, richCount, poorCount, 0.40f, 2f);
                     string kName = GameHelpers.SafeKingdomName(kingdom);
-                    GameHelpers.Notify($"[政策] <{kName}> 推行贫富调节政策，财富再分配，贫富差距下降");
+                    GameHelpers.NotifyLocalized("toast_policy_redistribute", kName);
                     EventStreamService.Record(EventStreamService.TypePolicy, kName, 1);
                     if (UnrestConfig.Instance.LogToWorldLog)
                         Debug.Log($"[ClassicalEconomics] 政策成功(贫富调节) 王国<{kName}> 基尼={stats.GiniCoefficient:F2}");
@@ -163,12 +165,16 @@ namespace EconomyMod.Core
                 // 繁荣减税（低税率特质）/ 萧条增税（高税率特质）
                 string taxTrait = isBoom ? "tax_rate_local_low" : "tax_rate_local_high";
                 if (kingdom.hasTrait(taxTrait)) return;
-                kingdom.addTrait(taxTrait, true);
-                if (!isBoom) // 萧条增税时同时移除低税率
+                if (isBoom)
+                {
+                    if (kingdom.hasTrait("tax_rate_local_high")) kingdom.removeTrait("tax_rate_local_high");
+                }
+                else
                 {
                     if (kingdom.hasTrait("tax_rate_local_low")) kingdom.removeTrait("tax_rate_local_low");
                 }
-                GameHelpers.Notify($"[政策] <{kName}> {(isBoom ? "减税刺激消费" : "增税补充财政")}");
+                kingdom.addTrait(taxTrait, true);
+                GameHelpers.NotifyLocalized(isBoom ? "toast_policy_tax_boom" : "toast_policy_tax_austerity", kName);
                 EventStreamService.Record(EventStreamService.TypePolicy, kName, isBoom ? 2 : 3);
                 if (UnrestConfig.Instance.LogToWorldLog)
                     Debug.Log($"[ClassicalEconomics] 政策成功(财政) 王国<{kName}> {(isBoom ? "减税" : "增税")}");
@@ -176,32 +182,79 @@ namespace EconomyMod.Core
             catch (System.Exception) { }
         }
 
-        /// <summary>贸易政策：关税调节——顺差王国增收关税（提高贸易流），逆差王国削减进口（降低贸易流）。</summary>
+        /// <summary>贸易政策：逆差王国向居民征收关税并转入城市仓库，金币真实转移。</summary>
         private static void ApplyTradePolicy(Kingdom kingdom, KingdomStats stats)
         {
             string kName = GameHelpers.SafeKingdomName(kingdom);
-            // 模拟关税：顺差王国向城市仓库征收关税收入（贸易额×10%）
-            long tariff = stats.TradeBalance > 0 ? (long)(stats.TradeBalance * 0.1f) : 0;
-            if (tariff > 0)
+            long tariffTarget = stats.TradeBalance < 0 ? (long)(-stats.TradeBalance * 0.1f) : 0L;
+            long tariff = 0L;
+            var cityPool = _cityPool;
+            cityPool.Clear();
+            try
             {
                 var cities = kingdom.getCities();
-                if (cities != null && cities.Count() > 0)
+                if (cities != null)
                 {
-                    long per = tariff / cities.Count();
-                    if (per > 0)
-                    {
-                        foreach (var city in cities)
-                        {
-                            if (city == null) continue;
-                            try { city.addResourcesToRandomStockpile("gold", (int)per); } catch { }
-                        }
-                    }
+                    foreach (var city in cities) if (city != null) cityPool.Add(city);
+                }
+                if (tariffTarget > 0 && cityPool.Count > 0 && kingdom.units != null)
+                {
+                    tariff = CollectTariff(kingdom.units, cityPool, tariffTarget);
                 }
             }
-            GameHelpers.Notify($"[政策] <{kName}> 征收贸易关税（+{tariff}金币）");
+            finally
+            {
+                cityPool.Clear();
+            }
+            GameHelpers.NotifyLocalized("toast_policy_tariff", kName, tariff);
             EventStreamService.Record(EventStreamService.TypePolicy, kName, 4);
             if (UnrestConfig.Instance.LogToWorldLog)
                 Debug.Log($"[ClassicalEconomics] 政策成功(贸易) 王国<{kName}> 关税收入{tariff}");
+        }
+
+        private static long AddGoldToCity(City city, long amount)
+        {
+            long added = 0L;
+            while (city != null && amount > 0)
+            {
+                int give = (int)System.Math.Min(amount, (long)int.MaxValue);
+                try { city.addResourcesToRandomStockpile("gold", give); }
+                catch (System.Exception) { break; }
+                added += give;
+                amount -= give;
+            }
+            return added;
+        }
+
+        private static long CollectTariff(List<Actor> units, List<City> cities, long target)
+        {
+            long remaining = target;
+            long collected = 0L;
+            int nextCity = 0;
+            foreach (var actor in units)
+            {
+                if (actor == null || !actor.isAlive() || remaining <= 0) continue;
+                int coins;
+                try { coins = Mathf.Max(0, Mathf.RoundToInt(actor.money)); }
+                catch (System.Exception) { continue; }
+                if (coins <= 0) continue;
+
+                int charge = System.Math.Min(coins, (int)System.Math.Min(remaining, (long)int.MaxValue));
+                try { actor.addMoney(-charge); }
+                catch (System.Exception) { continue; }
+
+                long deposited = 0L;
+                for (int offset = 0; offset < cities.Count && deposited < charge; offset++)
+                {
+                    int cityIndex = (nextCity + offset) % cities.Count;
+                    deposited += AddGoldToCity(cities[cityIndex], charge - deposited);
+                }
+                nextCity = (nextCity + 1) % cities.Count;
+                if (deposited < charge) GameHelpers.AddPositiveMoney(actor, charge - deposited);
+                collected += deposited;
+                remaining -= deposited;
+            }
+            return collected;
         }
 
         /// <summary>政策失败：后果分级——贫富调节最严重（退位/死亡/内战），贸易中度（贸易伙伴报复），财政轻微（仅支持下降）。</summary>
@@ -212,7 +265,7 @@ namespace EconomyMod.Core
             // 财政失败：轻微后果（仅通知，不触发政权变动）
             if (kind == PolicyKind.Fiscal)
             {
-                GameHelpers.Notify($"[政策] <{kName}> 财政政策未能推行，民众不满");
+                GameHelpers.NotifyLocalized("toast_policy_fiscal_fail", kName);
                 EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 4); // 4=财政失败
                 if (UnrestConfig.Instance.LogToWorldLog)
                     Debug.Log($"[ClassicalEconomics] 政策失败(财政) 王国<{kName}> 基尼={stats.GiniCoefficient:F2}");
@@ -238,7 +291,7 @@ namespace EconomyMod.Core
                         }
                     }
                 }
-                GameHelpers.Notify($"[政策] <{kName}> 关税政策失败，贸易伙伴报复（损失{loss}金币）");
+                GameHelpers.NotifyLocalized("toast_policy_tariff_fail", kName, loss);
                 EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 5); // 5=贸易失败
                 if (UnrestConfig.Instance.LogToWorldLog)
                     Debug.Log($"[ClassicalEconomics] 政策失败(贸易) 王国<{kName}> 损失{loss}");
@@ -253,7 +306,7 @@ namespace EconomyMod.Core
             {
                 if (kingdom.hasKing() && GameHelpers.TryRemoveKing(kingdom))
                 {
-                    GameHelpers.Notify($"[政策] <{kName}> 改革失败！国王退位");
+                    GameHelpers.NotifyLocalized("toast_policy_fail_abdicate", kName);
                     EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 1);
                     if (UnrestConfig.Instance.LogToWorldLog)
                         Debug.Log($"[ClassicalEconomics] 政策失败 王国<{kName}> 国王退位（基尼={stats.GiniCoefficient:F2}）");
@@ -268,7 +321,7 @@ namespace EconomyMod.Core
                 if (king != null && king.isAlive() && !king.hasDied())
                 {
                     try { king.dieAndDestroy(AttackType.Other); } catch (System.Exception) { }
-                    GameHelpers.Notify($"[政策] <{kName}> 改革失败！国王驾崩");
+                    GameHelpers.NotifyLocalized("toast_policy_fail_death", kName);
                     EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 2);
                     if (UnrestConfig.Instance.LogToWorldLog)
                         Debug.Log($"[ClassicalEconomics] 政策失败 王国<{kName}> 国王死亡（基尼={stats.GiniCoefficient:F2}）");
@@ -281,7 +334,7 @@ namespace EconomyMod.Core
             bool alreadyRebelling = UnrestEngine.GetState(kingdom.data.id, out _) == 2;
             if (!alreadyRebelling && UnrestEngine.TriggerCivilWar(kingdom) > 0)
             {
-                GameHelpers.Notify($"[政策] <{kName}> 改革失败！王国陷入内战");
+                GameHelpers.NotifyLocalized("toast_policy_fail_civilwar", kName);
                 EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 3);
                 if (UnrestConfig.Instance.LogToWorldLog)
                     Debug.Log($"[ClassicalEconomics] 政策失败 王国<{kName}> 内战爆发（基尼={stats.GiniCoefficient:F2}）");
@@ -289,7 +342,7 @@ namespace EconomyMod.Core
             }
             if (kingdom.hasKing() && GameHelpers.TryRemoveKing(kingdom))
             {
-                GameHelpers.Notify($"[政策] <{kName}> 改革失败！国王退位");
+                GameHelpers.NotifyLocalized("toast_policy_fail_abdicate", kName);
                 EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 1);
                 if (UnrestConfig.Instance.LogToWorldLog)
                     Debug.Log($"[ClassicalEconomics] 政策失败 王国<{kName}> 国王退位（内战触发失败回退，基尼={stats.GiniCoefficient:F2}）");

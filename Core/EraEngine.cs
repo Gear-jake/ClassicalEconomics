@@ -65,7 +65,7 @@ namespace EconomyMod.Core
             // 注意：不写原版王国特质（era_* 未在 KingdomTraitLibrary 注册，addTrait 静默无效），
             // 时代标记仅存于本模组字典，国民加成走已注册的 Actor 特质（真实生效）。
             GameHelpers.Log($"[ClassicalEconomics] {EventName(kingdomTrait)} <{GameHelpers.SafeKingdomName(kingdom)}> 时代开启（国民加成生效）");
-            GameHelpers.Notify($"[时代] {EventName(kingdomTrait)} <{GameHelpers.SafeKingdomName(kingdom)}> 开启");
+            GameHelpers.NotifyLocalized("toast_era_start", EventName(kingdomTrait), GameHelpers.SafeKingdomName(kingdom));
             EventStreamService.Record(EventTypeOf(kingdomTrait), GameHelpers.SafeKingdomName(kingdom), 0);
         }
 
@@ -100,7 +100,7 @@ namespace EconomyMod.Core
                         foreach (var city in cities)
                         {
                             if (city == null) continue;
-                            try { city.addResourcesToRandomStockpile("gold", (int)per); } catch { }
+                            try { city.addResourcesToRandomStockpile("gold", (int)System.Math.Min(per, (long)int.MaxValue)); } catch { }
                         }
                     }
                 }
@@ -117,7 +117,7 @@ namespace EconomyMod.Core
                     foreach (var a in kingdom.units)
                     {
                         if (a == null || !a.isAlive()) continue;
-                        if (a.asset == null || !a.asset.civ) continue;
+                        if (!GameHelpers.IsCivilizedActor(a)) continue;
                         float w;
                         if (!GameHelpers.TryGetWealth(a, out w)) continue;
                         GameHelpers.UpdateTopN(poorest, ref edge, a, w, 8, false);
@@ -129,7 +129,7 @@ namespace EconomyMod.Core
                         {
                             foreach (var a in poorest)
                             {
-                                try { a.addMoney((int)per); } catch { }
+                                try { a.addMoney((int)System.Math.Min(per, (long)int.MaxValue)); } catch { }
                             }
                         }
                     }
@@ -167,15 +167,15 @@ namespace EconomyMod.Core
             }
         }
 
-        /// <summary>王国特质 → 中文事件名（日志用）。</summary>
+        /// <summary>王国特质 → 本地化事件名（横幅/日志用，读 ev_era_* 四语言键）。</summary>
         public static string EventName(string kingdomTrait)
         {
             switch (kingdomTrait)
             {
-                case KingdomTraitGolden:  return "盛世";
-                case KingdomTraitRevival: return "复兴";
-                case KingdomTraitFlourish: return "强盛期";
-                default:                  return "经济崩溃";
+                case KingdomTraitGolden:  return Services.LocalizationService.Get("ev_era_golden");
+                case KingdomTraitRevival: return Services.LocalizationService.Get("ev_era_revival");
+                case KingdomTraitFlourish: return Services.LocalizationService.Get("ev_era_flourish");
+                default:                  return Services.LocalizationService.Get("ev_collapse");
             }
         }
 
@@ -185,6 +185,8 @@ namespace EconomyMod.Core
         /// </summary>
         public static void Evaluate()
         {
+            try
+            {
             var cfg = UnrestConfig.Instance;
             if (cfg == null || !cfg.EraEnabled) return;
             var res = TradeSimulationWorker.LastResult;
@@ -275,6 +277,11 @@ namespace EconomyMod.Core
                 _kingdomTrait.Remove(id);
                 _startYears.Remove(id);
             }
+            }
+            finally
+            {
+                ClearWorldReferences();
+            }
         }
 
         /// <summary>
@@ -283,7 +290,28 @@ namespace EconomyMod.Core
         /// </summary>
         public static void Tick(int currentYear)
         {
+            try
+            {
             var cfg = UnrestConfig.Instance;
+
+            // 0. 死王国清扫（与 EraEnabled 无关）：Evaluate 的清扫在 !EraEnabled 时被
+            // 早退跳过，这里每年兜底一次，防止 _prevAvg 等按王国键的记录滞留。
+            // 复用 _expired 缓冲（到期移除块使用前会先 Clear）。
+            if (_prevAvg.Count > 0 || _startYears.Count > 0)
+            {
+                _expired.Clear();
+                foreach (var kv in _prevAvg)
+                    if (GameHelpers.FindKingdom(kv.Key) == null) _expired.Add(kv.Key);
+                foreach (var kv in _startYears)
+                    if (!_prevAvg.ContainsKey(kv.Key) && GameHelpers.FindKingdom(kv.Key) == null) _expired.Add(kv.Key);
+                foreach (long deadId in _expired)
+                {
+                    _prevAvg.Remove(deadId);
+                    _flourishStreak.Remove(deadId);
+                    _kingdomTrait.Remove(deadId);
+                    _startYears.Remove(deadId);
+                }
+            }
 
             // 1. 到期移除
             if (_startYears.Count > 0)
@@ -320,11 +348,24 @@ namespace EconomyMod.Core
                 if (k == null) continue;
                 AddActorTraitToMembers(k, KingdomToActor[kv.Value]);
             }
+            }
+            finally
+            {
+                ClearWorldReferences();
+            }
+        }
+
+        /// <summary>清空仅用于当前世界的对象引用，保留跨读档的纯 ID 状态。</summary>
+        public static void ClearWorldReferences()
+        {
+            _kingdomById.Clear();
+            _memberPool.Clear();
         }
 
         /// <summary>重置（新地图/新游戏）。</summary>
         public static void Reset()
         {
+            ClearWorldReferences();
             _kingdomTrait.Clear();
             _startYears.Clear();
             _prevAvg.Clear();
@@ -354,7 +395,7 @@ namespace EconomyMod.Core
             foreach (var a in kingdom.units)
             {
                 if (a == null || !a.isAlive()) continue;
-                if (a.asset == null || !a.asset.civ) continue;
+                if (!GameHelpers.IsCivilizedActor(a)) continue;
                 pool.Add(a);
             }
             for (int i = 0; i < pool.Count; i++)
@@ -376,7 +417,7 @@ namespace EconomyMod.Core
             foreach (var a in kingdom.units)
             {
                 if (a == null || !a.isAlive()) continue;
-                if (a.asset == null || !a.asset.civ) continue;
+                if (!GameHelpers.IsCivilizedActor(a)) continue;
                 pool.Add(a);
             }
             for (int i = 0; i < pool.Count; i++)
@@ -399,7 +440,7 @@ namespace EconomyMod.Core
             foreach (var a in kingdom.units)
             {
                 if (a == null || !a.isAlive()) continue;
-                if (a.asset == null || !a.asset.civ) continue;
+                if (!GameHelpers.IsCivilizedActor(a)) continue;
                 pool.Add(a);
                 if (pool.Count >= max * 3) break;
             }

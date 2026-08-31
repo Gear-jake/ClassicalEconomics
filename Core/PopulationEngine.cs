@@ -18,6 +18,8 @@ namespace EconomyMod.Core
         /// <summary>每周期评估一次（需在统计消费后调用）。</summary>
         public static void Evaluate()
         {
+            try
+            {
             var cfg = UnrestConfig.Instance;
             if (cfg == null || !cfg.PopulationEnabled) return;
             var res = TradeSimulationWorker.LastResult;
@@ -38,6 +40,23 @@ namespace EconomyMod.Core
                     GameHelpers.Log($"[ClassicalEconomics] 人口超载·移民压力 <{ks.Name}> 压力={ks.Pressure:P0} 受影响={pressureAffected}人");
                 }
             }
+            }
+            finally
+            {
+                ClearWorldReferences();
+            }
+        }
+
+        /// <summary>清空仅用于当前世界的 Actor 引用。</summary>
+        public static void ClearWorldReferences()
+        {
+            _candidates.Clear();
+        }
+
+        /// <summary>重置（新地图/新游戏）。</summary>
+        public static void Reset()
+        {
+            ClearWorldReferences();
         }
 
         /// <summary>对超载王国随机成员施加不满特质（hotheaded），驱动原生移民/流失。返回受影响人数。</summary>
@@ -53,7 +72,7 @@ namespace EconomyMod.Core
                 foreach (var a in kingdom.units)
                 {
                     if (a == null || !a.isAlive()) continue;
-                    if (a.asset == null || !a.asset.civ) continue;
+                    if (!GameHelpers.IsCivilizedActor(a)) continue;
                     pool.Add(a);
                     if (pool.Count >= max * 3) break; // 候选池足够即可
                 }

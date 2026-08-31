@@ -17,6 +17,7 @@ namespace EconomyMod.Core
     {
         // 复用缓冲（避免每年 GC 分配）
         private static readonly List<Actor> _richPool = new List<Actor>(16);
+        private static readonly Dictionary<long, long> _contagionLossByKingdom = new Dictionary<long, long>();
 
         /// <summary>本期违约导致的财富损失总量。</summary>
         public static long LastDefaultLoss { get; private set; }
@@ -29,6 +30,19 @@ namespace EconomyMod.Core
         {
             LastDefaultLoss = 0;
             LastContagions = 0;
+            ClearWorldReferences();
+        }
+
+        /// <summary>清空仅用于当前世界的 Actor 引用和周期聚合数据。</summary>
+        public static void ClearWorldReferences()
+        {
+            _richPool.Clear();
+            _contagionLossByKingdom.Clear();
+        }
+
+        private static long SaturatingAdd(long current, long amount)
+        {
+            return current > long.MaxValue - amount ? long.MaxValue : current + amount;
         }
 
         /// <summary>
@@ -43,22 +57,29 @@ namespace EconomyMod.Core
         public static void Evaluate()
         {
             var cfg = UnrestConfig.Instance;
-            if (cfg == null || !cfg.BankingEnabled) return;
-
             LastDefaultLoss = 0;
             LastContagions = 0;
-
-            float avgWealth = EconomyEngine.AvgWealth;
-            if (avgWealth <= 0f) return;
-
-            float creditRate = cfg.CreditRate;
-            bool isDepression = EconomyCycleModulator.CurrentPhase == EconomyPhase.Depression;
-            float defaultRate = isDepression ? cfg.DefaultRateDepression : 0.02f;
-            float contagionThreshold = cfg.CrisisContagionThreshold;
-
-            var kingdoms = GameHelpers.KingdomSnapshot();
-            foreach (var kingdom in kingdoms)
+            _richPool.Clear();
+            _contagionLossByKingdom.Clear();
+            try
             {
+                if (cfg == null || !cfg.BankingEnabled) return;
+
+                float avgWealth = EconomyEngine.AvgWealth;
+                if (avgWealth <= 0f) return;
+
+                float creditRate = cfg.CreditRate;
+                bool isDepression = EconomyCycleModulator.CurrentPhase == EconomyPhase.Depression;
+                float defaultRate = isDepression ? cfg.DefaultRateDepression : 0.02f;
+                float contagionThreshold = cfg.CrisisContagionThreshold;
+
+var kingdoms = GameHelpers.KingdomSnapshot();
+                // 信贷/违约处理年度上限：每年最多处理 cap 个王国（默认 500，远超正常王国数，保持现状量级）
+                int kingdomsProcessed = 0;
+                int defaultCap = cfg.BankingDefaultCapPerYear;
+                foreach (var kingdom in kingdoms)
+                {
+                    if (++kingdomsProcessed > defaultCap) break;
                 if (kingdom == null || kingdom.data == null) continue;
                 if (kingdom.units == null || kingdom.units.Count == 0) continue;
 
@@ -72,7 +93,7 @@ namespace EconomyMod.Core
                 foreach (var actor in kingdom.units)
                 {
                     if (actor == null || !actor.isAlive()) continue;
-                    if (actor.asset == null || !actor.asset.civ) continue;
+                    if (!GameHelpers.IsCivilizedActor(actor)) continue;
                     float w;
                     if (!GameHelpers.TryGetWealth(actor, out w)) continue;
 
@@ -98,21 +119,28 @@ namespace EconomyMod.Core
                 if (defaultAmount > 0 && _richPool.Count > 0)
                 {
                     long lossPerRich = defaultAmount / _richPool.Count;
+                    long actualDefaultLoss = 0L;
                     foreach (var rich in _richPool)
                     {
                         if (rich == null || !rich.isAlive()) continue;
                         // long 直接 (int) 强转可能溢出为负 → 反而"加钱"；先钳制到 int 上限
-                        try { rich.addMoney(-(int)Mathf.Min(lossPerRich, int.MaxValue)); } catch { }
+                        int charged = (int)System.Math.Min(lossPerRich, (long)int.MaxValue);
+                        try { rich.addMoney(-charged); actualDefaultLoss = SaturatingAdd(actualDefaultLoss, charged); } catch { }
                     }
-                    LastDefaultLoss += defaultAmount;
+                    LastDefaultLoss = SaturatingAdd(LastDefaultLoss, actualDefaultLoss);
+                    defaultAmount = actualDefaultLoss;
                 }
 
                 // 危机传染：违约率超过阈值时，逆差贸易伙伴遭受损失
                 if (defaultRate > contagionThreshold)
                 {
                     var kingdomStats = EconomyEngine.KingdomStats;
+                    // 危机传染评估年度上限：每年最多评估 cap 个伙伴王国（默认 500，远超正常王国数，保持现状量级）
+                    int contagionChecked = 0;
+                    int contagionCap = cfg.BankingContagionCapPerYear;
                     foreach (var kvp in kingdomStats)
                     {
+                        if (++contagionChecked > contagionCap) break;
                         if (kvp.Key == kingdomId || kvp.Key == 0) continue;
                         if (kvp.Value.TradeBalance < 0) // 逆差王国 = 贸易伙伴
                         {
@@ -121,22 +149,36 @@ namespace EconomyMod.Core
                             long contagionLoss = (long)(defaultAmount * 0.3f);
                             if (contagionLoss > 0)
                             {
-                                GameHelpers.DeductCoins(partnerKingdom.units, contagionLoss);
-                                LastContagions++;
+                                long accumulatedLoss;
+                                bool firstContagion = !_contagionLossByKingdom.TryGetValue(kvp.Key, out accumulatedLoss);
+                                _contagionLossByKingdom[kvp.Key] = SaturatingAdd(accumulatedLoss, contagionLoss);
+                                if (firstContagion) LastContagions++;
                             }
                         }
                     }
                 }
-            }
+                }
 
-            if (LastDefaultLoss > 0)
-            {
+                foreach (var kvp in _contagionLossByKingdom)
+                {
+                var partnerKingdom = GameHelpers.FindKingdom(kvp.Key);
+                if (partnerKingdom == null || partnerKingdom.units == null) continue;
+                GameHelpers.DeductCoins(partnerKingdom.units, kvp.Value);
+                }
+
+                if (LastDefaultLoss > 0)
+                {
                 string phase = isDepression ? "萧条期" : "";
                 GameHelpers.Log($"[ClassicalEconomics] 银行系统{phase}违约：损失{LastDefaultLoss}金币" +
                                  (LastContagions > 0 ? $"，危机传染{LastContagions}国" : ""));
                 if (isDepression && LastContagions > 0)
-                    GameHelpers.Notify($"[经济] 银行危机！萧条违约蔓延{LastContagions}国，损失{LastDefaultLoss}金币");
+                    GameHelpers.NotifyLocalized("toast_banking_crisis", LastContagions, LastDefaultLoss);
                 EventStreamService.Record(EventStreamService.TypeBanking, "", LastDefaultLoss);
+                }
+            }
+            finally
+            {
+                ClearWorldReferences();
             }
         }
     }

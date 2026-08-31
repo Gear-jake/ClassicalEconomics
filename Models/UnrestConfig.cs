@@ -145,6 +145,9 @@ namespace EconomyMod.Models
         /// 直接读 ResourceLibrary.gold.storage_max 公开静态字段）；关闭则回退到建筑数估算。</summary>
         public bool TradeUseRealStockpiles = true;
 
+        /// <summary>贸易寻路用 A* 真实路径长度计成本（绕山跨海更真实；关闭回退直线距离，默认开启）。</summary>
+        public bool TradeAstarEnabled = true;
+
         // ===== 人口约束（马尔萨斯，PopulationEngine）=====
 
         /// <summary>是否启用人口约束（超承载→饥饿/移民压力）。</summary>
@@ -200,6 +203,12 @@ namespace EconomyMod.Models
         /// <summary>实时刷新间隔（秒）：两次轻量采集之间至少相隔的秒数。</summary>
         public float RealTimeInterval = 5f;
 
+        /// <summary>实时刷新熔断阈值：存活单位数 ≥ 该值跳过重算（仅刷 UI），防止大地图实时刷新卡顿。</summary>
+        public int RealTimeRefreshThreshold = 2000;
+
+        /// <summary>实时刷新单次处理预算：单次轻量刷新最多采集的存活单位数（默认与阈值一致，保证阈值下全量同步）。</summary>
+        public int RealTimeRefreshBudget = 2000;
+
         // ===== 货币供给与价格指数（CPI）=====
 
         /// <summary>货币流通速度（默认0.5）：CPI = 货币供给 / (总产出 × 流通速度)。</summary>
@@ -232,6 +241,64 @@ namespace EconomyMod.Models
 
         /// <summary>银行危机传染阈值：违约率超过此值时，贸易伙伴也受波及。</summary>
         public float CrisisContagionThreshold = 0.2f;
+
+        // ===== 年度操作上限（性能保护：默认与现状同量级，可配置调低限流）=====
+
+        /// <summary>年度消费操作上限：SpendingEngine 每年最多处理的富裕生物数。</summary>
+        public int SpendingCapPerYear = 5000;
+
+        /// <summary>银行违约处理年度上限：BankingEngine 每年最多处理信贷/违约的王国数。</summary>
+        public int BankingDefaultCapPerYear = 500;
+
+        /// <summary>银行危机传染评估年度上限：BankingEngine 每年最多评估的传染伙伴王国数。</summary>
+        public int BankingContagionCapPerYear = 500;
+
+        /// <summary>遗产扫描每帧上限：InheritanceEngine 3 秒扫描窗口内每帧最多扫描的存活单位数。</summary>
+        public int InheritanceScanPerFrame = 2000;
+
+        // ===== 年度收尾分帧（计划任务 7：帧预算状态机）=====
+
+        /// <summary>年度收尾单帧预算（ms）：每帧最多推进的阶段执行时间（1~100，默认 4）。</summary>
+        public int FrameBudgetMs = 4;
+
+        /// <summary>年度收尾窗口（ms）：整个收尾允许的累计时间（100~10000，默认 2000）；超时先延窗再削减。</summary>
+        public int CycleWindowMs = 2000;
+
+        // ===== 年度收尾性能诊断（计划任务 1：PerfDiagnostics）=====
+
+        /// <summary>是否启用年度收尾性能诊断（Stopwatch 耗时 + GC.GetTotalMemory(false) 托管内存增量；默认关闭，关闭时零开销）。</summary>
+        public bool PerfDiagnosticsEnabled = false;
+
+        /// <summary>年度收尾托管分配预算（KB）：整年分配增量超过该值在汇总中标注超预算（默认 4096KB = 4MB）。</summary>
+        public int CycleAllocBudget = 4096;
+
+        // ===== 自动内存清理（MemoryCleanupEngine）=====
+
+        /// <summary>是否启用自动内存清理（空闲期对静态 scratch/缓存集合执行 TrimExcess，默认开启）。</summary>
+        public bool MemoryCleanupEnabled = true;
+
+        /// <summary>清理间隔到达时是否强制执行一次 System.GC.Collect（全项目唯一 GC 入口，默认关闭）。</summary>
+        public bool MemoryCleanupForceGc = false;
+
+        /// <summary>自动内存清理间隔（秒）：两次清理之间至少相隔的秒数（5~300，默认 30）。</summary>
+        public int MemoryCleanupIntervalSeconds = 30;
+
+        /// <summary>清理释放量有意义时是否弹顶部横幅提示（默认开启；HUD 状态行与日志不受此开关影响）。</summary>
+        public bool MemoryCleanupNotifyEnabled = true;
+
+        // ===== 中央银行家（NationEngine 玩家参与度）=====
+
+        /// <summary>是否启用中央银行家玩法（国家认领/金库/政策，默认开启）。</summary>
+        public bool NationPlayEnabled = true;
+
+        /// <summary>王室财政每期税负比例（城市仓库金币的百分比，1~20，默认 5）。</summary>
+        public int TreasuryIncomeRatio = 5;
+
+        /// <summary>持续政策槽位上限（1~5，默认 3）。</summary>
+        public int PolicySlots = 3;
+
+        /// <summary>打开内阁面板的快捷键（KeyCode 名，如 G；留空或无效则禁用，默认 G）。</summary>
+        public string NationClaimHotkey = "G";
 
         private static UnrestConfig _instance;
 

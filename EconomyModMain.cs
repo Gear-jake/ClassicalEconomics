@@ -13,8 +13,6 @@ namespace EconomyMod
     {
         protected override void OnModLoad()
         {
-            // 游戏启动：清空 Unity 日志，便于只看本次会话内容（调试辅助）
-            ClearPlayerLog();
             Debug.Log("[ClassicalEconomics] Economy Mod 已加载");
             // 配置全部由 NML 模组设置管理：先注册本地化（设置窗口标签）+ 同步初始值，再初始化 UI
             Services.EconomyConfigCallbacks.RegisterLocales();
@@ -49,7 +47,7 @@ namespace EconomyMod
 
         /// <summary>
         /// 重置全部经济引擎状态（热重载 / 新地图共用序列）。
-        /// full=true 时额外执行新地图专属清理：清空日志、清 biome 缓存。
+        /// full=true 时额外执行新地图专属清理：清 biome 缓存。
         /// </summary>
         private static void ResetAllEngines(bool full)
         {
@@ -65,13 +63,69 @@ namespace EconomyMod
             InheritanceEngine.Reset();
             DisasterEngine.Reset();
             BankingEngine.Reset();
+            PopulationEngine.Reset();
+            SpendingEngine.Reset();
+            NationEngine.Reset(); // 中央银行家：清空国家绑定/金库/政策（新地图从零开始）
             HistoryService.ClearHistory();
             EventStreamService.Clear();
             if (full)
             {
-                ClearPlayerLog(); // 打开新地图：清空日志，只看本局内容（调试辅助）
-                BiomeEconomy.ClearCache();
+BiomeEconomy.ClearCache();
             }
+        }
+
+        /// <summary>
+        /// 年度收尾完成钩子（AnnualPipeline 最后一个阶段调用）：
+        /// 全部经济阶段完成后才执行周期日志 + 写快照 + 刷新 UI（快照时机不变量）。
+        /// </summary>
+        public static void WriteCycleSnapshot(int year)
+        {
+            // 周期/王国检测日志：默认关闭，需在配置页开启 LogToWorldLog
+            bool logOut = UnrestConfig.Instance.LogToWorldLog;
+            if (logOut)
+            {
+                Debug.Log($"[ClassicalEconomics] 周期#{EconomyEngine.CycleIndex} " +
+                          $"财富={EconomyEngine.GlobalGDP:F0} " +
+                          $"人均={EconomyEngine.AvgWealth:F2} " +
+                          $"Actor={EconomyEngine.AliveActorCount} " +
+                          $"贫富差距={EconomyEngine.GiniCoefficient:F2} " +
+                          $"贸易额={EconomyEngine.TotalTradeVolume:F0}");
+
+                var topKingdoms = EconomyEngine.TopKingdoms(3);
+                foreach (var k in topKingdoms)
+                {
+                    Debug.Log($"[ClassicalEconomics]   王国<{k.KingdomName}> 财富={k.GDP} 人均={k.AvgWealth:F2} 贫富差距={k.GiniCoefficient:F2}");
+                }
+            }
+
+            var snapshot = new EconomySnapshot
+            {
+                CycleIndex = EconomyEngine.CycleIndex,
+                GameYear = year,
+                GlobalGDP = (long)EconomyEngine.GlobalGDP,
+                AvgWealth = EconomyEngine.AvgWealth,
+                AliveActorCount = EconomyEngine.AliveActorCount,
+                GiniCoefficient = EconomyEngine.GiniCoefficient,
+                Phase = (int)EconomyCycleModulator.CurrentPhase,
+                TotalProduction = EconomyEngine.TotalProduction,
+                PriceIndex = EconomyCycleModulator.CurrentCPI
+            };
+            snapshot.Kingdoms = new List<KingdomStats>(EconomyEngine.KingdomStats.Values);
+            // 贸易净额排名（v0.13）：直接引用后台已聚合的城市/国家净额列表（本周期只读，零拷贝）
+            snapshot.TotalExport = EconomyEngine.TotalTradeVolume;
+            var last = TradeSimulationWorker.LastResult;
+            snapshot.CityBalances = CopyTopBalances(last != null ? last.CityBalances : null, 40);
+            snapshot.KingdomBalances = CopyTopBalances(last != null ? last.KingdomBalances : null, 40);
+            HistoryService.AppendSnapshot(snapshot);
+            EconomyUI.RefreshOverview();
+        }
+
+        private static List<TradeBalance> CopyTopBalances(List<TradeBalance> source, int limit)
+        {
+            int count = source == null ? 0 : System.Math.Min(source.Count, limit);
+            var copy = new List<TradeBalance>(count);
+            for (int i = 0; i < count; i++) copy.Add(source[i]);
+            return copy;
         }
 
         // ===== 时代事件国民特质注册（EraEngine 国民加成用，替换原 cultural_awakening）=====
@@ -238,38 +292,14 @@ namespace EconomyMod
         }
 
         /// <summary>
-        /// 清空 Unity 的 Player.log（调试辅助）：游戏启动 / 打开新地图时调用，
-        /// 让日志只保留本次会话/本局的内容。
-        /// 路径 = %USERPROFILE%\AppData\LocalLow\{companyName}\{productName}\Player.log
-        /// 用 FileMode.Create + FileShare.ReadWrite 截断，Unity 持有的日志句柄可继续写入。
-        /// </summary>
-        public static void ClearPlayerLog()
-        {
-            try
-            {
-                string dir = System.IO.Path.Combine(
-                    System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile),
-                    "AppData", "LocalLow", Application.companyName, Application.productName);
-                string path = System.IO.Path.Combine(dir, "Player.log");
-                if (!System.IO.File.Exists(path)) return;
-                using (var fs = new System.IO.FileStream(path, System.IO.FileMode.Create,
-                    System.IO.FileAccess.Write, System.IO.FileShare.ReadWrite))
-                {
-                    fs.SetLength(0);
-                }
-            }
-            catch (System.Exception) { } // 日志被独占锁定时静默跳过，不影响游戏
-        }
-
-        /// <summary>
         /// 手动采集（工具按钮触发）：同步计算并立即刷新，不等后台线程。
         /// </summary>
         public static void ManualCollect()
         {
             try
             {
-                // 在途周期存在时跳过同步计算（否则 _generation++ 会作废在途年度周期，S2 防护）
-                if (!TradeSimulationWorker.IsBusy())
+                // 在途周期/分帧收尾存在时跳过同步计算（否则 _generation++ 会作废在途年度周期，S2 防护）
+                if (!TradeSimulationWorker.IsBusy() && !AnnualPipeline.IsSettling)
                 {
                     DataCollector.Collect(postCycle: false);              // 采集纯数据（含年度副作用，不投后台）
                     TradeSimulationWorker.ComputeAndConsumeSync();        // 同步计算并发布（推进周期号）
@@ -290,18 +320,20 @@ namespace EconomyMod
         /// </summary>
         public static void RealTimeRefresh()
         {
-            // 熔断：较大地图时跳过实时全量重算（主线程同步 O(n log n) 基尼排序 + 全量采集），
-            // 阈值从 5000 下调到 3000 —— 实测 5000 人口已出现可感卡顿，3000 更稳。
+            // 熔断：较大地图时跳过实时全量重算（主线程同步 O(n log n) 基尼排序 + 全量采集）。
+            // 阈值默认 2000（实测 5000 人口已出现可感卡顿，2000 更稳），并纳入配置 real_time_refresh_threshold。
+            var cfg = UnrestConfig.Instance;
             var aliveList = World.world != null && World.world.units != null
                 ? World.world.units.units_only_alive : null;
-            if (aliveList != null && aliveList.Count >= 3000)
+            if (aliveList != null && aliveList.Count >= cfg.RealTimeRefreshThreshold)
             {
                 EconomyUI.RefreshOverview(); // 仅刷新UI，不重算
                 return;
             }
-            // 在途周期存在时跳过（同步计算会作废在途任务；年度周期收尾后自会刷新 UI，S2 防护）
-            if (TradeSimulationWorker.IsBusy()) return;
-            DataCollector.Collect(applySideEffects: false, postCycle: false);
+            // 在途周期/分帧收尾存在时跳过（同步计算会作废在途任务；年度周期收尾后自会刷新 UI，S2 防护）
+            if (TradeSimulationWorker.IsBusy() || AnnualPipeline.IsSettling) return;
+            // 阈值下保持同步全量重算；单次处理上限由 real_time_refresh_budget 预算约束（默认 2000，阈值下不截断）
+            DataCollector.Collect(applySideEffects: false, postCycle: false, maxUnits: cfg.RealTimeRefreshBudget);
             TradeSimulationWorker.ComputeAndConsumeSync(advanceCycle: false);
             EconomyUI.RefreshOverview();
         }
@@ -317,6 +349,7 @@ namespace EconomyMod
             private float _yearCheckTimer;   // 反射读取年份的节流计时（年份粒度为年，无需每帧）
             private float _realtimeTimer;    // 实时刷新节流计时（配置开启时按秒轻量刷新 HUD 数据）
             private bool _cyclePending;      // 后台统计进行中/待消费
+            private int _pendingYear = -1;   // 提交周期对应的游戏年份，避免后台耗时跨年后错标快照
             private bool _optimeGuardChecked; // 首帧执行一次 Optime 兼容兜底安装
             private bool _worldReferencesCleared;
 
@@ -327,7 +360,25 @@ namespace EconomyMod
                 {
                     _optimeGuardChecked = true;
                     Services.OptimeCompatibility.TryInstall();
+                    KingdomWindowIntegration.TryInstall(); // 中央银行家：原版界面入口（手动补丁，幂等）;
                 }
+
+                // 大地图快捷键（默认 G，可配置）：鼠标悬停国家 → 认领/打开内阁（RulerBox K 键同款）
+                try
+                {
+                    var hotkeyCfg = UnrestConfig.Instance;
+                    if (hotkeyCfg == null) return;
+                    string keyName = hotkeyCfg.NationClaimHotkey;
+                    if (!string.IsNullOrWhiteSpace(keyName))
+                    {
+                        UnityEngine.KeyCode key;
+                        if (System.Enum.TryParse(keyName, true, out key))
+                        {
+                            if (UnityEngine.Input.GetKeyDown(key)) KingdomWindowIntegration.TryHotkeyOpen();
+                        }
+                    }
+                }
+                catch (System.Exception) { }
 
                 InheritanceEngine.Tick(Time.deltaTime);
                 // 每帧维持收复战争（内部 1 秒节流）：和谈后立即重新宣战，直到收回叛乱城市
@@ -346,10 +397,22 @@ namespace EconomyMod
                     _cyclePending = true;
                 }
 
+                // 分帧收尾推进：管线在途时每帧推进，直到全部阶段完成（快照/UI 最后才写）
+                if (AnnualPipeline.IsSettling)
+                {
+                    AnnualPipeline.Tick();
+                }
+                // 自动内存清理（空闲期缩容静态 scratch/缓存；内部按配置间隔节流）
+                MemoryCleanupEngine.Tick(Time.deltaTime);
+                // 结算期 UI 状态：面板"结算中…"标记 + 禁用 立即采集/手动切阶段（完成后恢复）
+                EconomyUI.ApplySettlingState(AnnualPipeline.IsSettling);
+
                 // 实时数据感：配置开启且无年度周期在途时，按秒做轻量采集+同步计算+刷 HUD
                 // （跳过工资/税收等年度副作用，也不推进周期号），让经济面板"活"起来
                 var cfg = UnrestConfig.Instance;
-                if (cfg.RealTimeRefresh && !_cyclePending && World.world != null)
+                // 认领国家后自动实时刷新（中央治国的"时间实时进行"体验），开关仍可强关
+                bool realtime = cfg.RealTimeRefresh || NationEngine.NationKingdomId != 0;
+                if (realtime && !_cyclePending && !AnnualPipeline.IsSettling && World.world != null)
                 {
                     _realtimeTimer += Time.deltaTime;
                     if (_realtimeTimer >= cfg.RealTimeInterval)
@@ -367,15 +430,27 @@ namespace EconomyMod
 
                 // 无世界（主菜单/加载中）：不检测年份也不重置状态，
                 // 保证"回主菜单再读档"时历史与周期状态不被误清
-                if (World.world == null)
+if (World.world == null)
                 {
                     _cyclePending = false;
+                    _pendingYear = -1;
+                    AnnualPipeline.Abort(); // 在途分帧收尾随世界失效立即终止（避免污染下一局）
                     if (!_worldReferencesCleared)
                     {
                         _worldReferencesCleared = true;
                         DataCollector.ClearWorldReferences();
                         TradeSimulationWorker.ClearWorldReferences();
                         GameHelpers.ClearWorldReferences();
+                        InheritanceEngine.ClearWorldReferences();
+                        SpendingEngine.Reset();
+                        EraEngine.ClearWorldReferences();
+                        SocialCrisisEngine.ClearWorldReferences();
+                        UnrestEngine.ClearWorldReferences();
+                        TradePowerEngine.ClearWorldReferences();
+                        PopulationEngine.ClearWorldReferences();
+                        BankingEngine.ClearWorldReferences();
+                        EventStreamService.Clear();
+                        EconomyUI.OnWorldUnavailable();
                     }
                     return;
                 }
@@ -387,6 +462,7 @@ namespace EconomyMod
                 {
                     _lastCollectedYear = currentYear;
                     _cyclePending = false;
+                    AnnualPipeline.Abort(); // 世界数据已失效，终止在途分帧收尾
                     TradeSimulationWorker.Reset(); // 在途后台周期无条件丢弃（世界数据已失效）
                     if (currentYear <= 1)
                     {
@@ -398,93 +474,45 @@ namespace EconomyMod
                     {
                         // 读档：保留历史快照/周期/时代/动荡状态，仅重建失效引用并继续运行
                         InheritanceEngine.Reset();
+                        // 读档后的王国 ID 可能属于另一存档，biome/坐标缓存按 ID 缓存必须失效
+                        BiomeEconomy.ClearCache();
                         Debug.Log($"[ClassicalEconomics] 检测到读档（年份 {currentYear}），保留历史与周期状态，继续运行");
                     }
                 }
                 if (currentYear != _lastCollectedYear)
                 {
-                    _lastCollectedYear = currentYear;
-                    RunOneCycle();
+                    if (RunOneCycle(currentYear)) _lastCollectedYear = currentYear;
                 }
             }
 
-            private void RunOneCycle()
+private bool RunOneCycle(int year)
             {
-                if (_cyclePending) return; // 防御：上一周期尚未消费完成
+                if (_cyclePending) return false; // 防御：上一周期尚未消费完成
+                if (AnnualPipeline.IsSettling) return false; // 防御：上一周期仍在分帧收尾（避免新结果发布打断在途收尾）
                 // Collect 内部完成采集 + 提交后台统计（主线程零计算），返回提交是否成功。
                 // 提交失败（在途周期残留等）则下个检查点重试，避免 _cyclePending 被置位后
                 // 永远等不到结果（周期永久卡死）。
                 _cyclePending = DataCollector.Collect();
+                if (_cyclePending) _pendingYear = year;
                 if (!_cyclePending)
                 {
                     Debug.LogWarning("[ClassicalEconomics] 周期提交失败，将在下次年份检查时重试");
                 }
+                return _cyclePending;
             }
 
             private void FinishCycle()
             {
-                int year = GetCurrentGameYear(); // 本周期内只反射读取一次年份，供各引擎与快照复用
-                // 贸易金流：金币经城市仓库在王国间零和结算（原版机制）
-                TradeSimulationWorker.ApplyTradeFlows();
-                // 年度富豪税（依赖本周期全球人均，须在统计消费后）
-                DataCollector.ApplyWealthTax();
-
-                EconomyCycleModulator.Evaluate();
-                UnrestEngine.Evaluate();
-                PolicyEngine.Evaluate(); // 高基尼王国尝试贫富调节政策（失败则统治者退位/死亡）
-                KingdomMonitorEngine.Evaluate(); // 王位继承监测（新王即位事件）
-                SocialCrisisEngine.Evaluate();
-                PopulationEngine.Evaluate();
-                SpendingEngine.RunOncePerYear();
-                // 时代事件：先自动评估触发（含花钱触发的状态），再同步国民特质与到期移除
-                EraEngine.Evaluate();
-                EraEngine.Tick(year);
-                // 贸易军力：顺差国国民战斗加成 / 逆差国惩罚（依赖后台已算好的净贸易额）
-                TradePowerEngine.Evaluate();
-                // 灾害经济冲击：检测城市人口骤降，施加财富蒸发（火山矿产加成）
-                DisasterEngine.Evaluate();
-                // 银行信贷：放贷/偿还/违约/危机传染
-                BankingEngine.Evaluate();
-
-                // 周期/王国检测日志：默认关闭，需在配置页开启 LogToWorldLog
-                bool logOut = UnrestConfig.Instance.LogToWorldLog;
-                if (logOut)
-                {
-                    Debug.Log($"[ClassicalEconomics] 周期#{EconomyEngine.CycleIndex} " +
-                              $"财富={EconomyEngine.GlobalGDP:F0} " +
-                              $"人均={EconomyEngine.AvgWealth:F2} " +
-                              $"Actor={EconomyEngine.AliveActorCount} " +
-                              $"贫富差距={EconomyEngine.GiniCoefficient:F2} " +
-                              $"贸易额={EconomyEngine.TotalTradeVolume:F0}");
-
-                    var topKingdoms = EconomyEngine.TopKingdoms(3);
-                    foreach (var k in topKingdoms)
-                    {
-                        Debug.Log($"[ClassicalEconomics]   王国<{k.KingdomName}> 财富={k.GDP} 人均={k.AvgWealth:F2} 贫富差距={k.GiniCoefficient:F2}");
-                    }
-                }
-
-                var snapshot = new EconomySnapshot
-                {
-                    CycleIndex = EconomyEngine.CycleIndex,
-                    GameYear = year,
-                    GlobalGDP = (long)EconomyEngine.GlobalGDP,
-                    AvgWealth = EconomyEngine.AvgWealth,
-                    AliveActorCount = EconomyEngine.AliveActorCount,
-                    GiniCoefficient = EconomyEngine.GiniCoefficient,
-                    Phase = (int)EconomyCycleModulator.CurrentPhase,
-                    TotalProduction = EconomyEngine.TotalProduction,
-                    PriceIndex = EconomyCycleModulator.CurrentCPI
-                };
-                snapshot.Kingdoms = new List<KingdomStats>(EconomyEngine.KingdomStats.Values);
-                // 贸易净额排名（v0.13）：直接引用后台已聚合的城市/国家净额列表（本周期只读，零拷贝）
-                snapshot.TotalExport = EconomyEngine.TotalTradeVolume;
-                var last = TradeSimulationWorker.LastResult;
-                snapshot.CityBalances = last != null ? last.CityBalances : new List<TradeBalance>();
-                snapshot.KingdomBalances = last != null ? last.KingdomBalances : new List<TradeBalance>();
-                HistoryService.AppendSnapshot(snapshot);
-                EconomyUI.RefreshOverview();
+int year = _pendingYear >= 0 ? _pendingYear : GetCurrentGameYear();
+                _pendingYear = -1;
+                // 启动分帧收尾管线：全部经济阶段按帧预算推进（超预算兜底削减顺序见下），
+                // 全部阶段完成后才写快照/刷新 UI（快照时机不变量，S4）。
+                // 超预算兜底削减顺序（年度操作上限生效点）：consumption(spending) -> banking -> other。
+                // over-budget fallback reduction order: spending caps -> banking caps -> other stages
+                // remain unchanged; the wealth-tax/redistribution path is never reduced (tax conservation).
+                AnnualPipeline.Start(year);
             }
-        }
+
+}
     }
 }

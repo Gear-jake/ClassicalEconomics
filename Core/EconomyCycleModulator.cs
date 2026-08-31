@@ -78,6 +78,7 @@ namespace EconomyMod.Core
 
         // 游戏原生王国税率特质 id（高税率/高供奉已不再使用，避免基尼集中死循环，见类注释）
         private const string TaxLocalLow = "tax_rate_local_low";       // 低税率 20%
+        private const string TaxLocalHigh = "tax_rate_local_high";     // 高税率（财政政策可能添加）
 
         // 调制范围：只对财富前 N 的王国施加税率特质，避免干扰小国
         private const int ModulateKingdoms = 5;
@@ -113,6 +114,8 @@ namespace EconomyMod.Core
                 _initialized = true;
                 _prevGDP = gdp;
                 GrowthRate = 0f;
+                MoneySupply = gdp;
+                CurrentCPI = 1f;
                 return; // 首期仅记录基线
             }
 
@@ -127,6 +130,8 @@ namespace EconomyMod.Core
 
             PhaseDuration++;
 
+            // 以本期实际财富同步货币供给，再叠加/扣除本期政策效果。
+            MoneySupply = gdp;
             AdvancePhase(cfg);
             // 计算价格指数 CPI = 货币供给 / (总产出 × 流通速度)
             float production = EconomyEngine.TotalProduction;
@@ -149,8 +154,9 @@ namespace EconomyMod.Core
                     float bubbleThreshold = gdp > cfg.BubbleThreshold
                         ? cfg.BubbleThreshold
                         : gdp * 0.1f;
+                    bool bubbleExceeded = bubbleThreshold > 0f && BubbleValue >= bubbleThreshold;
                     if (_highGiniStreak >= cfg.CycleGiniPeriods ||
-                        BubbleValue >= bubbleThreshold ||
+                        bubbleExceeded ||
                         PhaseDuration > cfg.BoomMaxDuration)
                     {
                         TriggerBubbleBurst();
@@ -223,22 +229,24 @@ namespace EconomyMod.Core
         {
             // 1. 信用扩张：按 GDP 比例折算成人均注入，均匀发给全体文明
             float stimulus = EconomyEngine.GlobalGDP * cfg.BoomStimulusRatio;
-            int perActor = EconomyEngine.AliveActorCount > 0
+            int perActor = stimulus > 0f && EconomyEngine.AliveActorCount > 0
                 ? Mathf.Max(1, Mathf.RoundToInt(stimulus / EconomyEngine.AliveActorCount))
                 : 0;
+            float actualStimulus = 0f;
             if (perActor > 0)
             {
                 int count = InjectCoinsToAllCiv(perActor);
+                actualStimulus = (float)count * perActor;
                 if (count > 0)
                     GameHelpers.Log($"[ClassicalEconomics] 繁荣期刺激 人均+{perActor} 覆盖{count}人");
             }
 
-            // 货币供给追踪：注金增加 M
-            MoneySupply += stimulus;
+            // 货币供给追踪：按实际成功注入额增加 M
+            MoneySupply += actualStimulus;
 
             // 2. 泡沫累积：注入规模 × 泡沫系数 + 通胀加速（CPI>1 时泡沫累积更快）
-            float inflationBoost = CurrentCPI > 1f ? (CurrentCPI - 1f) * cfg.InflationBubbleBoost * stimulus : 0f;
-            BubbleValue += stimulus * cfg.BoomBubbleFactor + inflationBoost;
+            float inflationBoost = CurrentCPI > 1f ? (CurrentCPI - 1f) * cfg.InflationBubbleBoost * actualStimulus : 0f;
+            BubbleValue += actualStimulus * cfg.BoomBubbleFactor + inflationBoost;
 
             // 3. 低税率刺激消费（繁荣期政策）
             ApplyTaxPolicy(true);
@@ -260,7 +268,7 @@ namespace EconomyMod.Core
                 foreach (var actor in aliveList)
                 {
                     if (actor == null || !actor.isAlive()) continue;
-                    if (actor.asset == null || !actor.asset.civ) continue;
+                    if (!GameHelpers.IsCivilizedActor(actor)) continue;
                     if (bubbleVictim == null) bubbleVictim = actor;
                     if (crashRatio <= 0.01f) continue;
                     int coins = Mathf.Max(0, Mathf.RoundToInt(actor.money));
@@ -284,7 +292,7 @@ namespace EconomyMod.Core
             MoneySupply = Mathf.Max(0f, MoneySupply - totalEvaporated);
 
             GameHelpers.Log($"[ClassicalEconomics] 经济泡沫破裂！蒸发比例 {crashRatio.ToString("P0")}，波及 {victims} 人（泡沫值 {BubbleValue:F0}，CPI 将下降）");
-            GameHelpers.Notify($"[经济] 泡沫破裂！{crashRatio.ToString("P0")} 财富蒸发，波及 {victims} 人");
+            GameHelpers.NotifyLocalized("toast_bubble_burst", crashRatio.ToString("P0"), victims);
             EventStreamService.Record(EventStreamService.TypeBubbleBurst, "", Mathf.RoundToInt(crashRatio * 100f));
             try { if (bubbleVictim != null) WorldLog.logFavMurder(bubbleVictim, null); } catch (System.Exception) { }
             BubbleValue = 0f;
@@ -299,6 +307,21 @@ namespace EconomyMod.Core
         /// <summary>对财富前 N 的王国统一设置低税率特质（先移除旧的再添加新的，幂等）。</summary>
         private static void ApplyTaxPolicy(bool localLow)
         {
+            foreach (var kingdom in GameHelpers.KingdomSnapshot())
+            {
+                if (kingdom == null) continue;
+                try
+                {
+                    SetTrait(kingdom, TaxLocalHigh, false);
+                    if (!localLow) SetTrait(kingdom, TaxLocalLow, false);
+                }
+                catch (System.Exception) { }
+            }
+            if (!localLow)
+            {
+                return;
+            }
+
             var top = EconomyEngine.TopKingdoms(ModulateKingdoms);
             foreach (var stats in top)
             {
@@ -330,7 +353,7 @@ namespace EconomyMod.Core
             foreach (var actor in aliveList)
             {
                 if (actor == null || !actor.isAlive()) continue;
-                if (actor.asset == null || !actor.asset.civ) continue;
+                if (!GameHelpers.IsCivilizedActor(actor)) continue;
                 try { actor.addMoney(coinsPerActor); count++; }
                 catch (System.Exception) { }
             }

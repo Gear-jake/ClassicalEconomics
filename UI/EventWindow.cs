@@ -16,6 +16,7 @@ namespace EconomyMod.UI
     public class EventWindow : FloatingWindow
     {
         private static EventWindow _instance;
+        private int _renderedVersion = int.MinValue;
 
         private const float PanelWidth = UIStyles.ListWidth;
         private const float PanelHeight = UIStyles.ListHeight;
@@ -48,8 +49,27 @@ namespace EconomyMod.UI
         /// <summary>重建内容（打开或周期刷新时调用）。</summary>
         public override void RefreshNow()
         {
+            int version = EventStreamService.Version;
+            if (_renderedVersion == version && _lines.Count > 0) return;
             ClearContent();
             BuildList();
+            _renderedVersion = version;
+        }
+
+        public void InvalidateContent() => _renderedVersion = int.MinValue;
+
+        /// <summary>语言切换：标题走基类；内容因含本地化文案，强制下次重建。</summary>
+        public override void RefreshAllTexts()
+        {
+            base.RefreshAllTexts();
+            InvalidateContent();
+            if (_visible) RefreshNow();
+        }
+
+        public override void OnWorldUnavailable()
+        {
+            base.OnWorldUnavailable();
+            InvalidateContent();
         }
 
         private void BuildList()
@@ -111,7 +131,8 @@ namespace EconomyMod.UI
         /// <summary>渲染关键类型统计行（仅发生过才显示，每行最多 3 项）。返回渲染行数。</summary>
         private int AddTypeStats()
         {
-            var parts = new List<string>();
+            var parts = _statsPool;
+            parts.Clear();
             PushStat(parts, EventStreamService.TypeRevolution);
             PushStat(parts, EventStreamService.TypeUprising);
             PushStat(parts, EventStreamService.TypeBubbleBurst);
@@ -143,6 +164,8 @@ namespace EconomyMod.UI
             return lines;
         }
 
+        private static readonly List<string> _statsPool = new List<string>(12);
+
         private static void PushStat(List<string> parts, string typeKey)
         {
             int c = EventStreamService.GetTypeCount(typeKey);
@@ -172,11 +195,19 @@ namespace EconomyMod.UI
                 case EventStreamService.TypeUnrestResolved: return UIHelpers.L("ev_desc_unrest_resolved");
                 case EventStreamService.TypePolicyFail:   return e.Value == 3 ? UIHelpers.L("ev_desc_policy_fail_civilwar")
                     : e.Value == 2 ? UIHelpers.L("ev_desc_policy_fail_death")
+                    : e.Value == 4 ? UIHelpers.L("ev_desc_policy_fail_fiscal")
+                    : e.Value == 5 ? UIHelpers.L("ev_desc_policy_fail_trade")
                     : UIHelpers.L("ev_desc_policy_fail_abdicate");
                 case EventStreamService.TypeKingInherit:  return UIHelpers.L("ev_desc_king_inherit");
                 case EventStreamService.TypeDisaster:     return UIHelpers.Lf("ev_desc_disaster", e.Value);
                 case EventStreamService.TypeBanking:      return UIHelpers.Lf("ev_desc_banking", e.Value);
                 case EventStreamService.TypeBubbleBurst:  return UIHelpers.Lf("ev_desc_bubble_burst", e.Value);
+                case EventStreamService.TypeNationClaim:    return UIHelpers.Lf("ev_desc_nation_claim", e.KingdomName);
+                case EventStreamService.TypeNationPolicy:   return UIHelpers.Lf("ev_desc_nation_policy", e.KingdomName);
+                case EventStreamService.TypeNationRelief:   return UIHelpers.Lf("ev_desc_nation_relief", e.KingdomName, e.Value);
+                case EventStreamService.TypeNationFestival: return UIHelpers.Lf("ev_desc_nation_festival", e.KingdomName);
+                case EventStreamService.TypeNationBuild:    return UIHelpers.Lf("ev_desc_nation_build", e.KingdomName);
+                case EventStreamService.TypeNationDiplomacy: return UIHelpers.Lf("ev_desc_nation_diplomacy", e.KingdomName, e.Value);
                 default:                                return UIHelpers.L(e.TypeKey);
             }
         }
