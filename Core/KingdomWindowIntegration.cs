@@ -175,12 +175,12 @@ namespace EconomyMod.Core
                 rt.anchorMax = new Vector2(1f, 1f);
                 rt.pivot = new Vector2(1f, 1f);
                 rt.anchoredPosition = new Vector2(-12f, -56f);
-                rt.sizeDelta = new Vector2(180f, 64f);
+                rt.sizeDelta = new Vector2(190f, 72f);
                 var t = go.GetComponent<Text>();
                 t.font = LocalizedTextManager.current_font != null
                     ? LocalizedTextManager.current_font
                     : Resources.GetBuiltinResource<Font>("Arial.ttf");
-                t.fontSize = 9;
+                t.fontSize = 11;
                 t.alignment = TextAnchor.UpperRight;
                 t.color = new Color(0.95f, 0.88f, 0.6f, 0.95f);
                 t.lineSpacing = 1.05f;

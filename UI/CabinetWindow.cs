@@ -247,7 +247,7 @@ namespace EconomyMod.UI
             for (int i = 0; i < parts.Count; i += 3)
             {
                 int end = System.Math.Min(parts.Count, i + 3);
-                AddLine(string.Join("｜", parts.GetRange(i, end - i).ToArray()), UIStyles.Info, 11f);
+                AddLine(string.Join("｜", parts.GetRange(i, end - i).ToArray()), UIStyles.Info, 12f);
             }
         }
 
@@ -255,8 +255,8 @@ namespace EconomyMod.UI
         {
             int level = CodexEngine.GetLawLevel(kingdom.data.id, key);
             string name = UIHelpers.L(key);
-            AddLine(name, level > 0 ? UIStyles.Positive : UIStyles.TextPrimary, 10f);
-            var row = NewRow(CodexEngine.LawTiers, 22f, fill: true);
+            AddLine(name, level > 0 ? UIStyles.Positive : UIStyles.TextPrimary, 12f);
+            var row = NewRow(CodexEngine.LawTiers, 30f, fill: true);
             // 档位按钮（0..4，小号横排）：显示该法律自己的档位语义名（如 无贸易保护→闭关锁国），缺失回退 无/轻/中/重/极
             for (int lv = 0; lv < CodexEngine.LawTiers; lv++)
             {
@@ -446,7 +446,7 @@ namespace EconomyMod.UI
 
             for (int i = 0; i < defs.Length; i += 3)
             {
-                var row = NewRow(3, 24f, fill: true);
+                var row = NewRow(3, 28f, fill: true);
                 for (int j = i; j < i + 3 && j < defs.Length; j++)
                 {
                     var d = defs[j];
@@ -482,10 +482,10 @@ namespace EconomyMod.UI
             long kid = target.data.id;
             string name = GameHelpers.SafeKingdomName(target);
 
-            var topRow = NewRow(2, 30f);
+            var topRow = NewRow(2, 34f);
             AddRowButton(topRow, UIHelpers.L("cabinet_dip_back"), BtnColor,
                 () => { _dipTargetId = 0; RefreshNow(); }, 90f);
-            var crest = UIHelpers.CreateText(name, topRow.transform, 14f, UIStyles.Gold, _gameFont, 26f);
+            var crest = UIHelpers.CreateText(name, topRow.transform, 15f, UIStyles.Gold, _gameFont, 28f);
             var crestLe = crest.GetComponent<LayoutElement>();
             if (crestLe == null) crestLe = crest.AddComponent<LayoutElement>();
             crestLe.flexibleWidth = 1f;
@@ -516,7 +516,7 @@ namespace EconomyMod.UI
                 UIHelpers.L(CodexEngine.StyleKeys[style])), Muted, 11f);
             if (hasStats)
             {
-                AddLine(UIHelpers.Lf("cabinet_dip_stat_gdp", ks.GDP.ToString("N0")), UIStyles.Gold, 12f);
+                AddLine(UIHelpers.Lf("cabinet_dip_stat_gdp", ks.GDP.ToString("N0")), UIStyles.Gold, 13f);
                 AddLine(UIHelpers.Lf("cabinet_dip_stat_pop", ks.Population, ks.AvgWealth.ToString("F1")), Muted, 11f);
             }
             int laws = 0, pols = 0;
@@ -530,7 +530,7 @@ namespace EconomyMod.UI
             AddDivider(DividerColor);
 
             AddLine(UIHelpers.L("cabinet_dip_actions"), UIStyles.Gold, 12f);
-            var row1 = NewRow(3, 26f, fill: true);
+            var row1 = NewRow(3, 30f, fill: true);
             AddRowButton(row1, UIHelpers.L("cabinet_dip_war"), BtnBad, () =>
             {
                 string msg; bool ok = NationDiplomacy.DeclareWar(target, out msg);
@@ -549,7 +549,7 @@ namespace EconomyMod.UI
                 GameHelpers.NotifyLocalized(msg, name);
                 if (ok) RefreshNow();
             }, 110f, fill: true);
-            var row2 = NewRow(3, 26f, fill: true);
+            var row2 = NewRow(3, 30f, fill: true);
             int pactTier = NationDiplomacy.PactTier(kid);
             AddRowButton(row2, pactTier >= 0
                 ? UIHelpers.Lf("cabinet_dip_pact_on", pactTier + 1)
@@ -603,7 +603,7 @@ namespace EconomyMod.UI
                     NationDiplomacy.GetRelationScore(k), NationDiplomacy.GetGoodwill(kid));
 
                 // 整行按钮：点击进入详情（列表仅按页重建；详情单独取对象，无每帧开销）
-                var btn = UIHelpers.CreateButton(line, CurPage.transform, -1, 28, _gameFont, BtnColor, 11f);
+                var btn = UIHelpers.CreateButton(line, CurPage.transform, -1, 30, _gameFont, BtnColor, 12f);
                 btn.onClick.AddListener(() => { _dipTargetId = kid; RefreshNow(); });
                 CurLines.Add(btn.gameObject);
                 shown++;
@@ -620,20 +620,20 @@ namespace EconomyMod.UI
                 NationEngine.FormatGold((long)NationEngine.PolicyAnnualCost(kind, 2)));
 
             // 一行：名称+档位状态 + 费用（右侧弱色）——不再用两行大按钮
-            var row = NewRow(2, 24f);
+            var row = NewRow(2, 28f);
             var nameTxt = UIHelpers.CreateText(
                 tier >= 0 ? UIHelpers.Lf("cabinet_policy_active", name, tier + 1) : name,
-                row.transform, 12f, tier >= 0 ? UIStyles.Positive : UIStyles.TextPrimary, _gameFont, 22f);
+                row.transform, 12f, tier >= 0 ? UIStyles.Positive : UIStyles.TextPrimary, _gameFont, 24f);
             var nameLe = nameTxt.GetComponent<LayoutElement>();
             if (nameLe == null) nameLe = nameTxt.AddComponent<LayoutElement>();
             nameLe.flexibleWidth = 1f;
-            var costTxt = UIHelpers.CreateText(costText, row.transform, 10f, Muted, _gameFont, 18f);
+            var costTxt = UIHelpers.CreateText(costText, row.transform, 11f, Muted, _gameFont, 20f);
             var costLe = costTxt.GetComponent<LayoutElement>();
             if (costLe == null) costLe = costTxt.AddComponent<LayoutElement>();
             costLe.flexibleWidth = 1f;
 
             // 按钮行：小号按钮横排（启用→升档→取消），不再拉满整行
-            var btnRow = NewRow(3, 24f);
+            var btnRow = NewRow(3, 28f);
             if (tier < 0)
             {
                 AddRowButton(btnRow, UIHelpers.L("cabinet_enable"), BtnGood, () =>
@@ -658,14 +658,14 @@ namespace EconomyMod.UI
         private void BuildDecreeRow(string nameKey, string costText, bool cooling, System.Action action)
         {
             string name = UIHelpers.L(nameKey);
-            var row = NewRow(2, 24f);
+            var row = NewRow(2, 28f);
             var nameTxt = UIHelpers.CreateText(
                 cooling ? UIHelpers.Lf("cabinet_decree_cooling", name) : name,
-                row.transform, 12f, cooling ? Muted : UIStyles.TextPrimary, _gameFont, 22f);
+                row.transform, 13f, cooling ? Muted : UIStyles.TextPrimary, _gameFont, 24f);
             var nameLe2 = nameTxt.GetComponent<LayoutElement>();
             if (nameLe2 == null) nameLe2 = nameTxt.AddComponent<LayoutElement>();
             nameLe2.flexibleWidth = 1f;
-            var costTxt = UIHelpers.CreateText(costText, row.transform, 10f, Muted, _gameFont, 18f);
+            var costTxt = UIHelpers.CreateText(costText, row.transform, 11f, Muted, _gameFont, 20f);
             var costLe2 = costTxt.GetComponent<LayoutElement>();
             if (costLe2 == null) costLe2 = costTxt.AddComponent<LayoutElement>();
             costLe2.flexibleWidth = 1f;
@@ -776,11 +776,11 @@ namespace EconomyMod.UI
 
         private void AddRowButton(GameObject row, string label, Color bg, System.Action onClick, float width = 120f, bool fill = false)
         {
-            var btn = UIHelpers.CreateButton(label, row.transform, width, 24, _gameFont, bg, 10f);
+            var btn = UIHelpers.CreateButton(label, row.transform, width, 28, _gameFont, bg, 12f);
             var le = btn.gameObject.AddComponent<LayoutElement>();
             le.preferredWidth = width;
             le.flexibleWidth = fill ? 1f : 0f; // fill=true 均分剩余（随窗口缩放）
-            le.preferredHeight = 24f;
+            le.preferredHeight = 28f;
             btn.onClick.AddListener(() => onClick());
         }
 
