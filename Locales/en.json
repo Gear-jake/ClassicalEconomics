@@ -554,5 +554,15 @@
   "cabinet_dip_style": "Nature: {0}",
   "codex_suggest_btn": "→{0}",
   "kingdom_codex_header": "Codex",
-  "kingdom_codex_counts": "Laws {0} · Policies {1}"
+  "kingdom_codex_counts": "Laws {0} · Policies {1}",
+  "cabinet_dip_back": "< Back to list",
+  "cabinet_dip_list_row": "{0} | GDP {1} | opinion {2} (gifts {3})",
+  "cabinet_dip_stat_relation": "Diplomatic opinion {0} (gift total {1})",
+  "cabinet_dip_stat_style": "Nature: {0}",
+  "cabinet_dip_stat_gdp": "GDP {0}",
+  "cabinet_dip_stat_pop": "Pop {0} | Avg {1}",
+  "cabinet_dip_stat_laws": "Laws {0} · Policies {1}",
+  "cabinet_dip_stat_war": "Currently at war",
+  "cabinet_dip_stat_peace": "Currently at peace",
+  "cabinet_dip_actions": "Diplomatic Actions"
 }

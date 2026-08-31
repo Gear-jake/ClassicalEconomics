@@ -51,6 +51,7 @@ namespace EconomyMod.UI
         private readonly GameObject[] _pages = new GameObject[PageCount];
         private readonly List<GameObject>[] _pageLines = new List<GameObject>[PageCount];
         private CabinetPage _page = CabinetPage.Finance;
+        private long _dipTargetId; // 外交详情页目标国（0 = 列表模式）
 
         private List<GameObject> CurLines => _pageLines[(int)_page];
         private GameObject CurPage => _pages[(int)_page];
@@ -418,6 +419,12 @@ namespace EconomyMod.UI
 
         private void BuildDiplomacyPage()
         {
+            if (_dipTargetId != 0)
+            {
+                var target = GameHelpers.FindKingdom(_dipTargetId);
+                if (target != null && target.data != null) { BuildDiplomacyDetail(target); return; }
+                _dipTargetId = 0;
+            }
             AddLine(UIHelpers.L("cabinet_diplomacy"), UIStyles.Gold, 13f);
             AddLine(UIHelpers.L("cabinet_diplomacy_hint"), Muted, 11f);
             AddDivider(DividerColor);
@@ -425,6 +432,99 @@ namespace EconomyMod.UI
         }
 
         /// <summary>外交列表：他国（按 GDP 前 12），每国一行：好感 + 5 个动作按钮。</summary>
+        /// <summary>详情页：国徽 + 该国数据 + 可用外交动作，返回按钮回列表。</summary>
+        private void BuildDiplomacyDetail(Kingdom target)
+        {
+            long kid = target.data.id;
+            string name = GameHelpers.SafeKingdomName(target);
+
+            var topRow = NewRow(2, 30f);
+            AddRowButton(topRow, UIHelpers.L("cabinet_dip_back"), BtnColor,
+                () => { _dipTargetId = 0; RefreshNow(); }, 90f);
+            var crest = UIHelpers.CreateText(name, topRow.transform, 14f, UIStyles.Gold, _gameFont, 26f);
+            var crestLe = crest.GetComponent<LayoutElement>();
+            if (crestLe == null) crestLe = crest.AddComponent<LayoutElement>();
+            crestLe.flexibleWidth = 1f;
+            // 国徽（旗帜底 + 主色），失败则跳过不阻断
+            try
+            {
+                var flagGo = new GameObject("Flag", typeof(RectTransform), typeof(Image));
+                flagGo.transform.SetParent(topRow.transform, false);
+                var flagRt = flagGo.GetComponent<RectTransform>();
+                flagRt.anchorMin = new Vector2(0, 0.5f); flagRt.anchorMax = new Vector2(0, 0.5f);
+                flagRt.pivot = new Vector2(0, 0.5f);
+                flagRt.sizeDelta = new Vector2(30f, 30f);
+                var flagImg = flagGo.GetComponent<Image>();
+                var bgSpr = target.getElementBackground();
+                if (bgSpr != null) flagImg.sprite = bgSpr;
+                var col = target.getColor();
+                if (col != null) flagImg.color = col.getColorMain32();
+            }
+            catch (System.Exception) { }
+            AddDivider(DividerColor);
+
+            EconomyMod.Models.KingdomStats ks;
+            bool hasStats = EconomyEngine.KingdomStats.TryGetValue(kid, out ks) && ks != null;
+            AddLine(UIHelpers.Lf("cabinet_dip_stat_relation",
+                NationDiplomacy.GetRelationScore(target), NationDiplomacy.GetGoodwill(kid)), UIStyles.Info, 12f);
+            int style = CodexEngine.GetStyle(kid);
+            AddLine(UIHelpers.Lf("cabinet_dip_stat_style",
+                UIHelpers.L(CodexEngine.StyleKeys[style])), Muted, 11f);
+            if (hasStats)
+            {
+                AddLine(UIHelpers.Lf("cabinet_dip_stat_gdp", ks.GDP.ToString("N0")), UIStyles.Gold, 12f);
+                AddLine(UIHelpers.Lf("cabinet_dip_stat_pop", ks.Population, ks.AvgWealth.ToString("F1")), Muted, 11f);
+            }
+            int laws = 0, pols = 0;
+            for (int i = 0; i < CodexEngine.LawKeys.Length; i++)
+                if (CodexEngine.GetLawLevel(kid, CodexEngine.LawKeys[i]) > 0) laws++;
+            for (int i = 0; i < CodexEngine.PolicyKeys.Length; i++)
+                if (CodexEngine.GetPolicyLevel(kid, CodexEngine.PolicyKeys[i]) > 0) pols++;
+            AddLine(UIHelpers.Lf("cabinet_dip_stat_laws", laws, pols), Muted, 11f);
+            bool atWar = NationDiplomacy.IsAtWarWith(target);
+            AddLine(UIHelpers.L(atWar ? "cabinet_dip_stat_war" : "cabinet_dip_stat_peace"), UIStyles.Warning, 11f);
+            AddDivider(DividerColor);
+
+            AddLine(UIHelpers.L("cabinet_dip_actions"), UIStyles.Gold, 12f);
+            var row1 = NewRow(3, 26f);
+            AddRowButton(row1, UIHelpers.L("cabinet_dip_war"), BtnBad, () =>
+            {
+                string msg; bool ok = NationDiplomacy.DeclareWar(target, out msg);
+                GameHelpers.NotifyLocalized(msg, name);
+                if (ok) RefreshNow();
+            }, 110f);
+            AddRowButton(row1, UIHelpers.L("cabinet_dip_peace"), BtnColor, () =>
+            {
+                string msg; bool ok = NationDiplomacy.SueForPeace(target, out msg);
+                GameHelpers.NotifyLocalized(msg, name);
+                if (ok) RefreshNow();
+            }, 110f);
+            AddRowButton(row1, UIHelpers.L("cabinet_dip_alliance"), BtnGood, () =>
+            {
+                string msg; bool ok = NationDiplomacy.FormAlliance(target, out msg);
+                GameHelpers.NotifyLocalized(msg, name);
+                if (ok) RefreshNow();
+            }, 110f);
+            var row2 = NewRow(3, 26f);
+            int pactTier = NationDiplomacy.PactTier(kid);
+            AddRowButton(row2, pactTier >= 0
+                ? UIHelpers.Lf("cabinet_dip_pact_on", pactTier + 1)
+                : UIHelpers.L("cabinet_dip_pact"), BtnGood, () =>
+                {
+                    string msg; bool ok;
+                    if (pactTier >= 0) ok = NationDiplomacy.SignPact(target, pactTier + 1, out msg);
+                    else ok = NationDiplomacy.SignPact(target, 0, out msg);
+                    GameHelpers.NotifyLocalized(msg, name);
+                    if (ok) RefreshNow();
+                }, 110f);
+            AddRowButton(row2, UIHelpers.L("cabinet_dip_gift"), BtnGood, () =>
+            {
+                string msg; bool ok = NationDiplomacy.GiveGift(target, out msg);
+                GameHelpers.NotifyLocalized(msg, name);
+                if (ok) RefreshNow();
+            }, 110f);
+        }
+
         private void BuildDiplomacyList()
         {
             var mineId = NationEngine.NationKingdomId;
@@ -447,59 +547,23 @@ namespace EconomyMod.UI
             {
                 if (k == null || k.data == null) continue;
                 if (k.data.id == mineId) continue;
-                if (shown >= 12) break;
+                if (shown >= 40) break;
 
                 long kid = k.data.id;
                 string name = GameHelpers.SafeKingdomName(k);
-                int score = NationDiplomacy.GetRelationScore(k);
-                int goodwill = NationDiplomacy.GetGoodwill(kid);
-                int pactTier = NationDiplomacy.PactTier(kid);
-                string status = UIHelpers.Lf("cabinet_dip_row", name, score, goodwill,
-                    pactTier >= 0 ? UIHelpers.Lf("cabinet_dip_pact_tier", pactTier + 1) : "");
-                AddLine(status, UIStyles.TextPrimary, 11f);
-                int style = CodexEngine.GetStyle(kid);
-                AddLine(UIHelpers.Lf("cabinet_dip_style", UIHelpers.L(CodexEngine.StyleKeys[style])), Muted, 10f);
+                EconomyMod.Models.KingdomStats ks;
+                string gdpTxt = "?";
+                if (EconomyEngine.KingdomStats.TryGetValue(kid, out ks) && ks != null)
+                    gdpTxt = ks.GDP.ToString("N0");
+                string line = UIHelpers.Lf("cabinet_dip_list_row", name, gdpTxt,
+                    NationDiplomacy.GetRelationScore(k), NationDiplomacy.GetGoodwill(kid));
 
-                var row = NewRow(5);
-                AddRowButton(row, UIHelpers.L("cabinet_dip_war"), BtnBad, () =>
-                {
-                    string msg; bool ok = NationDiplomacy.DeclareWar(k, out msg);
-                    GameHelpers.NotifyLocalized(msg, name);
-                    if (ok) RefreshNow();
-                });
-                AddRowButton(row, UIHelpers.L("cabinet_dip_peace"), BtnColor, () =>
-                {
-                    string msg; bool ok = NationDiplomacy.SueForPeace(k, out msg);
-                    GameHelpers.NotifyLocalized(msg, name);
-                    if (ok) RefreshNow();
-                });
-                AddRowButton(row, UIHelpers.L("cabinet_dip_alliance"), BtnGood, () =>
-                {
-                    string msg; bool ok = NationDiplomacy.FormAlliance(k, out msg);
-                    GameHelpers.NotifyLocalized(msg, name);
-                    if (ok) RefreshNow();
-                });
-                AddRowButton(row, pactTier >= 0
-                    ? UIHelpers.Lf("cabinet_dip_pact_on", pactTier + 1)
-                    : UIHelpers.L("cabinet_dip_pact"), BtnGood, () =>
-                {
-                    string msg; bool ok;
-                    if (pactTier >= 0)
-                        ok = NationDiplomacy.SignPact(k, pactTier + 1, out msg); // 升档
-                    else
-                        ok = NationDiplomacy.SignPact(k, 0, out msg); // 新签（少）
-                    GameHelpers.NotifyLocalized(msg, name);
-                    if (ok) RefreshNow();
-                });
-                AddRowButton(row, UIHelpers.L("cabinet_dip_gift"), BtnGood, () =>
-                {
-                    string msg; bool ok = NationDiplomacy.GiveGift(k, out msg);
-                    GameHelpers.NotifyLocalized(msg, name);
-                    if (ok) RefreshNow();
-                });
+                // 整行按钮：点击进入详情（列表仅按页重建；详情单独取对象，无每帧开销）
+                var btn = UIHelpers.CreateButton(line, CurPage.transform, -1, 28, _gameFont, BtnColor, 11f);
+                btn.onClick.AddListener(() => { _dipTargetId = kid; RefreshNow(); });
+                CurLines.Add(btn.gameObject);
                 shown++;
             }
-            if (shown == 0) AddLine(UIHelpers.L("cabinet_no_others"), Muted, 11f);
         }
 
         private void BuildPolicyRow(NationEngine.PolicyKind kind, int year)

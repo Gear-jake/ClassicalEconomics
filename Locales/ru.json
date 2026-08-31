@@ -554,5 +554,15 @@
   "cabinet_dip_style": "Характер: {0}",
   "codex_suggest_btn": "→{0}",
   "kingdom_codex_header": "Кодекс",
-  "kingdom_codex_counts": "Законов {0} · Политик {1}"
+  "kingdom_codex_counts": "Законов {0} · Политик {1}",
+  "cabinet_dip_back": "< Назад к списку",
+  "cabinet_dip_list_row": "{0} | ВВП {1} | мнение {2} (дары {3})",
+  "cabinet_dip_stat_relation": "Дипломатическое мнение {0} (даров {1})",
+  "cabinet_dip_stat_style": "Характер: {0}",
+  "cabinet_dip_stat_gdp": "ВВП {0}",
+  "cabinet_dip_stat_pop": "Население {0} | Среднее {1}",
+  "cabinet_dip_stat_laws": "Законов {0} · Политик {1}",
+  "cabinet_dip_stat_war": "Сейчас в состоянии войны",
+  "cabinet_dip_stat_peace": "Сейчас в состоянии мира",
+  "cabinet_dip_actions": "Дипломатические действия"
 }

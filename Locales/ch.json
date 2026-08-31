@@ -554,5 +554,15 @@
   "cabinet_dip_style": "国性：{0}",
   "codex_suggest_btn": "→{0}",
   "kingdom_codex_header": "法典",
-  "kingdom_codex_counts": "法律 {0} 条 · 国策 {1} 条"
+  "kingdom_codex_counts": "法律 {0} 条 · 国策 {1} 条",
+  "cabinet_dip_back": "← 返回列表",
+  "cabinet_dip_list_row": "{0}｜GDP {1}｜好感 {2}（赠礼 {3}）",
+  "cabinet_dip_stat_relation": "外交好感 {0}（赠礼累计 {1}）",
+  "cabinet_dip_stat_style": "国性：{0}",
+  "cabinet_dip_stat_gdp": "GDP {0}",
+  "cabinet_dip_stat_pop": "人口 {0}｜人均 {1}",
+  "cabinet_dip_stat_laws": "法律 {0} 条 · 国策 {1} 条",
+  "cabinet_dip_stat_war": "当前处于战争状态",
+  "cabinet_dip_stat_peace": "当前处于和平状态",
+  "cabinet_dip_actions": "外交动作"
 }
