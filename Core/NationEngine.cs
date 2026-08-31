@@ -118,7 +118,8 @@ namespace EconomyMod.Core
             _reliefReadyYear = currentYear; // 换国后法令冷却重新起算
             _festivalReadyYear = currentYear;
 
-            // 启动资金：新国家各城市仓库金币的 20%（守恒：城市仓库 → 金库）
+            // 启动资金：城市仓库金币 20% + 开国拨款（从居民财富征 0.5%）——
+            // 城市仓库往往为空（金币主要在居民口袋），只抽仓库会出现金库 0 动不了的局面。
             long start = 0;
             var cities = SnapshotCities(kingdom, _cityPool);
             for (int i = 0; i < cities.Count; i++)
@@ -137,6 +138,11 @@ namespace EconomyMod.Core
                 }
                 catch (System.Exception) { }
             }
+            // 开国拨款：人口×人均×0.5%（从居民征收，守恒；无居民可征则为 0）
+            var stats0 = NationStats();
+            long grant = (long)(System.Math.Max(1, stats0?.ActorCount ?? 0) * System.Math.Max(0f, stats0?.AvgWealth ?? 0f) * 0.005f);
+            start += CollectFromResidents(kingdom, grant);
+
             _treasury += start;
 
             EventStreamService.Record(EventStreamService.TypeNationClaim, _nationName, _treasury > int.MaxValue ? int.MaxValue : (int)_treasury);
@@ -580,7 +586,8 @@ namespace EconomyMod.Core
             long expense = 0;
             var stats = NationStats();
 
-            // 2. 金库税负：各城市仓库金币 × 配置比例（上限 = 人口×人均×0.1）
+            // 2. 金库税负 = 城市仓库×配置比例 + 居民税（人口×人均×0.1%）；
+            //    总上限 = 人口×人均×0.1（居民税保证城市仓库为空时国库仍有收入）
             var cities = SnapshotCities(kingdom, _cityPool);
             long ratio = System.Math.Max(1, System.Math.Min(20, cfg.TreasuryIncomeRatio));
             long cap = (long)((stats?.ActorCount ?? 0) * (stats?.AvgWealth ?? 0f) * 0.1f);
@@ -599,6 +606,11 @@ namespace EconomyMod.Core
                 }
                 catch (System.Exception) { }
             }
+            // 居民税：人口×人均×0.1%（受总上限约束；仓库已征满则居民税为 0）
+            long residentTarget = (long)((stats?.ActorCount ?? 0) * (stats?.AvgWealth ?? 0f) * 0.001f);
+            long remaining = cap > 0 ? System.Math.Max(0, cap - income) : residentTarget;
+            long residentIncome = CollectFromResidents(kingdom, System.Math.Min(residentTarget, remaining));
+            income += residentIncome;
             _treasury += income;
 
             // 3. 持续政策：扣费/收税 + 效果
