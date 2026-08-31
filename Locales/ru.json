@@ -719,5 +719,7 @@
   "law_secularism_lv1": "Мягкий секуляризм",
   "law_secularism_lv2": "Светское государство",
   "law_secularism_lv3": "Строгий секуляризм",
-  "law_secularism_lv4": "Полный секуляризм"
+  "law_secularism_lv4": "Полный секуляризм",
+  "cabinet_gdp_chart": "ВВП страны (последние 40 циклов)",
+  "cabinet_gdp_chart_short": "Недостаточно данных ВВП - кривая появится через несколько циклов"
 }

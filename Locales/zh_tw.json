@@ -719,5 +719,7 @@
   "law_secularism_lv1": "溫和世俗",
   "law_secularism_lv2": "世俗國家",
   "law_secularism_lv3": "嚴格世俗",
-  "law_secularism_lv4": "完全世俗"
+  "law_secularism_lv4": "完全世俗",
+  "cabinet_gdp_chart": "本國 GDP 趨勢（近 40 期）",
+  "cabinet_gdp_chart_short": "本國 GDP 數據不足：持續運行幾期後顯示曲線"
 }

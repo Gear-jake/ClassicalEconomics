@@ -135,6 +135,7 @@ if (-not (Test-Path -LiteralPath $diplomacyPath -PathType Leaf)) {
     Assert ($cabinet -match 'BuildDiplomacyPage|BuildDiplomacyList') 'cabinet must render the diplomacy page'
     Assert ($cabinet -match 'BuildDiplomacyDetail') 'cabinet must render the diplomacy detail page'
     Assert ($cabinet -match 'BuildCodexEffectSummary') 'cabinet codex page must show the aggregate effect summary'
+    Assert ($cabinet -match 'BuildGdpChart') 'finance page must render the nation GDP chart'
     Assert ($cabinet -match '_dipTargetId') 'diplomacy list rows must navigate into detail (RulerBox-style two-level)'
     Assert ($cabinet -match 'BuildNativeBuildings') 'cabinet must render the native-building section'
     # 防回归：CreateText 结果无 LayoutElement（GetComponent 直接取值会 NRE 中断整页构建）

@@ -372,6 +372,7 @@ namespace EconomyMod.UI
             if (cooldown > 0)
                 AddLine(UIHelpers.Lf("cabinet_switch_cooldown", cooldown), Muted, 12f);
             AddDivider(DividerColor);
+            BuildGdpChart();
             BuildRecordSection();
         }
 
@@ -716,6 +717,56 @@ namespace EconomyMod.UI
                 shown++;
             }
             if (cities.Count > shown) AddLine(UIHelpers.L("cabinet_more_cities"), Muted, 11f);
+        }
+
+        /// <summary>本国 GDP 折线图（历史最近 40 期；复用 ChartMeshGraphic 顶点图表，宽度随窗口）。</summary>
+        private void BuildGdpChart()
+        {
+            long mine = NationEngine.NationKingdomId;
+            if (mine == 0) return;
+            var snaps = HistoryService.GetRecent(40);
+            if (snaps == null || snaps.Count < 3)
+            {
+                AddLine(UIHelpers.L("cabinet_gdp_chart_short"), Muted, 11f);
+                return;
+            }
+
+            AddLine(UIHelpers.L("cabinet_gdp_chart"), UIStyles.Gold, 12f);
+            var values = new float[snaps.Count];
+            var phases = new int[snaps.Count];
+            float vmax = 1f;
+            int life = 0;
+            for (int i = 0; i < snaps.Count; i++)
+            {
+                var sn = snaps[i];
+                phases[i] = sn.Phase;
+                values[i] = float.NaN;
+                if (sn.Kingdoms != null)
+                {
+                    for (int j = 0; j < sn.Kingdoms.Count; j++)
+                    {
+                        if (sn.Kingdoms[j].KingdomId == mine)
+                        {
+                            values[i] = sn.Kingdoms[j].GDP;
+                            if (values[i] > vmax) vmax = values[i];
+                            life++;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            var chartCard = UIComponents.CreateChartCard(CurPage.transform, 560f, 130f);
+            var el = chartCard.GetComponent<LayoutElement>();
+            el.preferredWidth = -1f;
+            el.flexibleWidth = 1f; // 随窗口宽度自适应
+            var chart = chartCard.gameObject.AddComponent<ChartMeshGraphic>();
+            if (life >= 2)
+            {
+                chart.SetChartData(new float[][] { values }, new[] { UIStyles.Gold }, null,
+                    phases, 1, 0f, vmax * 1.15f, true, false, 0f, 0f);
+            }
+            CurLines.Add(chartCard.gameObject);
         }
 
         private void BuildRecordSection()
