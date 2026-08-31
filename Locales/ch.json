@@ -721,5 +721,6 @@
   "law_secularism_lv3": "严格世俗",
   "law_secularism_lv4": "完全世俗",
   "cabinet_gdp_chart": "本国 GDP 趋势（近 40 期）",
-  "cabinet_gdp_chart_short": "本国 GDP 数据不足：持续运行几期后显示曲线"
+  "cabinet_gdp_chart_short": "本国 GDP 数据不足：持续运行几期后显示曲线",
+  "cabinet_gdp_chart_now": "当前 {0}｜区间 {1} – {2}"
 }

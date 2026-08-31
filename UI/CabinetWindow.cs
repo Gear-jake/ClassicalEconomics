@@ -838,8 +838,22 @@ namespace EconomyMod.UI
             var chart = chartCard.gameObject.AddComponent<ChartMeshGraphic>();
             if (life >= 2)
             {
+                // 自适应刻度：以实际最小/最大值为界（避免 0 起使波动脉成直线）
+                float vmin = float.MaxValue;
+                float vmax2 = float.MinValue;
+                for (int i = 0; i < values.Length; i++)
+                {
+                    if (float.IsNaN(values[i])) continue;
+                    if (values[i] < vmin) vmin = values[i];
+                    if (values[i] > vmax2) vmax2 = values[i];
+                }
+                if (vmax2 <= vmin) { vmax2 = vmin + 1f; }
+                float pad = (vmax2 - vmin) * 0.15f;
                 chart.SetChartData(new float[][] { values }, new[] { UIStyles.Gold }, null,
-                    phases, 1, 0f, vmax * 1.15f, true, false, 0f, 0f);
+                    phases, 1, vmin - pad, vmax2 + pad, true, false, 0f, 0f);
+                AddLine(UIHelpers.Lf("cabinet_gdp_chart_now",
+                    values[values.Length - 1].ToString("N0"),
+                    vmin.ToString("N0"), vmax2.ToString("N0")), Muted, 11f);
             }
             CurLines.Add(chartCard.gameObject);
         }

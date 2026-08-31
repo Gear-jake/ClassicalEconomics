@@ -721,5 +721,6 @@
   "law_secularism_lv3": "Strict secularism",
   "law_secularism_lv4": "Fully secular",
   "cabinet_gdp_chart": "Nation GDP Trend (last 40 cycles)",
-  "cabinet_gdp_chart_short": "Not enough GDP data yet - the curve appears after a few cycles"
+  "cabinet_gdp_chart_short": "Not enough GDP data yet - the curve appears after a few cycles",
+  "cabinet_gdp_chart_now": "Now {0} | range {1} – {2}"
 }

@@ -124,6 +124,13 @@ namespace EconomyMod.Core
             "style_tech",        // 科技兴邦
         };
 
+        // ===== 法典国民特质（法典效果在国民身上的可见体现：原版 ActorTrait 机制）=====
+        public const string CodexTraitEdu = "codex_trait_edu";         // 教育之国
+        public const string CodexTraitWelfare = "codex_trait_welfare"; // 民生之国
+        public const string CodexTraitMil = "codex_trait_mil";         // 武备之国
+        public const string CodexTraitTrade = "codex_trait_trade";     // 货殖之国
+        public const string CodexTraitAusterity = "codex_trait_austerity"; // 紧缩之国
+
         // ===== LawMods 聚合乘数（引擎唯一读取面）=====
 
 
@@ -133,6 +140,7 @@ namespace EconomyMod.Core
             public int[] LawLevels = new int[LawKeys.Length];
             public int[] PolicyLevels = new int[PolicyKeys.Length];
             public int Style = -1; // -1 = 未掷（0 是合法风格，不能作哨兵）
+            public System.Collections.Generic.List<string> ActiveTraits = new System.Collections.Generic.List<string>(); // 已施加的法典国民特质
             public int LastEvalYear = -9999;
 
 
@@ -276,6 +284,7 @@ namespace EconomyMod.Core
             }
             st.LawLevels[i] = level;
             RecomputeMods(kingdom.data.id, st);
+            UpdateMemberTraits(kingdom, kingdom.data.id, st); // 玩家改法即时同步国民特质
             return true;
         }
 
@@ -307,6 +316,7 @@ namespace EconomyMod.Core
             }
             st.PolicyLevels[i] = level;
             RecomputeMods(kingdom.data.id, st);
+            UpdateMemberTraits(kingdom, kingdom.data.id, st);
             return true;
         }
 
@@ -401,6 +411,7 @@ namespace EconomyMod.Core
                     var st = Get(kid);
                     if (st.Style < 0) st.Style = RollStyle(kingdom);
                     RecomputeMods(kid, st);
+                    UpdateMemberTraits(kingdom, kid, st); // 法典加成落到国民特质（年度同步一次）
                     // AI 决策（玩家国豁免）必须写在 LastEvalYear 之前：TickNation 用它防重入
                     if (NationEngine.NationKingdomId != kid)
                         CodexAi.TickNation(kingdom, st, year);
@@ -666,6 +677,66 @@ namespace EconomyMod.Core
                     m.Happiness *= 1f - 0.004f * level;
                     break;
             }
+        }
+
+        /// <summary>
+        /// 法典加成 → 国民特质：按该国法典主导档位判定目标特质集合，与已施加集合 diff 后
+        /// 增/删成员 traits（不重复添加；异常静默，绝不影响经济计算）。
+        /// </summary>
+        private static void UpdateMemberTraits(Kingdom kingdom, long kid, NationState st)
+        {
+            try
+            {
+                if (kingdom == null || kingdom.units == null) return;
+                var target = new List<string>();
+                if (GetLawLevel(kid, LawEducation) >= 3) target.Add(CodexTraitEdu);
+                if (GetLawLevel(kid, LawHealthcare) >= 3) target.Add(CodexTraitWelfare);
+                if (GetLawLevel(kid, LawMilitarism) >= 3 || st.Mods.Military >= 0.4f) target.Add(CodexTraitMil);
+                if (GetLawLevel(kid, LawTradeFreedom) >= 4 || GetPolicyLevel(kid, PolicyTradeDeal) >= 1) target.Add(CodexTraitTrade);
+                if (GetLawLevel(kid, LawTaxSystem) >= 4 || st.Mods.TaxRate >= 1.25f) target.Add(CodexTraitAusterity);
+
+                // 移除已不再满足的特质
+                for (int i = st.ActiveTraits.Count - 1; i >= 0; i--)
+                {
+                    if (target.Contains(st.ActiveTraits[i])) continue;
+                    RemoveMemberTrait(kingdom, st.ActiveTraits[i]);
+                    st.ActiveTraits.RemoveAt(i);
+                }
+                // 添加新满足的特质
+                foreach (var t in target)
+                {
+                    if (st.ActiveTraits.Contains(t)) continue;
+                    AddMemberTrait(kingdom, t);
+                    st.ActiveTraits.Add(t);
+                }
+            }
+            catch (System.Exception) { }
+        }
+
+        private static void AddMemberTrait(Kingdom kingdom, string traitId)
+        {
+            try
+            {
+                foreach (var a in kingdom.units)
+                {
+                    if (a == null || !a.isAlive()) continue;
+                    if (!a.hasTrait(traitId)) a.addTrait(traitId);
+                }
+            }
+            catch (System.Exception) { }
+        }
+
+        private static void RemoveMemberTrait(Kingdom kingdom, string traitId)
+        {
+            try
+            {
+                foreach (var a in kingdom.units)
+                {
+                    if (a == null || !a.isAlive()) continue;
+                    if (a.hasTrait(traitId)) a.removeTrait(traitId);
+                }
+            }
+            catch (System.Exception) { }
         }
 
         private static int IndexOf(string[] arr, string key)

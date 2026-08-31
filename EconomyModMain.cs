@@ -163,6 +163,11 @@ BiomeEconomy.ClearCache();
                     RegisterTrait(Core.EraEngine.ActorTraitCollapse, "ui/Icons/iconEraCollapse",  -15f, 30f, 20f, 0, "经济崩溃", "经济崩溃：国民幸福 -15、伤害 +30、护甲 +20");
                     RegisterTrait(Core.TradePowerEngine.ActorTraitSurplus, "ui/Icons/iconEraFlourish", 0f, 20f, 10f, 0, "贸易顺差", "贸易顺差：国民伤害 +20、护甲 +10");
                     RegisterTrait(Core.TradePowerEngine.ActorTraitDeficit, "ui/Icons/iconEraCollapse", 0f, -20f, 0f, 0, "贸易逆差", "贸易逆差：国民伤害 -20");
+                    RegisterTrait(Core.CodexEngine.CodexTraitEdu,      "ui/Icons/iconEraGolden",   8f, 0f, 0f, 2, "教育之国", "教育之国：国民幸福 +8、生育 +2");
+                    RegisterTrait(Core.CodexEngine.CodexTraitWelfare,  "ui/Icons/iconEraRevival",  10f, 0f, 0f, 0, "民生之国", "民生之国：国民幸福 +10");
+                    RegisterTrait(Core.CodexEngine.CodexTraitMil,      "ui/Icons/iconEraFlourish", -4f, 10f, 4f, 0, "武备之国", "武备之国：国民伤害 +10、护甲 +4、幸福 -4");
+                    RegisterTrait(Core.CodexEngine.CodexTraitTrade,    "ui/Icons/iconEraFlourish", 4f, 0f, 0f, 0, "货殖之国", "货殖之国：国民幸福 +4");
+                    RegisterTrait(Core.CodexEngine.CodexTraitAusterity,"ui/Icons/iconEraCollapse", -4f, 0f, 0f, 0, "紧缩之国", "紧缩之国：国民幸福 -4");
                 }
                 else
                 {
@@ -172,6 +177,11 @@ BiomeEconomy.ClearCache();
                     RegisterTrait(Core.EraEngine.ActorTraitCollapse, "ui/Icons/iconEraCollapse",  -15f, 30f, 20f, 0, "Economic Collapse", "Economic Collapse: happiness -15, damage +30, armor +20");
                     RegisterTrait(Core.TradePowerEngine.ActorTraitSurplus, "ui/Icons/iconEraFlourish", 0f, 20f, 10f, 0, "Trade Surplus", "Trade Surplus: damage +20, armor +10");
                     RegisterTrait(Core.TradePowerEngine.ActorTraitDeficit, "ui/Icons/iconEraCollapse", 0f, -20f, 0f, 0, "Trade Deficit", "Trade Deficit: damage -20");
+                    RegisterTrait(Core.CodexEngine.CodexTraitEdu,      "ui/Icons/iconEraGolden",   8f, 0f, 0f, 2, "Scholar State", "Scholar state: happiness +8, birth +2");
+                    RegisterTrait(Core.CodexEngine.CodexTraitWelfare,  "ui/Icons/iconEraRevival",  10f, 0f, 0f, 0, "Welfare State", "Welfare state: happiness +10");
+                    RegisterTrait(Core.CodexEngine.CodexTraitMil,      "ui/Icons/iconEraFlourish", -4f, 10f, 4f, 0, "Militarized", "Militarized: damage +10, armor +4, happiness -4");
+                    RegisterTrait(Core.CodexEngine.CodexTraitTrade,    "ui/Icons/iconEraFlourish", 4f, 0f, 0f, 0, "Merchant Nation", "Merchant nation: happiness +4");
+                    RegisterTrait(Core.CodexEngine.CodexTraitAusterity,"ui/Icons/iconEraCollapse", -4f, 0f, 0f, 0, "Austerity", "Austerity: happiness -4");
                 }
             }
             catch (System.Exception e)
