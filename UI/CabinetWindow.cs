@@ -516,9 +516,13 @@ namespace EconomyMod.UI
             var nameTxt = UIHelpers.CreateText(
                 tier >= 0 ? UIHelpers.Lf("cabinet_policy_active", name, tier + 1) : name,
                 row.transform, 12f, tier >= 0 ? UIStyles.Positive : UIStyles.TextPrimary, _gameFont, 22f);
-            nameTxt.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var nameLe = nameTxt.GetComponent<LayoutElement>();
+            if (nameLe == null) nameLe = nameTxt.AddComponent<LayoutElement>();
+            nameLe.flexibleWidth = 1f;
             var costTxt = UIHelpers.CreateText(costText, row.transform, 10f, Muted, _gameFont, 18f);
-            costTxt.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var costLe = costTxt.GetComponent<LayoutElement>();
+            if (costLe == null) costLe = costTxt.AddComponent<LayoutElement>();
+            costLe.flexibleWidth = 1f;
 
             // 按钮行：小号按钮横排（启用→升档→取消），不再拉满整行
             var btnRow = NewRow(3, 24f);
@@ -550,9 +554,13 @@ namespace EconomyMod.UI
             var nameTxt = UIHelpers.CreateText(
                 cooling ? UIHelpers.Lf("cabinet_decree_cooling", name) : name,
                 row.transform, 12f, cooling ? Muted : UIStyles.TextPrimary, _gameFont, 22f);
-            nameTxt.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var nameLe2 = nameTxt.GetComponent<LayoutElement>();
+            if (nameLe2 == null) nameLe2 = nameTxt.AddComponent<LayoutElement>();
+            nameLe2.flexibleWidth = 1f;
             var costTxt = UIHelpers.CreateText(costText, row.transform, 10f, Muted, _gameFont, 18f);
-            costTxt.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var costLe2 = costTxt.GetComponent<LayoutElement>();
+            if (costLe2 == null) costLe2 = costTxt.AddComponent<LayoutElement>();
+            costLe2.flexibleWidth = 1f;
             AddRowButton(row, UIHelpers.L("cabinet_execute"), cooling ? BtnColor : BtnGood, () => action(), 100f);
         }
 
@@ -670,7 +678,10 @@ namespace EconomyMod.UI
         {
             var go = new GameObject("Spacer", typeof(RectTransform), typeof(LayoutElement));
             go.transform.SetParent(row.transform, false);
-            go.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var le = go.GetComponent<LayoutElement>();
+            le.flexibleWidth = 1f;
+            le.preferredWidth = 1f;
+            le.flexibleHeight = 1f;
         }
 
         private static int SafeYear()

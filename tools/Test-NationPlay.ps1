@@ -134,6 +134,8 @@ if (-not (Test-Path -LiteralPath $diplomacyPath -PathType Leaf)) {
     Assert ($nation -match 'NationDiplomacy\.Reset') 'nation reset must clear diplomacy state'
     Assert ($cabinet -match 'BuildDiplomacyPage|BuildDiplomacyList') 'cabinet must render the diplomacy page'
     Assert ($cabinet -match 'BuildNativeBuildings') 'cabinet must render the native-building section'
+    # 防回归：CreateText 结果无 LayoutElement（GetComponent 直接取值会 NRE 中断整页构建）
+    Assert ($cabinet -notmatch '\.GetComponent<LayoutElement>\(\)\.flexibleWidth') 'cabinet rows must null-check LayoutElement (NRE kills page build)' 
     Assert ($cabinet -match 'build_native_house_t1') 'cabinet must list vanilla building buttons'
     Assert ($nation -match 'BeginNativePlacement') 'nation must expose BeginNativePlacement'
     Assert ($nation -match 'TickNativePlacement') 'nation must expose the per-frame placement tick'
