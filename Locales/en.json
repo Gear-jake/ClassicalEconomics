@@ -552,5 +552,7 @@
   "cabinet_codex_adopt": "Adopt",
   "cabinet_codex_no_suggest": "No suggestions (balanced)",
   "cabinet_dip_style": "Nature: {0}",
-  "codex_suggest_btn": "→{0}"
+  "codex_suggest_btn": "→{0}",
+  "kingdom_codex_header": "Codex",
+  "kingdom_codex_counts": "Laws {0} · Policies {1}"
 }

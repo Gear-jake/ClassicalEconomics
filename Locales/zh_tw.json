@@ -552,5 +552,7 @@
   "cabinet_codex_adopt": "採納",
   "cabinet_codex_no_suggest": "暫無建議（國情均衡）",
   "cabinet_dip_style": "國性：{0}",
-  "codex_suggest_btn": "→{0}"
+  "codex_suggest_btn": "→{0}",
+  "kingdom_codex_header": "法典",
+  "kingdom_codex_counts": "法律 {0} 條 · 國策 {1} 條"
 }

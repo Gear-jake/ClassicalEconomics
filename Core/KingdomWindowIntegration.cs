@@ -58,6 +58,7 @@ namespace EconomyMod.Core
             try
             {
                 InjectEntry(window);
+                UpdateCodexSummary(window, GetShownKingdom(window));
             }
             catch (System.Exception e)
             {
@@ -106,6 +107,9 @@ namespace EconomyMod.Core
                     icon.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
                 }
                 btn.GetComponent<Button>().transition = Selectable.Transition.None;
+
+                // 法典摘要块（非操控国也能看到该国法律/国策状态；按钮下方，随窗口每开刷新）
+                EnsureSummaryText(window, background);
                 Debug.Log("[ClassicalEconomics] 国家界面入口按钮已注入: " + window.GetType().Name);
                 return true;
             }
@@ -151,6 +155,90 @@ namespace EconomyMod.Core
                 }
             }
             catch (System.Exception) { }
+        }
+
+        // ===== 法典摘要（原版窗口内展示任意国家的法律/国策状态）=====
+
+        private const string SummaryName = "ClassicalEconomicsCodexSummary";
+        private static Text _summaryText;
+
+        /// <summary>创建摘要文本对象（幂等）；锚定按钮左下方。</summary>
+        private static void EnsureSummaryText(StatsWindow window, Transform background)
+        {
+            if (_summaryText != null) return;
+            try
+            {
+                var go = new GameObject(SummaryName, typeof(RectTransform), typeof(Text));
+                go.transform.SetParent(background, false);
+                var rt = go.GetComponent<RectTransform>();
+                rt.anchorMin = new Vector2(1f, 1f);
+                rt.anchorMax = new Vector2(1f, 1f);
+                rt.pivot = new Vector2(1f, 1f);
+                rt.anchoredPosition = new Vector2(-12f, -56f);
+                rt.sizeDelta = new Vector2(180f, 64f);
+                var t = go.GetComponent<Text>();
+                t.font = LocalizedTextManager.current_font != null
+                    ? LocalizedTextManager.current_font
+                    : Resources.GetBuiltinResource<Font>("Arial.ttf");
+                t.fontSize = 9;
+                t.alignment = TextAnchor.UpperRight;
+                t.color = new Color(0.95f, 0.88f, 0.6f, 0.95f);
+                t.lineSpacing = 1.05f;
+                _summaryText = t;
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>刷新摘要文本：国性 + 生效法律/国策条数 + 最高档 2 条法律。</summary>
+        private static void UpdateCodexSummary(StatsWindow window, Kingdom kingdom)
+        {
+            if (_summaryText == null) return;
+            if (kingdom == null || kingdom.data == null)
+            {
+                _summaryText.gameObject.SetActive(false);
+                return;
+            }
+            try
+            {
+                long kid = kingdom.data.id;
+                int style = CodexEngine.GetStyle(kid);
+                string styleName = style >= 0 && style < CodexEngine.StyleKeys.Length
+                    ? Services.LocalizationService.Get(CodexEngine.StyleKeys[style]) : "?";
+
+                int lawCount = 0, polCount = 0;
+                var top = new System.Collections.Generic.List<string>();
+                int topLv = 0;
+                for (int i = 0; i < CodexEngine.LawKeys.Length; i++)
+                {
+                    int lv = CodexEngine.GetLawLevel(kid, CodexEngine.LawKeys[i]);
+                    if (lv > 0)
+                    {
+                        lawCount++;
+                        if (lv > topLv) { topLv = lv; top.Clear(); top.Add(CodexEngine.LawKeys[i]); }
+                        else if (lv == topLv && top.Count < 2) top.Add(CodexEngine.LawKeys[i]);
+                    }
+                }
+                for (int i = 0; i < CodexEngine.PolicyKeys.Length; i++)
+                    if (CodexEngine.GetPolicyLevel(kid, CodexEngine.PolicyKeys[i]) > 0) polCount++;
+
+                var sb = new System.Text.StringBuilder();
+                sb.Append(Services.LocalizationService.Get("kingdom_codex_header")).Append('：').Append(styleName)
+                  .Append('\n')
+                  .Append(string.Format(Services.LocalizationService.Get("kingdom_codex_counts"), lawCount, polCount));
+                for (int i = 0; i < top.Count; i++)
+                {
+                    sb.Append('\n');
+                    sb.Append(Services.LocalizationService.Get(top[i]));
+                    sb.Append('·');
+                    sb.Append(Services.LocalizationService.Get("codex_lv" + topLv));
+                }
+                _summaryText.text = sb.ToString();
+                _summaryText.gameObject.SetActive(true);
+            }
+            catch (System.Exception)
+            {
+                _summaryText.gameObject.SetActive(false);
+            }
         }
 
         private static void OnEntryClick(StatsWindow window)

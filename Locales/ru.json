@@ -552,5 +552,7 @@
   "cabinet_codex_adopt": "Принять",
   "cabinet_codex_no_suggest": "Нет советов (баланс)",
   "cabinet_dip_style": "Характер: {0}",
-  "codex_suggest_btn": "→{0}"
+  "codex_suggest_btn": "→{0}",
+  "kingdom_codex_header": "Кодекс",
+  "kingdom_codex_counts": "Законов {0} · Политик {1}"
 }
