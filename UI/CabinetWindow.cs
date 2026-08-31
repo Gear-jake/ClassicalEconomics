@@ -477,6 +477,51 @@ namespace EconomyMod.UI
         }
 
         /// <summary>外交列表：他国（按 GDP 前 12），每国一行：好感 + 5 个动作按钮。</summary>
+        /// <summary>
+        /// 旗帜图腾 Sprite（原版「图腾」部分）：data.get_banner_icon_id() → kingdom_banners_library
+        /// 的 BannerAsset.icons[index]（元素可能是 Sprite 或含 sprite 字段的对象）。
+        /// 全反射定位（编译期签名不稳定），失败返回 null（调用方回退 getElementIcon）。
+        /// </summary>
+        private static Sprite GetBannerIcon(Kingdom kingdom)
+        {
+            try
+            {
+                var data = kingdom.data;
+                if (data == null) return null;
+                const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+                var idMethod = data.GetType().GetMethod("get_banner_icon_id", F);
+                if (idMethod == null) return null;
+                int iconId = System.Convert.ToInt32(idMethod.Invoke(data, null));
+
+                var amType = typeof(AssetManager);
+                var libField = amType.GetField("kingdom_banners_library",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.FlattenHierarchy);
+                if (libField == null) return null;
+                var lib = libField.GetValue(null);
+                if (lib == null) return null;
+                var getter = lib.GetType().GetMethod("get", F);
+                if (getter == null || getter.GetParameters().Length != 1) return null;
+                var banner = getter.Invoke(lib, new object[] { "kingdom" });
+                if (banner == null) return null;
+
+                var iconsField = banner.GetType().GetField("icons", F);
+                if (iconsField == null) return null;
+                var icons = iconsField.GetValue(banner) as System.Collections.IList;
+                if (icons == null || iconId < 0 || iconId >= icons.Count) return null;
+                var part = icons[iconId];
+                if (part == null) return null;
+                var spr = part as Sprite;
+                if (spr != null) return spr;
+                var p = part.GetType().GetProperty("sprite", F) ?? part.GetType().GetProperty("sprite", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                return (p != null ? p.GetValue(part) : null) as Sprite;
+            }
+            catch (System.Exception)
+            {
+                // 图腾不可用：静默（背景+颜色仍完整）
+            }
+            return null;
+        }
+
         /// <summary>详情页：国徽 + 该国数据 + 可用外交动作，返回按钮回列表。</summary>
         private void BuildDiplomacyDetail(Kingdom target)
         {
@@ -518,7 +563,10 @@ namespace EconomyMod.UI
                 icRt.anchorMin = Vector2.zero; icRt.anchorMax = Vector2.one;
                 icRt.offsetMin = Vector2.zero; icRt.offsetMax = Vector2.zero;
                 var icImg = icGo.GetComponent<Image>();
-                try { icImg.sprite = target.getElementIcon(); } catch (System.Exception) { }
+                // 图腾：优先官方旗帜库（banner_icon_id -> kingdom_banners_library.icons），失败回退 getElementIcon
+                Sprite totem = GetBannerIcon(target);
+                if (totem == null) { try { totem = target.getElementIcon(); } catch (System.Exception) { } }
+                icImg.sprite = totem;
                 try { icImg.color = target.kingdomColor.getColorBanner(); } catch (System.Exception) { }
             }
             catch (System.Exception) { }
