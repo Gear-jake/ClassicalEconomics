@@ -109,7 +109,8 @@ namespace EconomyMod.UI
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
             img.color = bg;
-            img.sprite = RoundedSprite();
+            var btnArt = UIArt.Get("button_9slice");
+            img.sprite = btnArt != null ? btnArt : RoundedSprite();
             img.type = Image.Type.Sliced;
             var btn = go.GetComponent<Button>();
             var colors = btn.colors;
@@ -172,9 +173,20 @@ namespace EconomyMod.UI
             rt.anchoredPosition = anchoredPosition;
             rt.sizeDelta = size;
             var bg = root.GetComponent<Image>();
-            bg.color = bgColor;
-            bg.sprite = RoundedSprite();
-            bg.type = Image.Type.Sliced;
+            var art = UIArt.Get("panel_9slice");
+            if (art != null)
+            {
+                // 石板金边底图：tint 白（保留底图本色），alpha 跟随窗口的不透明度
+                bg.sprite = art;
+                bg.color = new Color(1f, 1f, 1f, Mathf.Max(0.9f, bgColor.a));
+                bg.type = Image.Type.Sliced;
+            }
+            else
+            {
+                bg.color = bgColor;
+                bg.sprite = RoundedSprite();
+                bg.type = Image.Type.Sliced;
+            }
             return rt;
         }
 
