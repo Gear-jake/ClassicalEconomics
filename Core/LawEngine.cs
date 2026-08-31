@@ -8,10 +8,10 @@ namespace EconomyMod.Core
     /// 法典引擎（v1.2 国法体系）：每个王国一套「法律」（常设制度，5 档）+「国策」（施政方针，3 档），
     /// 全王国（含 AI 国）年度自动演变；玩家认领国由玩家控制、AI 只给建议。
     /// 效果全部经 <see cref="LawMods"/> 统一聚合（每国一份），各引擎只读聚合乘数——
-    /// 禁止逐条散落硬编码（防 dead modifier，Test-CodexLaws 门禁强制每档至少改变一个乘数）。
+    /// 禁止逐条散落硬编码（防 dead modifier，Test-LawLaws 门禁强制每档至少改变一个乘数）。
     /// 状态经王国 data 的 rb_* 键写入存档（MapBox save/load 反射挂接）；失败回退本局记忆。
     /// </summary>
-    public static class CodexEngine
+    public static class LawEngine
     {
         // ===== 法律/国策条目 key 常量（数据表定义，供索引与门禁）=====
 
@@ -125,11 +125,11 @@ namespace EconomyMod.Core
         };
 
         // ===== 法典国民特质（法典效果在国民身上的可见体现：原版 ActorTrait 机制）=====
-        public const string CodexTraitEdu = "codex_trait_edu";         // 教育之国
-        public const string CodexTraitWelfare = "codex_trait_welfare"; // 民生之国
-        public const string CodexTraitMil = "codex_trait_mil";         // 武备之国
-        public const string CodexTraitTrade = "codex_trait_trade";     // 货殖之国
-        public const string CodexTraitAusterity = "codex_trait_austerity"; // 紧缩之国
+        public const string LawTraitEdu = "law_trait_edu";         // 教育之国
+        public const string LawTraitWelfare = "law_trait_welfare"; // 民生之国
+        public const string LawTraitMil = "law_trait_mil";         // 武备之国
+        public const string LawTraitTrade = "law_trait_trade";     // 货殖之国
+        public const string LawTraitAusterity = "law_trait_austerity"; // 紧缩之国
 
         // ===== LawMods 聚合乘数（引擎唯一读取面）=====
 
@@ -242,7 +242,7 @@ namespace EconomyMod.Core
         /// <summary>玩家为某国设置法律档位。升档从金库（玩家国）/仓库税（AI 国）付费；降档免费。</summary>
         public static bool SetLawLevel(Kingdom kingdom, string key, int level, out string noteKey)
         {
-            noteKey = "toast_codex_law_ok";
+            noteKey = "toast_law_law_ok";
             int i = IndexOf(LawKeys, key);
             if (kingdom == null || kingdom.data == null || i < 0) return false;
             if (level < 0 || level >= LawTiers) return false;
@@ -263,7 +263,7 @@ namespace EconomyMod.Core
                     }
                     else
                     {
-                        if (!CollectAIFunds(kingdom, cost)) { noteKey = "toast_codex_ai_poor"; return false; }
+                        if (!CollectAIFunds(kingdom, cost)) { noteKey = "toast_law_ai_poor"; return false; }
                     }
                 }
             }
@@ -291,7 +291,7 @@ namespace EconomyMod.Core
         /// <summary>玩家为某国设置国策档位（规则同法律）。</summary>
         public static bool SetPolicyLevel(Kingdom kingdom, string key, int level, out string noteKey)
         {
-            noteKey = "toast_codex_policy_ok";
+            noteKey = "toast_law_policy_ok";
             int i = IndexOf(PolicyKeys, key);
             if (kingdom == null || kingdom.data == null || i < 0) return false;
             if (level < 0 || level >= PolicyTiers) return false;
@@ -310,7 +310,7 @@ namespace EconomyMod.Core
                     }
                     else
                     {
-                        if (!CollectAIFunds(kingdom, cost)) { noteKey = "toast_codex_ai_poor"; return false; }
+                        if (!CollectAIFunds(kingdom, cost)) { noteKey = "toast_law_ai_poor"; return false; }
                     }
                 }
             }
@@ -326,10 +326,10 @@ namespace EconomyMod.Core
             Get(kingdom.data.id).Style = System.Math.Max(0, System.Math.Min(StyleCount - 1, style));
         }
 
-        /// <summary>AI 国家变法费用（实现集中于 CodexAi.CollectAIFunds，避免重复）。</summary>
+        /// <summary>AI 国家变法费用（实现集中于 LawAi.CollectAIFunds，避免重复）。</summary>
         private static bool CollectAIFunds(Kingdom kingdom, long cost)
         {
-            return CodexAi.CollectAIFunds(kingdom, cost);
+            return LawAi.CollectAIFunds(kingdom, cost);
         }
 
 
@@ -414,7 +414,7 @@ namespace EconomyMod.Core
                     UpdateMemberTraits(kingdom, kid, st); // 法典加成落到国民特质（年度同步一次）
                     // AI 决策（玩家国豁免）必须写在 LastEvalYear 之前：TickNation 用它防重入
                     if (NationEngine.NationKingdomId != kid)
-                        CodexAi.TickNation(kingdom, st, year);
+                        LawAi.TickNation(kingdom, st, year);
                     st.LastEvalYear = year;
                 }
             }
@@ -689,11 +689,11 @@ namespace EconomyMod.Core
             {
                 if (kingdom == null || kingdom.units == null) return;
                 var target = new List<string>();
-                if (GetLawLevel(kid, LawEducation) >= 3) target.Add(CodexTraitEdu);
-                if (GetLawLevel(kid, LawHealthcare) >= 3) target.Add(CodexTraitWelfare);
-                if (GetLawLevel(kid, LawMilitarism) >= 3 || st.Mods.Military >= 0.4f) target.Add(CodexTraitMil);
-                if (GetLawLevel(kid, LawTradeFreedom) >= 4 || GetPolicyLevel(kid, PolicyTradeDeal) >= 1) target.Add(CodexTraitTrade);
-                if (GetLawLevel(kid, LawTaxSystem) >= 4 || st.Mods.TaxRate >= 1.25f) target.Add(CodexTraitAusterity);
+                if (GetLawLevel(kid, LawEducation) >= 3) target.Add(LawTraitEdu);
+                if (GetLawLevel(kid, LawHealthcare) >= 3) target.Add(LawTraitWelfare);
+                if (GetLawLevel(kid, LawMilitarism) >= 3 || st.Mods.Military >= 0.4f) target.Add(LawTraitMil);
+                if (GetLawLevel(kid, LawTradeFreedom) >= 4 || GetPolicyLevel(kid, PolicyTradeDeal) >= 1) target.Add(LawTraitTrade);
+                if (GetLawLevel(kid, LawTaxSystem) >= 4 || st.Mods.TaxRate >= 1.25f) target.Add(LawTraitAusterity);
 
                 // 移除已不再满足的特质
                 for (int i = st.ActiveTraits.Count - 1; i >= 0; i--)

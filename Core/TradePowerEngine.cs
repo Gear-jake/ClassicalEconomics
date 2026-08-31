@@ -91,7 +91,7 @@ namespace EconomyMod.Core
         {
             float ratio = RatioOf(ks);
             // 法典：军力修正改为阈值换算——顺差保底 0.5 下限，军国/征兵降门槛、和平/管制升门槛
-            float mil = CodexEngine.GetMods(ks.KingdomId).Military;
+            float mil = LawEngine.GetMods(ks.KingdomId).Military;
             float surplusThreshold = mil != 0f
                 ? System.Math.Max(0.5f, cfg.TradeSurplusRatio / (1f + mil))
                 : cfg.TradeSurplusRatio;

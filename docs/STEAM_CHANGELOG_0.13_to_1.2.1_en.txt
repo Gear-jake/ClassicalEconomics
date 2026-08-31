@@ -59,7 +59,7 @@ Since 0.13.0 the mod has grown from an "economic statistics" layer into a full n
 
 [h2]v0.99–v1.0.0 Hotkey & consolidated release[/h2]
 [list]
-[*]v0.99 Map hotkey (default G, rebindable in settings; same polling pattern as RulerBox's K)
+[*]v0.99 Map hotkey (default G, rebindable in settings; same polling pattern as 's K)
 [*]v1.0.0 Consolidated release: hard gate for identical four-language key sets, all new strings localized, README & Steam docs updated
 [/list]
 
@@ -69,7 +69,7 @@ Since 0.13.0 the mod has grown from an "economic statistics" layer into a full n
 [*]v1.0.2 Diplomacy interface unavailable: startWar switched to runtime reflection + war-type asset candidate fallback
 [/list]
 
-[h2]v1.1.0 RulerBox-style cabinet[/h2]
+[h2]v1.1.0 -style cabinet[/h2]
 [list]
 [*]Cabinet rebuilt as a four-tab hub (Finance / Policies / Decrees & Build / Diplomacy), 600×760, each page gets full content width
 [/list]
@@ -77,12 +77,12 @@ Since 0.13.0 the mod has grown from an "economic statistics" layer into a full n
 [h2]v1.1.1 Vanilla building placement[/h2]
 [list]
 [*]Build page offers 10 vanilla buildings (houses T1/T3/T5, barracks, watch tower, well, mine, statue, temple, bonfire)
-[*]RulerBox-style placement mode: click the map to place repeatedly, right-click to cancel; fee derived from building cost, auto-refund on failure
+[*]-style placement mode: click the map to place repeatedly, right-click to cancel; fee derived from building cost, auto-refund on failure
 [/list]
 
 [h2]v1.2.0 National law codex[/h2]
 [list]
-[*]Every kingdom (AI included): 28 laws × 5 tiers + 16 policies × 3 tiers (beyond RulerBox's 38 items)
+[*]Every kingdom (AI included): 28 laws × 5 tiers + 16 policies × 3 tiers (beyond 's 38 items)
 [*]AI evolves annually from national situation (finance/Gini/war/population/disaster) + 6 national natures; the player's nation is player-controlled
 [*]Effects aggregated via one LawMods layer and wired to 10 engines (production/trade/price/Gini/unrest/consumption/disaster/build cost/wages/military)
 [*]5 mutual-exclusion pairs, paid upgrades & free downgrades, codex persisted in saves, cabinet codex page

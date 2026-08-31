@@ -48,7 +48,7 @@ namespace EconomyMod.Services
         public const string TypeNationFestival = "ev_nation_festival"; // 中央银行家：国庆庆典
         public const string TypeNationBuild    = "ev_nation_build";    // 中央银行家：兴建建筑
         public const string TypeNationDiplomacy = "ev_nation_diplomacy"; // 中央银行家：外交动作（1宣战2求和3结盟4赠礼5协定6解约）
-        public const string TypeCodexReform = "ev_codex_reform"; // 法典：AI 国家变法（1一般 2重大互斥）
+        public const string TypeLawReform = "ev_law_reform"; // 法典：AI 国家变法（1一般 2重大互斥）
 
         /// <summary>
         /// 是否为重大事件（史书级）：低频高价值，走独立环形缓冲防被高频事件覆盖。
@@ -150,7 +150,7 @@ namespace EconomyMod.Services
                 case TypeBubbleBurst:
                 case TypeNationClaim: case TypeNationPolicy: case TypeNationRelief:
                 case TypeNationFestival: case TypeNationBuild: case TypeNationDiplomacy:
-                case TypeCodexReform:
+                case TypeLawReform:
                     return true;
                 default:
                     return false;

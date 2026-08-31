@@ -208,8 +208,8 @@ namespace EconomyMod.UI
                 case EventStreamService.TypeNationFestival: return UIHelpers.Lf("ev_desc_nation_festival", e.KingdomName);
                 case EventStreamService.TypeNationBuild:    return UIHelpers.Lf("ev_desc_nation_build", e.KingdomName);
                 case EventStreamService.TypeNationDiplomacy: return UIHelpers.Lf("ev_desc_nation_diplomacy", e.KingdomName, e.Value);
-                case EventStreamService.TypeCodexReform:
-                    return e.Value >= 2 ? UIHelpers.L("ev_desc_codex_reform_major") : UIHelpers.Lf("ev_desc_codex_reform", e.KingdomName);
+                case EventStreamService.TypeLawReform:
+                    return e.Value >= 2 ? UIHelpers.L("ev_desc_law_reform_major") : UIHelpers.Lf("ev_desc_law_reform", e.KingdomName);
                 default:                                return UIHelpers.L(e.TypeKey);
             }
         }

@@ -34,7 +34,7 @@ namespace EconomyMod.UI
         protected override Vector2 Size => new Vector2(600f, 760f);
         protected override Color BgColor => new Color(0.12f, 0.13f, 0.16f, 0.97f);
 
-        private enum CabinetPage { Finance = 0, Policy, Decree, Diplomacy, Codex }
+        private enum CabinetPage { Finance = 0, Policy, Decree, Diplomacy, Law }
         private const int PageCount = 5;
         private static readonly string[] PageKeys = { "cabinet_tab_finance", "cabinet_tab_policy", "cabinet_tab_decree", "cabinet_tab_diplomacy", "cabinet_tab_codex" };
 
@@ -170,13 +170,13 @@ namespace EconomyMod.UI
                 case CabinetPage.Policy: BuildPolicyPage(); break;
                 case CabinetPage.Decree: BuildDecreePage(); break;
                 default: BuildDiplomacyPage(); break;
-                case CabinetPage.Codex: BuildCodexPage(null); break;
+                case CabinetPage.Law: BuildLawPage(null); break;
             }
         }
 
         /// <summary>法典页：两区（法律 24 条 5 档 / 国策 16 条 3 档）+ 顶部当前国个性与 AI 建议。
         /// targetKingdom 为空时展示本国（玩家）；否则展示指定国（外交页跳转用）。</summary>
-        private void BuildCodexPage(Kingdom targetKingdom)
+        private void BuildLawPage(Kingdom targetKingdom)
         {
             var kingdom = targetKingdom != null ? targetKingdom
                 : GameHelpers.FindKingdom(NationEngine.NationKingdomId);
@@ -187,18 +187,18 @@ namespace EconomyMod.UI
             }
             long kid = kingdom.data.id;
             bool own = NationEngine.NationKingdomId == kid;
-            AddLine(UIHelpers.Lf("cabinet_codex_nation", GameHelpers.SafeKingdomName(kingdom)), UIStyles.Gold, 13f);
-            int style = CodexEngine.GetStyle(kid);
-            AddLine(UIHelpers.Lf("cabinet_codex_style", UIHelpers.L(CodexEngine.StyleKeys[style])), UIStyles.Info, 12f);
-            AddLine(UIHelpers.L("cabinet_codex_effect_title"), UIStyles.Gold, 12f);
-            BuildCodexEffectSummary(kid);
+            AddLine(UIHelpers.Lf("cabinet_law_nation", GameHelpers.SafeKingdomName(kingdom)), UIStyles.Gold, 13f);
+            int style = LawEngine.GetStyle(kid);
+            AddLine(UIHelpers.Lf("cabinet_law_style", UIHelpers.L(LawEngine.StyleKeys[style])), UIStyles.Info, 12f);
+            AddLine(UIHelpers.L("cabinet_law_effect_title"), UIStyles.Gold, 12f);
+            BuildLawEffectSummary(kid);
             // AI 建议改为逐条嵌入法律行（当前档→建议档小按钮），不再占顶部整块
             AddDivider(DividerColor);
 
             // 法律区
-            foreach (var cat in CodexEngine.LawCategories)
+            foreach (var cat in LawEngine.LawCategories)
             {
-                AddLine(UIHelpers.L("codex_cat_" + cat.Category), UIStyles.Gold, 12f);
+                AddLine(UIHelpers.L("law_cat_" + cat.Category), UIStyles.Gold, 12f);
                 foreach (var key in cat.Keys)
                 {
                     BuildLawRow(kingdom, key);
@@ -207,42 +207,42 @@ namespace EconomyMod.UI
             AddLine("", Muted, 6f);
 
             // 国策区
-            AddLine(UIHelpers.L("cabinet_codex_policy_hdr"), UIStyles.Gold, 12f);
-            foreach (var key in CodexEngine.PolicyKeys)
+            AddLine(UIHelpers.L("cabinet_law_policy_hdr"), UIStyles.Gold, 12f);
+            foreach (var key in LawEngine.PolicyKeys)
             {
-                BuildCodexPolicyRow(kingdom, key);
+                BuildLawPolicyRow(kingdom, key);
             }
         }
 
         /// <summary>法典聚合总览：直接读 LawMods，把偏离中性的乘数实时格式化展示（无需等年度）。</summary>
-        private void BuildCodexEffectSummary(long kid)
+        private void BuildLawEffectSummary(long kid)
         {
-            var m = CodexEngine.GetMods(kid);
+            var m = LawEngine.GetMods(kid);
             var parts = new List<string>();
             System.Action<string, float> addPct = (key, v) =>
             {
                 if (System.Math.Abs(v - 1f) > 0.0001f)
                     parts.Add(UIHelpers.L(key) + (v > 1f ? " +" : " -") + (System.Math.Abs(v - 1f) * 100f).ToString("F1") + "%");
             };
-            addPct("codex_eff_production", m.Productivity);
-            addPct("codex_eff_tax", m.TaxRate);
-            addPct("codex_eff_trade", m.TradeFlow);
-            addPct("codex_eff_price", m.Price);
-            addPct("codex_eff_consume", m.Consumer);
-            addPct("codex_eff_disaster", m.DisasterResist);
-            addPct("codex_eff_build", m.BuildCost);
-            addPct("codex_eff_wage", m.Wage);
-            addPct("codex_eff_unrest", m.UnrestAccum);
-            addPct("codex_eff_happy", m.Happiness);
-            addPct("codex_eff_birth", m.Birth);
+            addPct("law_eff_production", m.Productivity);
+            addPct("law_eff_tax", m.TaxRate);
+            addPct("law_eff_trade", m.TradeFlow);
+            addPct("law_eff_price", m.Price);
+            addPct("law_eff_consume", m.Consumer);
+            addPct("law_eff_disaster", m.DisasterResist);
+            addPct("law_eff_build", m.BuildCost);
+            addPct("law_eff_wage", m.Wage);
+            addPct("law_eff_unrest", m.UnrestAccum);
+            addPct("law_eff_happy", m.Happiness);
+            addPct("law_eff_birth", m.Birth);
             if (System.Math.Abs(m.GiniShift) > 0.0001f)
-                parts.Add(UIHelpers.L("codex_eff_gini") + (m.GiniShift > 0f ? " +" : " -") + System.Math.Abs(m.GiniShift).ToString("F2"));
+                parts.Add(UIHelpers.L("law_eff_gini") + (m.GiniShift > 0f ? " +" : " -") + System.Math.Abs(m.GiniShift).ToString("F2"));
             if (System.Math.Abs(m.Military) > 0.0001f)
-                parts.Add(UIHelpers.L("codex_eff_military") + (m.Military > 0f ? " +" : " -") + System.Math.Abs(m.Military).ToString("F1"));
+                parts.Add(UIHelpers.L("law_eff_military") + (m.Military > 0f ? " +" : " -") + System.Math.Abs(m.Military).ToString("F1"));
 
             if (parts.Count == 0)
             {
-                AddLine(UIHelpers.L("cabinet_codex_effect_none"), Muted, 11f);
+                AddLine(UIHelpers.L("cabinet_law_effect_none"), Muted, 11f);
                 return;
             }
             for (int i = 0; i < parts.Count; i += 3)
@@ -254,22 +254,22 @@ namespace EconomyMod.UI
 
         private void BuildLawRow(Kingdom kingdom, string key)
         {
-            int level = CodexEngine.GetLawLevel(kingdom.data.id, key);
+            int level = LawEngine.GetLawLevel(kingdom.data.id, key);
             string name = UIHelpers.L(key);
             AddLine(name, level > 0 ? UIStyles.Positive : UIStyles.TextPrimary, 12f);
-            var row = NewRow(CodexEngine.LawTiers, 30f, fill: true);
+            var row = NewRow(LawEngine.LawTiers, 30f, fill: true);
             // 档位按钮（0..4，小号横排）：显示该法律自己的档位语义名（如 无贸易保护→闭关锁国），缺失回退 无/轻/中/重/极
-            for (int lv = 0; lv < CodexEngine.LawTiers; lv++)
+            for (int lv = 0; lv < LawEngine.LawTiers; lv++)
             {
                 int target = lv;
                 string lvKey = key + "_lv" + lv;
                 string lvLabel = UIHelpers.L(lvKey);
-                if (lvLabel == lvKey) lvLabel = UIHelpers.L("codex_lv" + lv);
+                if (lvLabel == lvKey) lvLabel = UIHelpers.L("law_lv" + lv);
                 AddRowButton(row, lvLabel,
                     lv == level ? BtnGood : BtnColor,
                     () =>
                     {
-                        string msg; bool ok = CodexEngine.SetLawLevel(kingdom, key, target, out msg);
+                        string msg; bool ok = LawEngine.SetLawLevel(kingdom, key, target, out msg);
                         GameHelpers.NotifyLocalized(msg);
                         if (ok) RefreshNow();
                     }, 86f);
@@ -277,14 +277,14 @@ namespace EconomyMod.UI
             // AI 建议（仅玩家国）：显示 当前→建议，点击采纳
             if (NationEngine.NationKingdomId == kingdom.data.id)
             {
-                var st = CodexEngine.Get(kingdom.data.id);
-                int suggest = CodexEngine.SuggestLawLevel(kingdom, key, st);
+                var st = LawEngine.Get(kingdom.data.id);
+                int suggest = LawEngine.SuggestLawLevel(kingdom, key, st);
                 if (suggest >= 0 && suggest != level)
                 {
                     int stLv = suggest;
-                    AddRowButton(row, UIHelpers.Lf("codex_suggest_btn", suggest), BtnGood, () =>
+                    AddRowButton(row, UIHelpers.Lf("law_suggest_btn", suggest), BtnGood, () =>
                     {
-                        string msg; bool ok = CodexEngine.SetLawLevel(kingdom, key, stLv, out msg);
+                        string msg; bool ok = LawEngine.SetLawLevel(kingdom, key, stLv, out msg);
                         GameHelpers.NotifyLocalized(msg);
                         if (ok) RefreshNow();
                     }, 56f);
@@ -293,20 +293,20 @@ namespace EconomyMod.UI
             AddRowSpacer(row);
         }
 
-        private void BuildCodexPolicyRow(Kingdom kingdom, string key)
+        private void BuildLawPolicyRow(Kingdom kingdom, string key)
         {
-            int level = CodexEngine.GetPolicyLevel(kingdom.data.id, key);
+            int level = LawEngine.GetPolicyLevel(kingdom.data.id, key);
             string name = UIHelpers.L(key);
             AddLine(name, level > 0 ? UIStyles.Info : UIStyles.TextPrimary, 11f);
             var row = NewRow(2);
-            for (int lv = 0; lv < CodexEngine.PolicyTiers; lv++)
+            for (int lv = 0; lv < LawEngine.PolicyTiers; lv++)
             {
                 int target = lv;
-                AddRowButton(row, UIHelpers.Lf("codex_pol_lv" + lv),
+                AddRowButton(row, UIHelpers.Lf("law_pol_lv" + lv),
                     lv == level ? BtnGood : BtnColor,
                     () =>
                     {
-                        string msg; bool ok = CodexEngine.SetPolicyLevel(kingdom, key, target, out msg);
+                        string msg; bool ok = LawEngine.SetPolicyLevel(kingdom, key, target, out msg);
                         GameHelpers.NotifyLocalized(msg);
                         if (ok) RefreshNow();
                     });
@@ -588,19 +588,19 @@ namespace EconomyMod.UI
             bool hasStats = EconomyEngine.KingdomStats.TryGetValue(kid, out ks) && ks != null;
             AddLine(UIHelpers.Lf("cabinet_dip_stat_relation",
                 NationDiplomacy.GetRelationScore(target), NationDiplomacy.GetGoodwill(kid)), UIStyles.Info, 12f);
-            int style = CodexEngine.GetStyle(kid);
+            int style = LawEngine.GetStyle(kid);
             AddLine(UIHelpers.Lf("cabinet_dip_stat_style",
-                UIHelpers.L(CodexEngine.StyleKeys[style])), Muted, 11f);
+                UIHelpers.L(LawEngine.StyleKeys[style])), Muted, 11f);
             if (hasStats)
             {
                 AddLine(UIHelpers.Lf("cabinet_dip_stat_gdp", ks.GDP.ToString("N0")), UIStyles.Gold, 13f);
                 AddLine(UIHelpers.Lf("cabinet_dip_stat_pop", ks.Population, ks.AvgWealth.ToString("F1")), Muted, 11f);
             }
             int laws = 0, pols = 0;
-            for (int i = 0; i < CodexEngine.LawKeys.Length; i++)
-                if (CodexEngine.GetLawLevel(kid, CodexEngine.LawKeys[i]) > 0) laws++;
-            for (int i = 0; i < CodexEngine.PolicyKeys.Length; i++)
-                if (CodexEngine.GetPolicyLevel(kid, CodexEngine.PolicyKeys[i]) > 0) pols++;
+            for (int i = 0; i < LawEngine.LawKeys.Length; i++)
+                if (LawEngine.GetLawLevel(kid, LawEngine.LawKeys[i]) > 0) laws++;
+            for (int i = 0; i < LawEngine.PolicyKeys.Length; i++)
+                if (LawEngine.GetPolicyLevel(kid, LawEngine.PolicyKeys[i]) > 0) pols++;
             AddLine(UIHelpers.Lf("cabinet_dip_stat_laws", laws, pols), Muted, 11f);
             bool atWar = NationDiplomacy.IsAtWarWith(target);
             AddLine(UIHelpers.L(atWar ? "cabinet_dip_stat_war" : "cabinet_dip_stat_peace"), UIStyles.Warning, 11f);

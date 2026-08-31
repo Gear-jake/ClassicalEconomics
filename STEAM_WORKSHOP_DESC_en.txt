@@ -1,39 +1,26 @@
 [h1]Classical Economics[/h1]
-[b]A macroeconomic simulation mod for WorldBox | v1.0.0[/b][b]Requires:[/b] WorldBox 0.51.2+ and NeoModLoader (NML)
+[b]A macroeconomics & nation-governance simulation mod for WorldBox ｜ Current version 1.2.1fix[/b]
+[b]Requires:[/b] WorldBox 0.51.2+ and NeoModLoader (NML)
 
-Gives your world a real economy. The mod tracks the wealth of every creature that has built a city or belongs to a kingdom (including aliens, dragons, Fire Demons and Ice Demons), then simulates a full macroeconomic system on top of it:
+Adds a full macroeconomic and **national-governance** simulation to WorldBox. Every race that can found a kingdom (Fire/Ice Demons, aliens...) joins the economy; play one nation yourself or watch the AI kingdoms govern themselves.
 
 [list]
-[*]Macro statistics: global GDP, average wealth, Gini coefficient, price index (CPI), per-kingdom breakdown
-[*]Economic cycle: Boom / Recession / Depression / Recovery with bubble buildup and bursts; famine in depression
-[*]Unrest & revolution: inequality triggers rebellions, uprisings and revolutions; war plunder transfers loot to winners
-[*]Kingdom trade: zero-sum trade flows (surplus = deficit, no coins created from nothing) + biome specialties for comparative-advantage trade; [b]geographic trade[/b] — distance decay between capitals, transport costs, and regional price arbitrage; [b]adaptive trade parameters (v0.11)[/b] — distance decay / transport cost / arbitrage weight are derived each cycle from game state, no manual config needed
-[*][b]Net trade ranking (v0.13)[/b]: a floating window ranks cities/kingdoms by net trade (exports − imports), surplus green / deficit red; a kingdom's value = sum of its cities
-[*][b]Trade military power (v0.13)[/b]: surplus nations' people gain damage/armor, deficit nations suffer damage — trade powerhouses fight stronger
-[*]Labor division: employed population creates wages through a production function
-[*]Sapient spending: the rich spend yearly in 7 ways (weapons, building investment, arsenal, wholesale, era events, charity, taxes) — coins never vanish
-[*]Era events: Golden Age / Revival / Flourishing / Economic Collapse
-[*]Banking credit: the rich lend to the poor; defaults soar in depressions; crises spread along trade routes
-[*]Disaster shocks: volcanoes and meteors evaporate affected city wealth; volcanoes temporarily boost mining
-[*]Inheritance: wealth passes parents → spouse → children; mayors collect inheritance tax
-[*]Policy & governance: redistribution, fiscal policy, tariffs; failed rulers abdicate
+[*][b]Macroeconomics:[/b] wealth tracking for all races - GDP, average wealth, Gini coefficient, CPI per kingdom; Boom -> Recession -> Depression -> Recovery cycle, bubble bursts, famine and inflation
+[*][b]Geographic trade:[/b] real A* path costs (detours around mountains and seas), sea penalties, comparative advantages from biomes; net-trade rankings (city & kingdom)
+[*][b]Economic systems:[/b] labor wages, banking credit with default contagion in depressions, disaster shocks (volcano/meteor), inheritance (parents -> spouse -> children, or split by damage dealt)
+[*][b]Social unrest:[/b] inequality triggers rebellion -> street uprising -> revolution; war plunder and dynasty monitoring
+[*][b][Playable Government - Central Banker][/b] Hover a kingdom on the map and press G (rebindable) to claim it: royal treasury (founding grant + periodic levies), 6 ongoing policies x 3 tiers with slots, one-shot decrees (relief / festival), **vanilla building placement** (houses/barracks/watch tower/well and more - 10 kinds, click the map to build), track record and a nation GDP trend chart, and **diplomacy** (declare war / sue for peace / alliances / gifts / bilateral trade pacts - a two-level page: nation list -> detail with a three-layer crest and full stats)
+[*][b][National Law System - Codex][/b] **Every kingdom (AI included): 28 laws x 5 tiers + 16 policies x 3 tiers** - evolving yearly from the national situation (finance/Gini/war/population/disaster) plus 6 national natures; mutual-exclusion law pairs, paid upgrades and free downgrades, all persisted in saves; effects genuinely wired into 10 engines (production/trade/price/Gini/unrest/consumption/disaster/build cost/wages/military) and shown on **citizen traits** (Scholar State, Militarized, etc.); the law page shows a live aggregate-effect summary and semantic tier names (e.g. Trade Freedom: no protection -> closed country)
+[*][b]UI:[/b] hub-style Cabinet with five tabs (Finance / Policies / Decrees & Build / Diplomacy / Laws, 600x760, buttons adapt to window resizing); slate-and-gold 9-slice UI; floating windows for overview/trends/events/trade/rich list
 [/list]
 
-[b]UI:[/b] Economy tab in the toolbar with 7 buttons; overview panel, wealth & inequality trend charts, event stream window (major events are kept permanently, never pushed out by frequent ones).
+[b]Performance:[/b] frame-budgeted yearly settlement (4 ms/frame, 2 s window; only spending/banking are reduced when over budget - taxes are never reduced), automatic memory cleanup, background-thread statistics, 46 automated gates, fully conserved gold.
 
-[b]Installation:[/b] Install NML first, then put the EconomyMod folder into WorldBox/Mods/ and enable it in-game.
+[b]Localization:[/b] four languages (简体 / 繁體 / English / Русский), the whole UI switches instantly; citizens carry visible codex traits.
 
-[b]Compatibility:[/b] Built entirely on vanilla mechanics, no external resources; all statistics computed on a background thread (zero main-thread cost). Fully compatible with the Optime optimization mod — the compatibility layer injects null-guards at runtime and never modifies Optime.
+[b]Installation:[/b] Install NML first, put the EconomyMod folder into WorldBox/Mods/, enable in-game.
+[b]Controls:[/b] hover a kingdom and press G to claim / open the Cabinet (rebindable in settings); a ledger button sits in the top-right of nation/city windows.
 
-UI languages: 简体中文 / 繁體中文 / English / Русский
-
-[b]v1.0.0 new content[/b]
-[list]
-[*][b]Central Banker gameplay[/b] Claim a kingdom and serve as its economy minister: a real royal treasury (levies and spending), 6 ongoing policies (tax cuts/hikes, poor relief, propaganda, trade pacts, tariffs; 3-tier slot system), emergency relief & national festival decrees, market & granary buildings on the map (destroyed by wars and disasters)
-[*][b]Diplomacy[/b] Declare war, sue for peace (pay ransom when weaker), form alliances, send gifts, and sign bilateral trade pacts (+10% bilateral flow per tier) - all effective in real time
-[*][b]Map hotkey G[/b] Hover a kingdom and press G to claim it / open the cabinet (rebindable in settings; blank disables)
-[*][b]Performance[/b] Frame-budgeted annual settlement, automatic memory cleanup, real A* trade-path costs (detours around mountains and seas)
-[*][b]Full localization[/b] Key sets identical across Simplified/Traditional Chinese, English and Russian; the whole UI switches language instantly
-[/list]
+[b]Compatibility:[/b] built entirely on vanilla mechanics, no external assets, compatible with performance mods such as Optime; the codex state is stored in kingdom data keys, so it saves with your game.
 
 Author: Jake

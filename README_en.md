@@ -16,12 +16,12 @@
 - Royal treasury: founding grant + periodic levies; policies, decrees, buildings and diplomacy spend real gold
 - 6 ongoing policies x 3 tiers with slots, one-shot decrees (relief / festival), **vanilla building placement** (10 kinds, click the map to build)
 - Track record + nation GDP trend chart (last 40 cycles)
-- Diplomacy: war / peace (ransom when weaker) / alliances / gifts / bilateral trade pacts - two-level RulerBox style (list → detail: three-layer crest + nation stats)
+- Diplomacy: war / peace (ransom when weaker) / alliances / gifts / bilateral trade pacts - two-level  style (list → detail: three-layer crest + nation stats)
 
-**National Law Codex**
+**National Law Law**
 - **Every kingdom (AI included): 28 laws x 5 tiers + 16 policies x 3 tiers**, evolving yearly from national situation and 6 national natures
 - Mutex law pairs, paid upgrades / free downgrades; effects genuinely wired into 10 engines (production/trade/price/Gini/unrest/consumption/disaster/build cost/wages/military)
-- Codex bonuses visible on **citizen traits** (Scholar State, Militarized, etc.); codex persisted in saves
+- Law bonuses visible on **citizen traits** (Scholar State, Militarized, etc.); codex persisted in saves
 - Live aggregate-effect summary + semantic tier names (e.g. Trade Freedom: No protection → Closed country)
 
 **Performance & Quality**
@@ -72,7 +72,7 @@ While the annual settlement runs, the HUD shows a settling marker (`settling_mar
 ## Controls
 
 - **G** (rebindable): hover a kingdom → claim / open Cabinet (or the ledger button in nation/city windows)
-- Cabinet tabs: Finance / Policies / Decrees & Build / Diplomacy / Codex
+- Cabinet tabs: Finance / Policies / Decrees & Build / Diplomacy / Law
 
 ## Links
 

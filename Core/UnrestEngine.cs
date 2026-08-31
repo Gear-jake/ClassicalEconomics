@@ -95,7 +95,7 @@ namespace EconomyMod.Core
                     if (NationEngine.PropagandaActive(kid)) continue;
 
                     // 法典：动荡积累被法律抑制（新闻监管/司法/反腐等乘数 <1 时按比例跳过积累年）
-                    float unrestAccumMult = CodexEngine.GetMods(kid).UnrestAccum;
+                    float unrestAccumMult = LawEngine.GetMods(kid).UnrestAccum;
                     if (unrestAccumMult < 0.85f && (unrestAccumMult <= 0.5f || UnityEngine.Random.value < 0.45f))
                     {
                         continue;

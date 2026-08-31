@@ -58,7 +58,7 @@ namespace EconomyMod.Core
             public int Specialty; // BiomeSpecialty（主线程采集阶段读取，后台线程只读，避免后台访问 Unity 对象）
             public float CityX;   // 首都城市 tile x 坐标（主线程反射读取，后台只读；NaN=未知）
             public float CityY;   // 首都城市 tile y 坐标
-            public LawMods CodexMods; // 法典聚合快照（主线程采集时读一次；后台只读该拷贝，杜绝跨线程读写共享字典）
+            public LawMods LawMods; // 法典聚合快照（主线程采集时读一次；后台只读该拷贝，杜绝跨线程读写共享字典）
         }
 
         /// <summary>城市快照（主线程采集：Unity 对象 → 纯数据，后台线程只读）。</summary>
@@ -252,7 +252,7 @@ namespace EconomyMod.Core
             {
                 Id = id, Name = name, Population = population, Capacity = capacity,
                 Food = food, Cities = cities, Boats = boats, Specialty = specialty,
-                CityX = cityX, CityY = cityY, CodexMods = mods
+                CityX = cityX, CityY = cityY, LawMods = mods
             });
         }
 
@@ -1116,7 +1116,7 @@ namespace EconomyMod.Core
                                           + employmentRatio * 0.15f;
                     ks.Production = a.Workers * ks.Productivity * capitalFactor;
                     // 法典：生产函数乘数（教育/补贴/计划 vs 自由市场等聚合；读采集时快照，后台零字典访问）
-                    ks.Production *= f.CodexMods.Productivity;
+                    ks.Production *= f.LawMods.Productivity;
                     totalProduction += ks.Production;
                 }
                 res.Kingdoms.Add(ks);
@@ -1166,7 +1166,7 @@ namespace EconomyMod.Core
                 if (NationEngine.TariffPriceMult(ks.KingdomId) != 1f)
                     ks.LocalPrice = Mathf.Clamp(ks.LocalPrice * NationEngine.TariffPriceMult(ks.KingdomId), 0.5f, 2.5f);
                 // 法典：物价乘数（紧缩/贸易协定等聚合；快照读，后台零字典访问）
-                float cp2 = pi < kingdoms.Count ? kingdoms[pi].CodexMods.Price : 1f;
+                float cp2 = pi < kingdoms.Count ? kingdoms[pi].LawMods.Price : 1f;
                 if (cp2 != 1f) ks.LocalPrice = Mathf.Clamp(ks.LocalPrice * cp2, 0.5f, 3f);
                 // 恢复 foreach 语义：ks 是 struct，已就地改写，无碍
                 meanPrice += ks.LocalPrice;
@@ -1377,10 +1377,10 @@ namespace EconomyMod.Core
                 int cfA, cfB;
                 if (kingdomIndex.TryGetValue(ca.KingdomId, out cfA))
                 {
-                    codexFlow = kingdoms[cfA].CodexMods.TradeFlow;
+                    codexFlow = kingdoms[cfA].LawMods.TradeFlow;
                     if (kingdomIndex.TryGetValue(cb.KingdomId, out cfB))
                     {
-                        float fb = kingdoms[cfB].CodexMods.TradeFlow;
+                        float fb = kingdoms[cfB].LawMods.TradeFlow;
                         if (fb > codexFlow) codexFlow = fb;
                     }
                 }

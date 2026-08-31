@@ -9,9 +9,9 @@ $ErrorActionPreference = 'Stop'
 $failures = New-Object System.Collections.Generic.List[string]
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 
-$enginePath = Join-Path $Root 'Core\CodexEngine.cs'
-$aiPath = Join-Path $Root 'Core\CodexAi.cs'
-$savePath = Join-Path $Root 'Core\CodexSave.cs'
+$enginePath = Join-Path $Root 'Core\LawEngine.cs'
+$aiPath = Join-Path $Root 'Core\LawAi.cs'
+$savePath = Join-Path $Root 'Core\LawSave.cs'
 $cabinetPath = Join-Path $Root 'UI\CabinetWindow.cs'
 $mainPath = Join-Path $Root 'EconomyModMain.cs'
 
@@ -59,19 +59,19 @@ Assert ($ai -match 'MutexGroupOf') 'AI must resolve mutex groups'
 Assert ($engine -match 'if \(level > cur\).*TrySpend|if \(level > cur\)') 'law upgrade must cost gold'
 
 # 4) 存档注入点
-Assert ($save -match 'rb_codex_law_') 'save must write rb_codex_law_* keys'
-Assert ($save -match 'rb_codex_policy_') 'save must write rb_codex_policy_* keys'
-Assert ($save -match 'rb_codex_style') 'save must write rb_codex_style'
+Assert ($save -match 'rb_law_law_') 'save must write rb_law_law_* keys'
+Assert ($save -match 'rb_law_policy_') 'save must write rb_law_policy_* keys'
+Assert ($save -match 'rb_law_style') 'save must write rb_law_style'
 Assert ($save -match 'saveSave') 'save must patch MapBox.saveSave'
 Assert ($save -match 'loadSave') 'save must patch MapBox.loadSave'
-Assert ($main -match 'CodexSave\.TryInstall') 'main must install codex save patch'
+Assert ($main -match 'LawSave\.TryInstall') 'main must install codex save patch'
 
 # 5) 事件分级与 UI
-Assert ($ai -match 'TypeCodexReform') 'AI must record codex reform events'
-Assert ($cabinet -match 'BuildCodexPage') 'cabinet must render the codex page'
+Assert ($ai -match 'TypeLawReform') 'AI must record codex reform events'
+Assert ($cabinet -match 'BuildLawPage') 'cabinet must render the codex page'
 Assert ($cabinet -match 'cabinet_tab_codex') 'cabinet must have the codex tab'
-Assert ($cabinet -match 'CodexEngine\.SetLawLevel') 'cabinet must call SetLawLevel'
-Assert ($cabinet -match 'CodexEngine\.SetPolicyLevel') 'cabinet must call SetPolicyLevel'
+Assert ($cabinet -match 'LawEngine\.SetLawLevel') 'cabinet must call SetLawLevel'
+Assert ($cabinet -match 'LawEngine\.SetPolicyLevel') 'cabinet must call SetPolicyLevel'
 
 if ($failures.Count -gt 0) {
     foreach ($f in $failures) { Write-Host "CODEX_RED: $f" }

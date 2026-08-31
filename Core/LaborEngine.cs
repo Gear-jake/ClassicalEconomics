@@ -24,7 +24,7 @@ namespace EconomyMod.Core
         private static float WageMult(Actor actor)
         {
             if (actor == null || actor.kingdom == null || actor.kingdom.data == null) return 1f;
-            return CodexEngine.GetMods(actor.kingdom.data.id).Wage;
+            return LawEngine.GetMods(actor.kingdom.data.id).Wage;
         }
 
         public static float ProductivityOf(byte code) => TradeSimulationWorker.ProductivityOf(code);

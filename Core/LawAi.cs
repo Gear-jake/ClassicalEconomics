@@ -7,13 +7,13 @@ namespace EconomyMod.Core
     /// <summary>
     /// 法典 AI 决策：每年末对每个非玩家王国做 1 次「国情评分 → 目标档位 → 支付能力 → 执行」，
     /// 叠加国家个性权重（2% 年漂移）；重大变法（互斥切换/≥2 档/军事法律变动）进事件流+横幅，
-    /// 微调只静默生效。玩家国由 CodexEngine.SetLawLevel/SetPolicyLevel 手动控制，AI 不代改。
+    /// 微调只静默生效。玩家国由 LawEngine.SetLawLevel/SetPolicyLevel 手动控制，AI 不代改。
     /// </summary>
-    public static class CodexAi
+    public static class LawAi
     {
         private static readonly System.Random _rng = new System.Random();
 
-        public static void TickNation(Kingdom kingdom, CodexEngine.NationState state, int year)
+        public static void TickNation(Kingdom kingdom, LawEngine.NationState state, int year)
         {
             if (kingdom == null || kingdom.data == null) return;
             if (state.LastEvalYear == year) return;
@@ -25,10 +25,10 @@ namespace EconomyMod.Core
             bool _militaryChanged = false;
 
             // 1) 法律：逐条找目标档（SuggestLawLevel + 风格修正 + 概率），执行前检查支付
-            for (int i = 0; i < CodexEngine.LawKeys.Length; i++)
+            for (int i = 0; i < LawEngine.LawKeys.Length; i++)
             {
-                string key = CodexEngine.LawKeys[i];
-                int suggest = CodexEngine.SuggestLawLevel(kingdom, key, state, atWar);
+                string key = LawEngine.LawKeys[i];
+                int suggest = LawEngine.SuggestLawLevel(kingdom, key, state, atWar);
                 if (suggest < 0) continue;
                 suggest = StyleAdjust(style, key, suggest);
 
@@ -46,10 +46,10 @@ namespace EconomyMod.Core
                             continue;
                         state.MutexCooldownYear = year + 5;
                         state.MutexGroupId = g;
-                        foreach (var other in CodexEngine.MutexGroups[g])
+                        foreach (var other in LawEngine.MutexGroups[g])
                         {
                             if (other == key) continue;
-                            int oi = System.Array.IndexOf(CodexEngine.LawKeys, other);
+                            int oi = System.Array.IndexOf(LawEngine.LawKeys, other);
                             if (oi >= 0 && state.LawLevels[oi] > 0) { state.LawLevels[oi] = 0; mutexSwitch = true; }
                         }
                     }
@@ -57,14 +57,14 @@ namespace EconomyMod.Core
 
                 if (suggest > cur)
                 {
-                    long cost = (long)CodexEngine.LawUpgradeCost(kingdom, suggest);
+                    long cost = (long)LawEngine.LawUpgradeCost(kingdom, suggest);
                     if (cost > 0 && !CollectAIFunds(kingdom, cost)) continue;
                 }
 
                 state.LawLevels[i] = suggest;
                 majorChanges++;
-                if (key == CodexEngine.LawConscription || key == CodexEngine.LawStandingArmy
-                    || key == CodexEngine.LawMilitarism || key == CodexEngine.LawPacifism)
+                if (key == LawEngine.LawConscription || key == LawEngine.LawStandingArmy
+                    || key == LawEngine.LawMilitarism || key == LawEngine.LawPacifism)
                 {
                     _militaryChanged = true;
                 }
@@ -73,16 +73,16 @@ namespace EconomyMod.Core
             // 2) 国策：每 2 年最多动 1 条（更保守）
             if (year % 2 == 0)
             {
-                for (int i = 0; i < CodexEngine.PolicyKeys.Length; i++)
+                for (int i = 0; i < LawEngine.PolicyKeys.Length; i++)
                 {
-                    string key = CodexEngine.PolicyKeys[i];
+                    string key = LawEngine.PolicyKeys[i];
                     int cur = state.PolicyLevels[i];
                     int want = SuggestPolicy(kingdom, key, cur, style, state);
                     if (want == cur) continue;
                     if (_rng.NextDouble() > 0.3) continue;
                     if (want > cur)
                     {
-                        long cost = (long)CodexEngine.PolicyUpgradeCost(kingdom, want);
+                        long cost = (long)LawEngine.PolicyUpgradeCost(kingdom, want);
                         if (cost > 0 && !CollectAIFunds(kingdom, cost)) continue;
                     }
                     state.PolicyLevels[i] = want;
@@ -94,11 +94,11 @@ namespace EconomyMod.Core
             // 3) 个性漂移：2% 概率随机换风格
             if (_rng.NextDouble() < 0.02)
             {
-                state.Style = _rng.Next(CodexEngine.StyleCount);
+                state.Style = _rng.Next(LawEngine.StyleCount);
             }
 
             // 4) 重算聚合
-            CodexEngine.RecomputeMods(kingdom.data.id, state);
+            LawEngine.RecomputeMods(kingdom.data.id, state);
 
             // 5) 分级事件（只统计本 tick 变更过的军事法律；不得用"最终态"判定——
             //    否则年年 ≥2 的军事法国家会每一年都报"重大变法"）
@@ -108,21 +108,21 @@ namespace EconomyMod.Core
                 string name = GameHelpers.SafeKingdomName(kingdom);
                 if (mutexSwitch)
                 {
-                    EventStreamService.Record(EventStreamService.TypeCodexReform, name, 2);
-                    GameHelpers.NotifyLocalized("toast_codex_reform_major", name);
+                    EventStreamService.Record(EventStreamService.TypeLawReform, name, 2);
+                    GameHelpers.NotifyLocalized("toast_law_reform_major", name);
                 }
                 else
                 {
-                    EventStreamService.Record(EventStreamService.TypeCodexReform, name, 1);
-                    GameHelpers.NotifyLocalized("toast_codex_reform", name);
+                    EventStreamService.Record(EventStreamService.TypeLawReform, name, 1);
+                    GameHelpers.NotifyLocalized("toast_law_reform", name);
                 }
             }
         }
 
         private static int MutexGroupOf(string key)
         {
-            for (int g = 0; g < CodexEngine.MutexGroups.Length; g++)
-                if (System.Array.IndexOf(CodexEngine.MutexGroups[g], key) >= 0) return g;
+            for (int g = 0; g < LawEngine.MutexGroups.Length; g++)
+                if (System.Array.IndexOf(LawEngine.MutexGroups[g], key) >= 0) return g;
             return -1;
         }
 
@@ -132,40 +132,40 @@ namespace EconomyMod.Core
             switch (style)
             {
                 case 0: // 尚武好战
-                    if (key == CodexEngine.LawMilitarism) suggest += 1;
-                    if (key == CodexEngine.LawPacifism) suggest -= 2;
-                    if (key == CodexEngine.LawConscription || key == CodexEngine.LawStandingArmy) suggest += 1;
+                    if (key == LawEngine.LawMilitarism) suggest += 1;
+                    if (key == LawEngine.LawPacifism) suggest -= 2;
+                    if (key == LawEngine.LawConscription || key == LawEngine.LawStandingArmy) suggest += 1;
                     break;
                 case 1: // 重商开放
-                    if (key == CodexEngine.LawTradeFreedom || key == CodexEngine.LawFreeMarket) suggest += 1;
-                    if (key == CodexEngine.LawPlannedEconomy || key == CodexEngine.LawStateReligion) suggest -= 1;
+                    if (key == LawEngine.LawTradeFreedom || key == LawEngine.LawFreeMarket) suggest += 1;
+                    if (key == LawEngine.LawPlannedEconomy || key == LawEngine.LawStateReligion) suggest -= 1;
                     break;
                 case 2: // 仁政福利
-                    if (key == CodexEngine.LawEducation || key == CodexEngine.LawHealthcare
-                        || key == CodexEngine.LawLandReform || key == CodexEngine.LawPacifism) suggest += 1;
-                    if (key == CodexEngine.LawCapitalPun || key == CodexEngine.LawMilitarism) suggest -= 1;
+                    if (key == LawEngine.LawEducation || key == LawEngine.LawHealthcare
+                        || key == LawEngine.LawLandReform || key == LawEngine.LawPacifism) suggest += 1;
+                    if (key == LawEngine.LawCapitalPun || key == LawEngine.LawMilitarism) suggest -= 1;
                     break;
                 case 3: // 法理严明
-                    if (key == CodexEngine.LawJudicial || key == CodexEngine.LawAntiCorrupt
-                        || key == CodexEngine.LawPress || key == CodexEngine.LawGunControl) suggest += 1;
+                    if (key == LawEngine.LawJudicial || key == LawEngine.LawAntiCorrupt
+                        || key == LawEngine.LawPress || key == LawEngine.LawGunControl) suggest += 1;
                     break;
                 case 4: // 闭关自守
-                    if (key == CodexEngine.LawTradeFreedom) suggest -= 2;
-                    if (key == CodexEngine.LawFreeMarket) suggest -= 1;
-                    if (key == CodexEngine.LawPlannedEconomy) suggest += 1;
-                    if (key == CodexEngine.LawMigrant) suggest -= 1;
+                    if (key == LawEngine.LawTradeFreedom) suggest -= 2;
+                    if (key == LawEngine.LawFreeMarket) suggest -= 1;
+                    if (key == LawEngine.LawPlannedEconomy) suggest += 1;
+                    if (key == LawEngine.LawMigrant) suggest -= 1;
                     break;
                 case 5: // 科技兴邦
-                    if (key == CodexEngine.LawEducation) suggest += 2;
-                    if (key == CodexEngine.LawSecularism) suggest += 1;
-                    if (key == CodexEngine.LawReligion) suggest -= 1;
+                    if (key == LawEngine.LawEducation) suggest += 2;
+                    if (key == LawEngine.LawSecularism) suggest += 1;
+                    if (key == LawEngine.LawReligion) suggest -= 1;
                     break;
             }
-            return System.Math.Max(0, System.Math.Min(CodexEngine.LawTiers - 1, suggest));
+            return System.Math.Max(0, System.Math.Min(LawEngine.LawTiers - 1, suggest));
         }
 
         /// <summary>国策目标档（3 档：0/1/2），按国情与个性。</summary>
-        private static int SuggestPolicy(Kingdom kingdom, string key, int cur, int style, CodexEngine.NationState state)
+        private static int SuggestPolicy(Kingdom kingdom, string key, int cur, int style, LawEngine.NationState state)
         {
             EconomyMod.Models.KingdomStats ks;
             if (!EconomyEngine.KingdomStats.TryGetValue(kingdom.data.id, out ks) || ks == null) return cur;
@@ -173,22 +173,22 @@ namespace EconomyMod.Core
             bool atWar = NationDiplomacy.IsAtWarWith(kingdom) || state.Mods.Military > 0.3f;
             switch (key)
             {
-                case CodexEngine.PolicyLowTax: return gini < 0.4f ? 2 : (gini > 0.6f ? 0 : 1);
-                case CodexEngine.PolicyAusterity: return gini > 0.7f ? 2 : (gini > 0.55f ? 1 : 0);
-                case CodexEngine.PolicySubsidy: return ks.GDP > 0f && ks.AvgWealth < 30f ? 2 : 0;
-                case CodexEngine.PolicyTradeDeal: return style == 1 ? 2 : 1;
-                case CodexEngine.PolicyPoorRelief: return gini > 0.6f ? 2 : (gini > 0.5f ? 1 : 0);
-                case CodexEngine.PolicyPublicWork: return style == 2 ? 2 : 1;
-                case CodexEngine.PolicyFamily: return ks.Population < 2000 ? 2 : 0;
-                case CodexEngine.PolicyFestival: return gini > 0.8f ? 0 : 1;
-                case CodexEngine.PolicyWarFund: return atWar ? 2 : 0;
-                case CodexEngine.PolicyRecruit: return atWar ? 2 : 0;
-                case CodexEngine.PolicyFortify: return atWar ? 2 : (cur > 0 ? 0 : 1);
-                case CodexEngine.PolicyBorderGuard: return atWar ? 2 : 1;
-                case CodexEngine.PolicyDiplomacy: return style == 1 ? 2 : (atWar ? 1 : 0);
-                case CodexEngine.PolicyIsolation: return style == 4 ? 2 : (style == 1 ? 0 : 1);
-                case CodexEngine.PolicyExpansion: return style == 0 ? 2 : 0;
-                case CodexEngine.PolicyReparations: return atWar ? 1 : 0;
+                case LawEngine.PolicyLowTax: return gini < 0.4f ? 2 : (gini > 0.6f ? 0 : 1);
+                case LawEngine.PolicyAusterity: return gini > 0.7f ? 2 : (gini > 0.55f ? 1 : 0);
+                case LawEngine.PolicySubsidy: return ks.GDP > 0f && ks.AvgWealth < 30f ? 2 : 0;
+                case LawEngine.PolicyTradeDeal: return style == 1 ? 2 : 1;
+                case LawEngine.PolicyPoorRelief: return gini > 0.6f ? 2 : (gini > 0.5f ? 1 : 0);
+                case LawEngine.PolicyPublicWork: return style == 2 ? 2 : 1;
+                case LawEngine.PolicyFamily: return ks.Population < 2000 ? 2 : 0;
+                case LawEngine.PolicyFestival: return gini > 0.8f ? 0 : 1;
+                case LawEngine.PolicyWarFund: return atWar ? 2 : 0;
+                case LawEngine.PolicyRecruit: return atWar ? 2 : 0;
+                case LawEngine.PolicyFortify: return atWar ? 2 : (cur > 0 ? 0 : 1);
+                case LawEngine.PolicyBorderGuard: return atWar ? 2 : 1;
+                case LawEngine.PolicyDiplomacy: return style == 1 ? 2 : (atWar ? 1 : 0);
+                case LawEngine.PolicyIsolation: return style == 4 ? 2 : (style == 1 ? 0 : 1);
+                case LawEngine.PolicyExpansion: return style == 0 ? 2 : 0;
+                case LawEngine.PolicyReparations: return atWar ? 1 : 0;
                 default: return cur;
             }
         }

@@ -2,10 +2,10 @@
 
 > 状态说明：大地图快捷键 C 打开内阁面板完成；45/45 门禁 + performance_audit（46 源文件）+ 构建全绿（新增 UnityEngine.InputLegacyModule 引用）。F3 实机验收由用户安装到游戏后亲自执行。
 
-## 新快捷键：C（RulerBox K 键同款）
+## 新快捷键：C（ K 键同款）
 
 - **大地图上把鼠标悬停到任意国家/城市，按 C**：未认领 → 自动认领该国并打开内阁面板；已认领 → 直接打开内阁。
-- 实现为每帧轮询 `Input.GetKeyDown(KeyCode.C)`（与 RulerBox `Main.Update` 的 K 键完全同款），经鼠标 tile 反查城市/王国（`World.world.getMouseTilePos`）——无需先点开国家窗口，鼠标指着选就行。
+- 实现为每帧轮询 `Input.GetKeyDown(KeyCode.C)`（与  `Main.Update` 的 K 键完全同款），经鼠标 tile 反查城市/王国（`World.world.getMouseTilePos`）——无需先点开国家窗口，鼠标指着选就行。
 - 触发条件：世界中、非 UI 忙碌时生效；入口按钮（账本图标）保留作为补充方式。
 - `build_local.ps1` 新增 `UnityEngine.InputLegacyModule.dll` 引用（Input API 所在程序集）。
 

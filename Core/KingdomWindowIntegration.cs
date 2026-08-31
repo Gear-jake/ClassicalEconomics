@@ -58,7 +58,7 @@ namespace EconomyMod.Core
             try
             {
                 InjectEntry(window);
-                UpdateCodexSummary(window, GetShownKingdom(window));
+                UpdateLawSummary(window, GetShownKingdom(window));
             }
             catch (System.Exception e)
             {
@@ -159,7 +159,7 @@ namespace EconomyMod.Core
 
         // ===== 法典摘要（原版窗口内展示任意国家的法律/国策状态）=====
 
-        private const string SummaryName = "ClassicalEconomicsCodexSummary";
+        private const string SummaryName = "ClassicalEconomicsLawSummary";
         private static Text _summaryText;
 
         /// <summary>创建摘要文本对象（幂等）；锚定按钮左下方。</summary>
@@ -190,7 +190,7 @@ namespace EconomyMod.Core
         }
 
         /// <summary>刷新摘要文本：国性 + 生效法律/国策条数 + 最高档 2 条法律。</summary>
-        private static void UpdateCodexSummary(StatsWindow window, Kingdom kingdom)
+        private static void UpdateLawSummary(StatsWindow window, Kingdom kingdom)
         {
             if (_summaryText == null) return;
             if (kingdom == null || kingdom.data == null)
@@ -201,36 +201,36 @@ namespace EconomyMod.Core
             try
             {
                 long kid = kingdom.data.id;
-                int style = CodexEngine.GetStyle(kid);
-                string styleName = style >= 0 && style < CodexEngine.StyleKeys.Length
-                    ? Services.LocalizationService.Get(CodexEngine.StyleKeys[style]) : "?";
+                int style = LawEngine.GetStyle(kid);
+                string styleName = style >= 0 && style < LawEngine.StyleKeys.Length
+                    ? Services.LocalizationService.Get(LawEngine.StyleKeys[style]) : "?";
 
                 int lawCount = 0, polCount = 0;
                 var top = new System.Collections.Generic.List<string>();
                 int topLv = 0;
-                for (int i = 0; i < CodexEngine.LawKeys.Length; i++)
+                for (int i = 0; i < LawEngine.LawKeys.Length; i++)
                 {
-                    int lv = CodexEngine.GetLawLevel(kid, CodexEngine.LawKeys[i]);
+                    int lv = LawEngine.GetLawLevel(kid, LawEngine.LawKeys[i]);
                     if (lv > 0)
                     {
                         lawCount++;
-                        if (lv > topLv) { topLv = lv; top.Clear(); top.Add(CodexEngine.LawKeys[i]); }
-                        else if (lv == topLv && top.Count < 2) top.Add(CodexEngine.LawKeys[i]);
+                        if (lv > topLv) { topLv = lv; top.Clear(); top.Add(LawEngine.LawKeys[i]); }
+                        else if (lv == topLv && top.Count < 2) top.Add(LawEngine.LawKeys[i]);
                     }
                 }
-                for (int i = 0; i < CodexEngine.PolicyKeys.Length; i++)
-                    if (CodexEngine.GetPolicyLevel(kid, CodexEngine.PolicyKeys[i]) > 0) polCount++;
+                for (int i = 0; i < LawEngine.PolicyKeys.Length; i++)
+                    if (LawEngine.GetPolicyLevel(kid, LawEngine.PolicyKeys[i]) > 0) polCount++;
 
                 var sb = new System.Text.StringBuilder();
-                sb.Append(Services.LocalizationService.Get("kingdom_codex_header")).Append('：').Append(styleName)
+                sb.Append(Services.LocalizationService.Get("kingdom_law_header")).Append('：').Append(styleName)
                   .Append('\n')
-                  .Append(string.Format(Services.LocalizationService.Get("kingdom_codex_counts"), lawCount, polCount));
+                  .Append(string.Format(Services.LocalizationService.Get("kingdom_law_counts"), lawCount, polCount));
                 for (int i = 0; i < top.Count; i++)
                 {
                     sb.Append('\n');
                     sb.Append(Services.LocalizationService.Get(top[i]));
                     sb.Append('·');
-                    sb.Append(Services.LocalizationService.Get("codex_lv" + topLv));
+                    sb.Append(Services.LocalizationService.Get("law_lv" + topLv));
                 }
                 _summaryText.text = sb.ToString();
                 _summaryText.gameObject.SetActive(true);

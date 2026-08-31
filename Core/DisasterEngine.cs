@@ -104,7 +104,7 @@ namespace EconomyMod.Core
                             // 法典：灾害抗性（医疗/护林等降低蒸发）
                             if (loss > 0)
                             {
-                                float dr = CodexEngine.GetMods(k.data.id).DisasterResist;
+                                float dr = LawEngine.GetMods(k.data.id).DisasterResist;
                                 if (dr != 1f) loss = Mathf.RoundToInt(loss * dr);
                             }
                             if (loss > 0)
