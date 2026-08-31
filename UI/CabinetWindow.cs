@@ -490,20 +490,36 @@ namespace EconomyMod.UI
             var crestLe = crest.GetComponent<LayoutElement>();
             if (crestLe == null) crestLe = crest.AddComponent<LayoutElement>();
             crestLe.flexibleWidth = 1f;
-            // 国徽（旗帜底 + 主色），失败则跳过不阻断
+            // 国徽：RulerBox 同款双层旗章——底色背景（getElementBackground + 主色）+ 徽记图标
+            // （getElementIcon + 旗帜色）叠加于固定 26x26 容器，防止被行布局拉伸成大色块
             try
             {
-                var flagGo = new GameObject("Flag", typeof(RectTransform), typeof(Image));
-                flagGo.transform.SetParent(topRow.transform, false);
-                var flagRt = flagGo.GetComponent<RectTransform>();
-                flagRt.anchorMin = new Vector2(0, 0.5f); flagRt.anchorMax = new Vector2(0, 0.5f);
-                flagRt.pivot = new Vector2(0, 0.5f);
-                flagRt.sizeDelta = new Vector2(30f, 30f);
-                var flagImg = flagGo.GetComponent<Image>();
-                var bgSpr = target.getElementBackground();
-                if (bgSpr != null) flagImg.sprite = bgSpr;
-                var col = target.getColor();
-                if (col != null) flagImg.color = col.getColorMain32();
+                var flagWrap = new GameObject("FlagWrap", typeof(RectTransform));
+                flagWrap.transform.SetParent(topRow.transform, false);
+                var fwRt = flagWrap.GetComponent<RectTransform>();
+                fwRt.anchorMin = new Vector2(0, 0.5f); fwRt.anchorMax = new Vector2(0, 0.5f);
+                fwRt.pivot = new Vector2(0, 0.5f);
+                fwRt.sizeDelta = new Vector2(26f, 26f);
+                var fwLe = flagWrap.AddComponent<LayoutElement>();
+                fwLe.preferredWidth = 26f; fwLe.preferredHeight = 26f; fwLe.flexibleWidth = 0f;
+
+                var bgGo = new GameObject("FlagBg", typeof(RectTransform), typeof(Image));
+                bgGo.transform.SetParent(flagWrap.transform, false);
+                var bgRt = bgGo.GetComponent<RectTransform>();
+                bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
+                bgRt.offsetMin = Vector2.zero; bgRt.offsetMax = Vector2.zero;
+                var bgImg = bgGo.GetComponent<Image>();
+                try { bgImg.sprite = target.getElementBackground(); } catch (System.Exception) { }
+                try { bgImg.color = target.kingdomColor.getColorMain32(); } catch (System.Exception) { }
+
+                var icGo = new GameObject("FlagIcon", typeof(RectTransform), typeof(Image));
+                icGo.transform.SetParent(flagWrap.transform, false);
+                var icRt = icGo.GetComponent<RectTransform>();
+                icRt.anchorMin = Vector2.zero; icRt.anchorMax = Vector2.one;
+                icRt.offsetMin = Vector2.zero; icRt.offsetMax = Vector2.zero;
+                var icImg = icGo.GetComponent<Image>();
+                try { icImg.sprite = target.getElementIcon(); } catch (System.Exception) { }
+                try { icImg.color = target.kingdomColor.getColorBanner(); } catch (System.Exception) { }
             }
             catch (System.Exception) { }
             AddDivider(DividerColor);
