@@ -551,5 +551,6 @@
   "cabinet_codex_suggest": "Sugg: {0} {1}→{2}",
   "cabinet_codex_adopt": "Adopt",
   "cabinet_codex_no_suggest": "No suggestions (balanced)",
-  "cabinet_dip_style": "Nature: {0}"
+  "cabinet_dip_style": "Nature: {0}",
+  "codex_suggest_btn": "→{0}"
 }

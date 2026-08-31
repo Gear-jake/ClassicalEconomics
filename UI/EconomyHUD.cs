@@ -990,11 +990,33 @@ namespace EconomyMod.UI
                 long gdp = 0;
                 if (EconomyEngine.KingdomStats.TryGetValue(kingdom.data.id, out var ks)) gdp = (long)ks.GDP;
 
-                AddLine(UIHelpers.Lf("picker_kingdom", rank, name, gdp.ToString("F0")));
+                // 每国一行：名称左 + 煽动/镇压两个小按钮右（不再每个按钮独占整行）
+                var row = new GameObject("PickerRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+                row.transform.SetParent(_content.transform, false);
+                var rowRt = row.GetComponent<RectTransform>();
+                rowRt.anchorMin = new Vector2(0, 1); rowRt.anchorMax = new Vector2(1, 1);
+                rowRt.pivot = new Vector2(0.5f, 1f);
+                rowRt.sizeDelta = new Vector2(0, 26f);
+                var rowHlg = row.GetComponent<HorizontalLayoutGroup>();
+                rowHlg.spacing = 4; rowHlg.childForceExpandWidth = false;
+                rowHlg.childForceExpandHeight = true; rowHlg.childControlWidth = true;
+                rowHlg.childControlHeight = true;
+                _lines.Add(row);
 
-                // 煽动按钮（红）
-                var btnIncite = UIHelpers.CreateButton(UIHelpers.L("picker_incite"), _content.transform, -1, 30,
-                    _gameFont, UIStyles.Danger);
+                var rowName = UIHelpers.CreateText(
+                    UIHelpers.Lf("picker_kingdom", rank, name, gdp.ToString("F0")),
+                    row.transform, 12f, UIStyles.TextPrimary, _gameFont, 22f);
+                rowName.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.5f);
+                rowName.GetComponent<RectTransform>().anchorMax = new Vector2(0, 0.5f);
+                rowName.GetComponent<RectTransform>().sizeDelta = new Vector2(170f, 22f);
+                rowName.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
+                rowName.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
+
+                // 煽动按钮（红，小）
+                var btnIncite = UIHelpers.CreateButton(UIHelpers.L("picker_incite"), row.transform, 100, 24,
+                    _gameFont, UIStyles.Danger, 11f);
+                var leI = btnIncite.gameObject.AddComponent<LayoutElement>();
+                leI.preferredWidth = 100f; leI.flexibleWidth = 0f; leI.preferredHeight = 24f;
                 long inciteTargetId = kingdom.data.id;
                 btnIncite.onClick.AddListener(() =>
                 {
@@ -1014,11 +1036,11 @@ namespace EconomyMod.UI
                             : UIHelpers.Lf("picker_failed", nName),
                         color: n > 0 ? new Color(1f, 0.7f, 0.3f) : new Color(0.9f, 0.5f, 0.5f));
                 });
-                _lines.Add(btnIncite.gameObject);
-
-                // 镇压按钮（蓝）
-                var btnSuppress = UIHelpers.CreateButton(UIHelpers.L("picker_suppress"), _content.transform, -1, 30,
-                    _gameFont, UIStyles.Info);
+                // 镇压按钮（蓝，小）
+                var btnSuppress = UIHelpers.CreateButton(UIHelpers.L("picker_suppress"), row.transform, 100, 24,
+                    _gameFont, UIStyles.Info, 11f);
+                var leS = btnSuppress.gameObject.AddComponent<LayoutElement>();
+                leS.preferredWidth = 100f; leS.flexibleWidth = 0f; leS.preferredHeight = 24f;
                 long suppressTargetId = kingdom.data.id;
                 btnSuppress.onClick.AddListener(() =>
                 {
@@ -1037,8 +1059,6 @@ namespace EconomyMod.UI
                             : UIHelpers.Lf("picker_failed_suppress", nName),
                         color: n > 0 ? new Color(0.6f, 0.85f, 1f) : new Color(0.5f, 0.7f, 0.9f));
                 });
-                _lines.Add(btnSuppress.gameObject);
-
                 rank++;
             }
         }

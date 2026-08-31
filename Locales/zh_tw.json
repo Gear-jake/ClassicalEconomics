@@ -551,5 +551,6 @@
   "cabinet_codex_suggest": "建議：{0} {1}→{2}",
   "cabinet_codex_adopt": "採納",
   "cabinet_codex_no_suggest": "暫無建議（國情均衡）",
-  "cabinet_dip_style": "國性：{0}"
+  "cabinet_dip_style": "國性：{0}",
+  "codex_suggest_btn": "→{0}"
 }

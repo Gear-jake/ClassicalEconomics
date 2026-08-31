@@ -187,31 +187,7 @@ namespace EconomyMod.UI
             AddLine(UIHelpers.Lf("cabinet_codex_nation", GameHelpers.SafeKingdomName(kingdom)), UIStyles.Gold, 13f);
             int style = CodexEngine.GetStyle(kid);
             AddLine(UIHelpers.Lf("cabinet_codex_style", UIHelpers.L(CodexEngine.StyleKeys[style])), UIStyles.Info, 12f);
-            if (own)
-            {
-                // AI 建议（玩家国）：按评分列 3 条建议，一键采纳
-                var st = CodexEngine.Get(kid);
-                int shown2 = 0;
-                foreach (var key in CodexEngine.LawKeys)
-                {
-                    if (shown2 >= 3) break;
-                    int suggest = CodexEngine.SuggestLawLevel(kingdom, key, st);
-                    if (suggest < 0) continue;
-                    int curLv = CodexEngine.GetLawLevel(kid, key);
-                    AddLine(UIHelpers.Lf("cabinet_codex_suggest", UIHelpers.L(key), curLv, suggest), Muted, 11f);
-                    var suggestRow = NewRow(1);
-                    string sk = key;
-                    int stLv = suggest;
-                    AddRowButton(suggestRow, UIHelpers.L("cabinet_codex_adopt"), BtnGood, () =>
-                    {
-                        string msg; bool ok = CodexEngine.SetLawLevel(kingdom, sk, stLv, out msg);
-                        GameHelpers.NotifyLocalized(msg);
-                        if (ok) RefreshNow();
-                    });
-                    shown2++;
-                }
-                if (shown2 == 0) AddLine(UIHelpers.L("cabinet_codex_no_suggest"), Muted, 11f);
-            }
+            // AI 建议改为逐条嵌入法律行（当前档→建议档小按钮），不再占顶部整块
             AddDivider(DividerColor);
 
             // 法律区
@@ -237,9 +213,9 @@ namespace EconomyMod.UI
         {
             int level = CodexEngine.GetLawLevel(kingdom.data.id, key);
             string name = UIHelpers.L(key);
-            AddLine(name, level > 0 ? UIStyles.Positive : UIStyles.TextPrimary, 11f);
-            var row = NewRow(2);
-            // 档位按钮（0..4）
+            AddLine(name, level > 0 ? UIStyles.Positive : UIStyles.TextPrimary, 10f);
+            var row = NewRow(CodexEngine.LawTiers, 22f);
+            // 档位按钮（0..4，小号横排）
             for (int lv = 0; lv < CodexEngine.LawTiers; lv++)
             {
                 int target = lv;
@@ -250,9 +226,25 @@ namespace EconomyMod.UI
                         string msg; bool ok = CodexEngine.SetLawLevel(kingdom, key, target, out msg);
                         GameHelpers.NotifyLocalized(msg);
                         if (ok) RefreshNow();
-                    });
+                    }, 0.9f);
             }
-            AddRowButton(row, UIHelpers.L("codex_mutex_tip"), Muted, () => { });
+            // AI 建议（仅玩家国）：显示 当前→建议，点击采纳
+            if (NationEngine.NationKingdomId == kingdom.data.id)
+            {
+                var st = CodexEngine.Get(kingdom.data.id);
+                int suggest = CodexEngine.SuggestLawLevel(kingdom, key, st);
+                if (suggest >= 0 && suggest != level)
+                {
+                    int stLv = suggest;
+                    AddRowButton(row, UIHelpers.Lf("codex_suggest_btn", suggest), BtnGood, () =>
+                    {
+                        string msg; bool ok = CodexEngine.SetLawLevel(kingdom, key, stLv, out msg);
+                        GameHelpers.NotifyLocalized(msg);
+                        if (ok) RefreshNow();
+                    }, 0.55f);
+                }
+            }
+            AddRowSpacer(row);
         }
 
         private void BuildCodexPolicyRow(Kingdom kingdom, string key)
@@ -348,7 +340,7 @@ namespace EconomyMod.UI
             for (int kind = 0; kind < NationEngine.PolicyKindCount; kind++)
             {
                 BuildPolicyRow((NationEngine.PolicyKind)kind, year);
-                AddLine("", Muted, 6f);
+                AddLine("", Muted, 4f);
             }
         }
 
@@ -364,8 +356,6 @@ namespace EconomyMod.UI
                 () => { if (NationEngine.TryFestival(SafeYear())) RefreshNow(); });
             AddLine("", Muted, 6f);
             BuildNativeBuildings();
-            AddLine("", Muted, 6f);
-            BuildBuildingRows();
         }
 
         /// <summary>原版建筑放置区（RulerBox 式）：点建筑 → 放置模式 → 鼠标点击地图（本国领土）。
@@ -409,10 +399,10 @@ namespace EconomyMod.UI
                 ("bonfire", "", "build_native_bonfire", "bonfire"),
             };
 
-            for (int i = 0; i < defs.Length; i += 2)
+            for (int i = 0; i < defs.Length; i += 3)
             {
-                var row = NewRow(2);
-                for (int j = i; j < i + 2 && j < defs.Length; j++)
+                var row = NewRow(3, 24f);
+                for (int j = i; j < i + 3 && j < defs.Length; j++)
                 {
                     var d = defs[j];
                     string id = string.IsNullOrEmpty(d.Suffix) ? d.Plain
@@ -521,47 +511,49 @@ namespace EconomyMod.UI
                 NationEngine.FormatGold((long)NationEngine.PolicyAnnualCost(kind, 1)),
                 NationEngine.FormatGold((long)NationEngine.PolicyAnnualCost(kind, 2)));
 
-            if (tier >= 0)
-            {
-                AddLine(UIHelpers.Lf("cabinet_policy_active", name, tier + 1), UIStyles.Positive, 12f);
-            }
-            else
-            {
-                AddLine(name, UIStyles.TextPrimary, 12f);
-            }
-            AddLine(costText, Muted, 11f);
+            // 一行：名称+档位状态 + 费用（右侧弱色）——不再用两行大按钮
+            var row = NewRow(2, 24f);
+            var nameTxt = UIHelpers.CreateText(
+                tier >= 0 ? UIHelpers.Lf("cabinet_policy_active", name, tier + 1) : name,
+                row.transform, 12f, tier >= 0 ? UIStyles.Positive : UIStyles.TextPrimary, _gameFont, 22f);
+            nameTxt.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var costTxt = UIHelpers.CreateText(costText, row.transform, 10f, Muted, _gameFont, 18f);
+            costTxt.GetComponent<LayoutElement>().flexibleWidth = 1f;
 
-            // 按钮行：启用/切档（循环 少→中→大）+ 取消
-            var row = NewRow(2);
+            // 按钮行：小号按钮横排（启用→升档→取消），不再拉满整行
+            var btnRow = NewRow(3, 24f);
             if (tier < 0)
             {
-                AddRowButton(row, UIHelpers.L("cabinet_enable"), BtnGood, () =>
+                AddRowButton(btnRow, UIHelpers.L("cabinet_enable"), BtnGood, () =>
                 {
                     if (NationEngine.EnablePolicy(kind, 0, SafeYear())) RefreshNow();
-                });
-                AddRowSpacer(row);
+                }, 0.9f);
+                AddRowSpacer(btnRow);
             }
             else if (tier < NationEngine.TierCount - 1)
             {
-                AddRowButton(row, UIHelpers.L("cabinet_upgrade"), BtnGood, () =>
+                AddRowButton(btnRow, UIHelpers.L("cabinet_upgrade"), BtnGood, () =>
                 {
                     if (NationEngine.EnablePolicy(kind, tier + 1, SafeYear())) RefreshNow();
-                });
-                AddRowSpacer(row);
+                }, 0.9f);
+                AddRowSpacer(btnRow);
             }
-            AddRowButton(row, UIHelpers.L("cabinet_disable"), BtnBad,
-                () => { if (NationEngine.DisablePolicy(kind)) RefreshNow(); });
-            if (row.transform.childCount == 1) AddRowSpacer(row); // 单按钮行也拉满
+            AddRowButton(btnRow, UIHelpers.L("cabinet_disable"), BtnBad,
+                () => { if (NationEngine.DisablePolicy(kind)) RefreshNow(); }, 0.9f);
+            if (btnRow.transform.childCount == 1) AddRowSpacer(btnRow);
         }
 
         private void BuildDecreeRow(string nameKey, string costText, bool cooling, System.Action action)
         {
             string name = UIHelpers.L(nameKey);
-            AddLine(cooling ? UIHelpers.Lf("cabinet_decree_cooling", name) : name,
-                cooling ? Muted : UIStyles.TextPrimary, 12f);
-            AddLine(costText, Muted, 11f);
-            var row = NewRow(1);
-            AddRowButton(row, UIHelpers.L("cabinet_execute"), cooling ? BtnColor : BtnGood, () => action());
+            var row = NewRow(2, 24f);
+            var nameTxt = UIHelpers.CreateText(
+                cooling ? UIHelpers.Lf("cabinet_decree_cooling", name) : name,
+                row.transform, 12f, cooling ? Muted : UIStyles.TextPrimary, _gameFont, 22f);
+            nameTxt.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var costTxt = UIHelpers.CreateText(costText, row.transform, 10f, Muted, _gameFont, 18f);
+            costTxt.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            AddRowButton(row, UIHelpers.L("cabinet_execute"), cooling ? BtnColor : BtnGood, () => action(), 0.8f);
         }
 
         private void BuildBuildingRows()
@@ -647,16 +639,16 @@ namespace EconomyMod.UI
             CurLines.Add(UIHelpers.CreateDivider(CurPage.transform, color));
         }
 
-        private GameObject NewRow(int expectButtons)
+        private GameObject NewRow(int expectButtons, float height = 28f)
         {
             var row = new GameObject("CabinetRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             row.transform.SetParent(CurPage.transform, false);
             var le = row.AddComponent<LayoutElement>();
-            le.preferredHeight = 28f;
+            le.preferredHeight = height;
             le.flexibleWidth = 1f;
             var hlg = row.GetComponent<HorizontalLayoutGroup>();
             hlg.spacing = 4;
-            hlg.childForceExpandWidth = true;
+            hlg.childForceExpandWidth = false;   // 紧凑：按钮按 preferredWidth 排布，不拉满整行
             hlg.childForceExpandHeight = true;
             hlg.childControlWidth = true;
             hlg.childControlHeight = true;
@@ -664,9 +656,13 @@ namespace EconomyMod.UI
             return row;
         }
 
-        private void AddRowButton(GameObject row, string label, Color bg, System.Action onClick)
+        private void AddRowButton(GameObject row, string label, Color bg, System.Action onClick, float width = 120f)
         {
-            var btn = UIHelpers.CreateButton(label, row.transform, -1, 26, _gameFont, bg, 11f);
+            var btn = UIHelpers.CreateButton(label, row.transform, width, 24, _gameFont, bg, 10f);
+            var le = btn.gameObject.AddComponent<LayoutElement>();
+            le.preferredWidth = width;
+            le.flexibleWidth = 0f;
+            le.preferredHeight = 24f;
             btn.onClick.AddListener(() => onClick());
         }
 

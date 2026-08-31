@@ -551,5 +551,6 @@
   "cabinet_codex_suggest": "Совет: {0} {1}→{2}",
   "cabinet_codex_adopt": "Принять",
   "cabinet_codex_no_suggest": "Нет советов (баланс)",
-  "cabinet_dip_style": "Характер: {0}"
+  "cabinet_dip_style": "Характер: {0}",
+  "codex_suggest_btn": "→{0}"
 }
