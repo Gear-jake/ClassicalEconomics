@@ -146,7 +146,8 @@ TopRich.Clear();
                     try { boats = k.countBoats(); } catch (System.Exception) { }
                     try { BiomeEconomy.TryGetCapitalCoords(k.data.id, out cx, out cy); } catch (System.Exception) { }
                     TradeSimulationWorker.AddKingdom(k.data.id, GameHelpers.SafeKingdomName(k),
-                        pop, cap, food, cities, boats, (int)BiomeEconomy.GetSpecialty(k.data.id), cx, cy);
+                        pop, cap, food, cities, boats, (int)BiomeEconomy.GetSpecialty(k.data.id), cx, cy,
+                        CodexEngine.GetMods(k.data.id)); // 法典快照：主线程读一次，后台零并发访问
                 }
             }
 

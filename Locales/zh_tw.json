@@ -547,5 +547,9 @@
   "toast_codex_reform": "[法典] <{0}> 修订了国法",
   "toast_codex_reform_major": "[法典] <{0}> 重大宪政改革！",
   "ev_desc_codex_reform": "<{0}> 修订了国法",
-  "ev_desc_codex_reform_major": "重大宪政改革"
+  "ev_desc_codex_reform_major": "重大宪政改革",
+  "cabinet_codex_suggest": "建議：{0} {1}→{2}",
+  "cabinet_codex_adopt": "採納",
+  "cabinet_codex_no_suggest": "暫無建議（國情均衡）",
+  "cabinet_dip_style": "國性：{0}"
 }

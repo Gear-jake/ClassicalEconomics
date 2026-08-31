@@ -19,14 +19,16 @@ namespace EconomyMod.Core
             if (state.LastEvalYear == year) return;
 
             int style = state.Style;
+            bool atWar = NationDiplomacy.IsAtWarWith(kingdom); // hoist：一年只判断一次（原来每条法律都查）
             int majorChanges = 0;
             bool mutexSwitch = false;
+            bool _militaryChanged = false;
 
             // 1) 法律：逐条找目标档（SuggestLawLevel + 风格修正 + 概率），执行前检查支付
             for (int i = 0; i < CodexEngine.LawKeys.Length; i++)
             {
                 string key = CodexEngine.LawKeys[i];
-                int suggest = CodexEngine.SuggestLawLevel(kingdom, key, state);
+                int suggest = CodexEngine.SuggestLawLevel(kingdom, key, state, atWar);
                 if (suggest < 0) continue;
                 suggest = StyleAdjust(style, key, suggest);
 
@@ -39,6 +41,11 @@ namespace EconomyMod.Core
                     int g = MutexGroupOf(key);
                     if (g >= 0)
                     {
+                        // 5 年互斥冷却（AI 防振荡）；玩家路径不受此约束
+                        if (state.MutexCooldownYear > year)
+                            continue;
+                        state.MutexCooldownYear = year + 5;
+                        state.MutexGroupId = g;
                         foreach (var other in CodexEngine.MutexGroups[g])
                         {
                             if (other == key) continue;
@@ -56,6 +63,11 @@ namespace EconomyMod.Core
 
                 state.LawLevels[i] = suggest;
                 majorChanges++;
+                if (key == CodexEngine.LawConscription || key == CodexEngine.LawStandingArmy
+                    || key == CodexEngine.LawMilitarism || key == CodexEngine.LawPacifism)
+                {
+                    _militaryChanged = true;
+                }
             }
 
             // 2) 国策：每 2 年最多动 1 条（更保守）
@@ -88,17 +100,9 @@ namespace EconomyMod.Core
             // 4) 重算聚合
             CodexEngine.RecomputeMods(kingdom.data.id, state);
 
-            // 5) 分级事件
-            bool militaryTouched = false;
-            for (int i = 0; i < CodexEngine.LawKeys.Length; i++)
-            {
-                var k = CodexEngine.LawKeys[i];
-                if (k == CodexEngine.LawConscription || k == CodexEngine.LawStandingArmy
-                    || k == CodexEngine.LawMilitarism || k == CodexEngine.LawPacifism)
-                {
-                    if (state.LawLevels[i] > 1) militaryTouched = true;
-                }
-            }
+            // 5) 分级事件（只统计本 tick 变更过的军事法律；不得用"最终态"判定——
+            //    否则年年 ≥2 的军事法国家会每一年都报"重大变法"）
+            bool militaryTouched = _militaryChanged;
             if (mutexSwitch || majorChanges >= 2 || militaryTouched)
             {
                 string name = GameHelpers.SafeKingdomName(kingdom);
@@ -189,8 +193,11 @@ namespace EconomyMod.Core
             }
         }
 
+        // 复用缓冲（年度多次调用，避免每次 new List）
+        private static readonly List<Actor> _unitsBuf = new List<Actor>(64);
+
         /// <summary>AI 变法费用：城市仓库 + 居民征收（守恒）；不足返回 false。</summary>
-        private static bool CollectAIFunds(Kingdom kingdom, long cost)
+        public static bool CollectAIFunds(Kingdom kingdom, long cost)
         {
             long got = 0;
             try
@@ -210,9 +217,9 @@ namespace EconomyMod.Core
             catch (System.Exception) { }
             if (got < cost && kingdom.units != null)
             {
-                var units = new List<Actor>();
-                try { foreach (var a in kingdom.units) if (a != null && a.isAlive()) units.Add(a); } catch (System.Exception) { }
-                got += GameHelpers.DeductCoins(units, cost - got);
+                _unitsBuf.Clear();
+                try { foreach (var a in kingdom.units) if (a != null && a.isAlive()) _unitsBuf.Add(a); } catch (System.Exception) { }
+                got += GameHelpers.DeductCoins(_unitsBuf, cost - got);
             }
             return got >= cost;
         }

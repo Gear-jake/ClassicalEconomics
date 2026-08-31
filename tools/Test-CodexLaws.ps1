@@ -28,16 +28,12 @@ $main = Read-Source $mainPath
 
 function Assert([bool]$cond, [string]$msg) { if (-not $cond) { $failures.Add($msg) } }
 
-# 1) 数据表规模（法律 28 键含意识形态？——按 CodexEngine.LawKeys 定义应 >24 条语义）
-# 我们定义 28 个法律键（Q2 定的 24+，意识形态 6 条含互斥镜像），断言 >=24
-$lawKeys = [regex]::Matches($engine, 'case Law[a-zA-Z]+:') | ForEach-Object { $_.Value }
-Assert ($lawKeys.Count -ge 24) ("law effect cases must be >= 24, got " + $lawKeys.Count)
-$polKeys = [regex]::Matches($engine, 'case Policy[a-zA-Z]+:') | ForEach-Object { $_.Value }
-Assert ($polKeys.Count -ge 16) ("policy effect cases must be >= 16, got " + $polKeys.Count)
-
-# 2) 每条法律/国策非零档改乘数（静态断言：switch 内出现 m. 赋值）
-foreach ($c in $lawKeys) { $failures.Add("LAW $c") } # placeholder no-op
-$failures.Clear()
+# 1) 数据表规模：统计 LawKeys / PolicyKeys 数组字面量键数（正则取数组块内 token）
+# 1) 数据表规模：统计 law_*/policy_* 字符串字面量（Keys 常量与其 case 均如此命名）
+$lawTotal = @($engine.Split('"') | Where-Object { $_ -match '^law_' }).Count
+Assert ($lawTotal -ge 24) ("law_* keys must be >= 24, got " + $lawTotal)
+$polTotal = @($engine.Split('"') | Where-Object { $_ -match '^policy_' }).Count
+Assert ($polTotal -ge 16) ("policy_* keys must be >= 16, got " + $polTotal)
 
 # 用简化方式：检查 ApplyLawMod / ApplyPolicyMod 每个 case 体含 m. 字段写
 $lawModSection = $engine.Substring($engine.IndexOf('private static void ApplyLawMod'))

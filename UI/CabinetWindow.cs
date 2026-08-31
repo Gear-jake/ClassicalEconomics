@@ -187,6 +187,31 @@ namespace EconomyMod.UI
             AddLine(UIHelpers.Lf("cabinet_codex_nation", GameHelpers.SafeKingdomName(kingdom)), UIStyles.Gold, 13f);
             int style = CodexEngine.GetStyle(kid);
             AddLine(UIHelpers.Lf("cabinet_codex_style", UIHelpers.L(CodexEngine.StyleKeys[style])), UIStyles.Info, 12f);
+            if (own)
+            {
+                // AI 建议（玩家国）：按评分列 3 条建议，一键采纳
+                var st = CodexEngine.Get(kid);
+                int shown2 = 0;
+                foreach (var key in CodexEngine.LawKeys)
+                {
+                    if (shown2 >= 3) break;
+                    int suggest = CodexEngine.SuggestLawLevel(kingdom, key, st);
+                    if (suggest < 0) continue;
+                    int curLv = CodexEngine.GetLawLevel(kid, key);
+                    AddLine(UIHelpers.Lf("cabinet_codex_suggest", UIHelpers.L(key), curLv, suggest), Muted, 11f);
+                    var suggestRow = NewRow(1);
+                    string sk = key;
+                    int stLv = suggest;
+                    AddRowButton(suggestRow, UIHelpers.L("cabinet_codex_adopt"), BtnGood, () =>
+                    {
+                        string msg; bool ok = CodexEngine.SetLawLevel(kingdom, sk, stLv, out msg);
+                        GameHelpers.NotifyLocalized(msg);
+                        if (ok) RefreshNow();
+                    });
+                    shown2++;
+                }
+                if (shown2 == 0) AddLine(UIHelpers.L("cabinet_codex_no_suggest"), Muted, 11f);
+            }
             AddDivider(DividerColor);
 
             // 法律区
@@ -204,7 +229,7 @@ namespace EconomyMod.UI
             AddLine(UIHelpers.L("cabinet_codex_policy_hdr"), UIStyles.Gold, 12f);
             foreach (var key in CodexEngine.PolicyKeys)
             {
-                BuildPolicyRow2(kingdom, key);
+                BuildCodexPolicyRow(kingdom, key);
             }
         }
 
@@ -230,7 +255,7 @@ namespace EconomyMod.UI
             AddRowButton(row, UIHelpers.L("codex_mutex_tip"), Muted, () => { });
         }
 
-        private void BuildPolicyRow2(Kingdom kingdom, string key)
+        private void BuildCodexPolicyRow(Kingdom kingdom, string key)
         {
             int level = CodexEngine.GetPolicyLevel(kingdom.data.id, key);
             string name = UIHelpers.L(key);
@@ -442,6 +467,8 @@ namespace EconomyMod.UI
                 string status = UIHelpers.Lf("cabinet_dip_row", name, score, goodwill,
                     pactTier >= 0 ? UIHelpers.Lf("cabinet_dip_pact_tier", pactTier + 1) : "");
                 AddLine(status, UIStyles.TextPrimary, 11f);
+                int style = CodexEngine.GetStyle(kid);
+                AddLine(UIHelpers.Lf("cabinet_dip_style", UIHelpers.L(CodexEngine.StyleKeys[style])), Muted, 10f);
 
                 var row = NewRow(5);
                 AddRowButton(row, UIHelpers.L("cabinet_dip_war"), BtnBad, () =>

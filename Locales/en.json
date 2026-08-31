@@ -547,5 +547,9 @@
   "toast_codex_reform": "[Codex] <{0}> amends its laws",
   "toast_codex_reform_major": "[Codex] <{0}> major constitutional reform!",
   "ev_desc_codex_reform": "<{0}> amends its laws",
-  "ev_desc_codex_reform_major": "Major constitutional reform"
+  "ev_desc_codex_reform_major": "Major constitutional reform",
+  "cabinet_codex_suggest": "Sugg: {0} {1}→{2}",
+  "cabinet_codex_adopt": "Adopt",
+  "cabinet_codex_no_suggest": "No suggestions (balanced)",
+  "cabinet_dip_style": "Nature: {0}"
 }

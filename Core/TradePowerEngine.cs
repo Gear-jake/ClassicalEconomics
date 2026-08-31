@@ -89,14 +89,17 @@ namespace EconomyMod.Core
         /// <summary>按顺差率分档（正=顺差，负=逆差，中间=中性）。</summary>
         private static int ComputeTier(KingdomStats ks, UnrestConfig cfg)
         {
-            // 法典：军力修正（征兵/军国主义整体抬档，和平主义/武器管制压档；仅在顺差侧生效）
-            float mil = CodexEngine.GetMods(ks.KingdomId).Military;
-            if (mil != 0f && ks.TradeBalance > 0f)
-                return mil > 0f ? 1 : 0;
-
             float ratio = RatioOf(ks);
-            if (ratio >= cfg.TradeSurplusRatio) return 1;
-            if (ratio <= -cfg.TradeDeficitRatio) return -1;
+            // 法典：军力修正改为阈值换算——顺差保底 0.5 下限，军国/征兵降门槛、和平/管制升门槛
+            float mil = CodexEngine.GetMods(ks.KingdomId).Military;
+            float surplusThreshold = mil != 0f
+                ? System.Math.Max(0.5f, cfg.TradeSurplusRatio / (1f + mil))
+                : cfg.TradeSurplusRatio;
+            float deficitThreshold = mil != 0f
+                ? cfg.TradeDeficitRatio * (1f + System.Math.Max(0f, -mil))
+                : cfg.TradeDeficitRatio;
+            if (ratio >= surplusThreshold) return 1;
+            if (ratio <= -deficitThreshold) return -1;
             return 0;
         }
 

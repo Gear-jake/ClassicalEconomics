@@ -125,44 +125,21 @@ namespace EconomyMod.Core
         };
 
         // ===== LawMods 聚合乘数（引擎唯一读取面）=====
-        /// <summary>每国年度聚合效果。所有乘数以 1f 为中性；无新增乘数不放（宁可少而真）。</summary>
-        public struct LawMods
-        {
-            public float Productivity; // 生产函数乘数
-            public float TaxRate;      // 国民税负/收入乘数
-            public float GiniShift;    // 基尼平移（+ = 拉大）
-            public float UnrestAccum;  // 动荡积累速度乘数
-            public float TradeFlow;    // 贸易边流量乘数
-            public float Price;        // 本地物价乘数
-            public float Consumer;     // 消费额乘数
-            public float DisasterResist; // 灾害财富蒸发乘数（<1 更抗）
-            public float BuildCost;    // 建筑费乘数
-            public float Wage;         // 工资乘数
-            public float Military;     // 军力档位（改变顺逆差阈值/加成）
-            public float Happiness;    // 幸福（动荡平息速度乘数，1=默认）
-            public float Birth;        // 人口增长乘数（施于经济产出的人口项）
 
-            public static LawMods Neutral => new LawMods
-            {
-                Productivity = 1f, TaxRate = 1f, GiniShift = 0f, UnrestAccum = 1f,
-                TradeFlow = 1f, Price = 1f, Consumer = 1f, DisasterResist = 1f,
-                BuildCost = 1f, Wage = 1f, Military = 0f, Happiness = 1f, Birth = 1f
-            };
-        }
 
         // ===== 每国状态 =====
         public class NationState
         {
             public int[] LawLevels = new int[LawKeys.Length];
             public int[] PolicyLevels = new int[PolicyKeys.Length];
-            public int Style;
+            public int Style = -1; // -1 = 未掷（0 是合法风格，不能作哨兵）
             public int LastEvalYear = -9999;
-            public long LastGdp = -1;
-            public float LastGini = -1f;
+
+
             public int MutexCooldownYear = -9999; // AI 做互斥切换后的冷却
             public int MutexGroupId = -1;
             // 存档键注入
-            public bool SaveFailedWarned;
+
 
             public LawMods Mods = LawMods.Neutral;
         }
@@ -266,21 +243,7 @@ namespace EconomyMod.Core
             int cur = st.LawLevels[i];
             if (cur == level) return false;
 
-            // 互斥：升至 >0 时清掉同组其他项
-            if (level > 0)
-            {
-                foreach (var group in MutexGroups)
-                {
-                    if (System.Array.IndexOf(group, key) < 0) continue;
-                    foreach (var other in group)
-                    {
-                        if (other == key) continue;
-                        int oi = IndexOf(LawKeys, other);
-                        if (oi >= 0) st.LawLevels[oi] = 0;
-                    }
-                }
-            }
-
+            // 先付费，后清互斥：失败时原状态不被破坏
             if (level > cur)
             {
                 long cost = (long)LawUpgradeCost(kingdom, level);
@@ -296,9 +259,23 @@ namespace EconomyMod.Core
                     }
                 }
             }
+
+            // 互斥：升至 >0 时清掉同组其他项
+            if (level > 0)
+            {
+                foreach (var group in MutexGroups)
+                {
+                    if (System.Array.IndexOf(group, key) < 0) continue;
+                    foreach (var other in group)
+                    {
+                        if (other == key) continue;
+                        int oi = IndexOf(LawKeys, other);
+                        if (oi >= 0) st.LawLevels[oi] = 0;
+                    }
+                }
+            }
             st.LawLevels[i] = level;
             RecomputeMods(kingdom.data.id, st);
-            EventStreamService.Record(EventStreamService.TypeNationDiplomacy, GameHelpers.SafeKingdomName(kingdom), 6);
             return true;
         }
 
@@ -339,42 +316,16 @@ namespace EconomyMod.Core
             Get(kingdom.data.id).Style = System.Math.Max(0, System.Math.Min(StyleCount - 1, style));
         }
 
-        /// <summary>AI 国家变法费用：从城市仓库 + 居民征收（守恒）；不足返回 false。</summary>
+        /// <summary>AI 国家变法费用（实现集中于 CodexAi.CollectAIFunds，避免重复）。</summary>
         private static bool CollectAIFunds(Kingdom kingdom, long cost)
         {
-            long got = 0;
-            try
-            {
-                var cities = kingdom.getCities();
-                if (cities != null)
-                {
-                    foreach (var c in cities)
-                    {
-                        if (c == null || got >= cost) continue;
-                        int gold;
-                        try { gold = c.getResourcesAmount("gold"); } catch (System.Exception) { gold = 0; }
-                        if (gold <= 0) continue;
-                        int take = System.Math.Min(gold, (int)System.Math.Min(cost - got, int.MaxValue));
-                        try { c.takeResource("gold", take); got += take; } catch (System.Exception) { }
-                    }
-                }
-            }
-            catch (System.Exception) { }
-            if (got < cost && kingdom.units != null)
-            {
-                var units = new List<Actor>();
-                try
-                {
-                    foreach (var a in kingdom.units) if (a != null && a.isAlive()) units.Add(a);
-                }
-                catch (System.Exception) { }
-                got += GameHelpers.DeductCoins(units, cost - got);
-            }
-            return got >= cost;
+            return CodexAi.CollectAIFunds(kingdom, cost);
         }
 
+
+
         /// <summary>AI 年度决策建议（玩家法典页展示 + AI 演变共用）：返回建议档位（cur 不变返回 -1）。</summary>
-        public static int SuggestLawLevel(Kingdom kingdom, string key, NationState st)
+        public static int SuggestLawLevel(Kingdom kingdom, string key, NationState st, bool atWarParam = false)
         {
             var ks = EconomyEngine.KingdomStats.TryGetValue(kingdom.data.id, out var s) ? s : null;
             int i = IndexOf(LawKeys, key);
@@ -384,7 +335,7 @@ namespace EconomyMod.Core
             float gini = ks.GiniCoefficient;
             float pop = ks.Population;
             float gdp = ks.GDP;
-            bool atWar = NationDiplomacy.IsAtWarWith(kingdom) || st.Mods.Military > 0.3f;
+            bool atWar = atWarParam || st.Mods.Military > 0.3f;
 
             switch (LawKeys[i])
             {
@@ -400,7 +351,7 @@ namespace EconomyMod.Core
                     break;
                 case LawEducation:
                 case LawHealthcare:
-                    want = (gdp < 0f || st.LastGdp > gdp && pop < ks.Population) ? 0 : (pop > 3000 ? 3 : 2);
+                    want = pop > 3000 ? 3 : 2;
                     break;
                 case LawTaxSystem:
                     want = (gini > 0.6f && cur < 4) ? cur + 1 : (gini < 0.35f ? 0 : 2);
@@ -448,12 +399,12 @@ namespace EconomyMod.Core
                     if (kingdom == null || kingdom.data == null) continue;
                     long kid = kingdom.data.id;
                     var st = Get(kid);
-                    if (st.Style == 0 && year > 1) st.Style = RollStyle(kingdom);
+                    if (st.Style < 0) st.Style = RollStyle(kingdom);
                     RecomputeMods(kid, st);
-                    st.LastEvalYear = year;
-                    // B3 接入 AI 决策（玩家国豁免）
+                    // AI 决策（玩家国豁免）必须写在 LastEvalYear 之前：TickNation 用它防重入
                     if (NationEngine.NationKingdomId != kid)
                         CodexAi.TickNation(kingdom, st, year);
+                    st.LastEvalYear = year;
                 }
             }
             catch (System.Exception) { }
@@ -722,5 +673,29 @@ namespace EconomyMod.Core
             for (int i = 0; i < arr.Length; i++) if (arr[i] == key) return i;
             return -1;
         }
+    }
+    /// <summary>每国年度聚合效果。所有乘数以 1f 为中性；无新增乘数不放（宁可少而真）。</summary>
+    public struct LawMods
+    {
+        public float Productivity; // 生产函数乘数
+        public float TaxRate;      // 国民税负/收入乘数
+        public float GiniShift;    // 基尼平移（+ = 拉大）
+        public float UnrestAccum;  // 动荡积累速度乘数
+        public float TradeFlow;    // 贸易边流量乘数
+        public float Price;    // 本地物价乘数
+        public float Consumer;     // 消费额乘数
+        public float DisasterResist; // 灾害财富蒸发乘数（<1 更抗）
+        public float BuildCost;    // 建筑费乘数
+        public float Wage;     // 工资乘数
+        public float Military;     // 军力档位（改变顺逆差阈值/加成）
+        public float Happiness;    // 幸福（动荡平息速度乘数，1=默认）
+        public float Birth;    // 人口增长乘数（施于经济产出的人口项）
+
+        public static LawMods Neutral => new LawMods
+        {
+        Productivity = 1f, TaxRate = 1f, GiniShift = 0f, UnrestAccum = 1f,
+        TradeFlow = 1f, Price = 1f, Consumer = 1f, DisasterResist = 1f,
+        BuildCost = 1f, Wage = 1f, Military = 0f, Happiness = 1f, Birth = 1f
+        };
     }
 }

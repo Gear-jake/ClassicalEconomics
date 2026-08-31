@@ -58,6 +58,7 @@ namespace EconomyMod.Core
             public int Specialty; // BiomeSpecialty（主线程采集阶段读取，后台线程只读，避免后台访问 Unity 对象）
             public float CityX;   // 首都城市 tile x 坐标（主线程反射读取，后台只读；NaN=未知）
             public float CityY;   // 首都城市 tile y 坐标
+            public LawMods CodexMods; // 法典聚合快照（主线程采集时读一次；后台只读该拷贝，杜绝跨线程读写共享字典）
         }
 
         /// <summary>城市快照（主线程采集：Unity 对象 → 纯数据，后台线程只读）。</summary>
@@ -245,13 +246,13 @@ namespace EconomyMod.Core
         }
 
         public static void AddKingdom(long id, string name, int population, int capacity,
-            long food, int cities, int boats, int specialty, float cityX, float cityY)
+            long food, int cities, int boats, int specialty, float cityX, float cityY, LawMods mods = default(LawMods))
         {
             _collectKingdoms.Add(new KingdomFacts
             {
                 Id = id, Name = name, Population = population, Capacity = capacity,
                 Food = food, Cities = cities, Boats = boats, Specialty = specialty,
-                CityX = cityX, CityY = cityY
+                CityX = cityX, CityY = cityY, CodexMods = mods
             });
         }
 
@@ -1114,8 +1115,8 @@ namespace EconomyMod.Core
                                           * governanceBonus * scaleEfficiency
                                           + employmentRatio * 0.15f;
                     ks.Production = a.Workers * ks.Productivity * capitalFactor;
-                    // 法典：生产函数乘数（教育/补贴/计划 vs 自由市场等聚合）
-                    ks.Production *= CodexEngine.GetMods(ks.KingdomId).Productivity;
+                    // 法典：生产函数乘数（教育/补贴/计划 vs 自由市场等聚合；读采集时快照，后台零字典访问）
+                    ks.Production *= f.CodexMods.Productivity;
                     totalProduction += ks.Production;
                 }
                 res.Kingdoms.Add(ks);
@@ -1152,8 +1153,9 @@ namespace EconomyMod.Core
 
             float meanPrice = 0f;
             int priceCount = 0;
-            foreach (var ks in res.Kingdoms)
+            for (int pi = 0; pi < res.Kingdoms.Count; pi++)
             {
+                var ks = res.Kingdoms[pi];
                 if (ks.KingdomId == 0) { ks.LocalPrice = baseCPI; continue; }
                 float localPerCapitaProd = ks.Population > 0f ? ks.Production / ks.Population : 0f;
                 float supplyRatio = globalPerCapitaProd > 0f ? localPerCapitaProd / globalPerCapitaProd : 1f;
@@ -1163,9 +1165,10 @@ namespace EconomyMod.Core
                 // 中央银行家·关税：本国物价上浮（限幅 0.5×~2.5×）
                 if (NationEngine.TariffPriceMult(ks.KingdomId) != 1f)
                     ks.LocalPrice = Mathf.Clamp(ks.LocalPrice * NationEngine.TariffPriceMult(ks.KingdomId), 0.5f, 2.5f);
-                // 法典：物价乘数（紧缩/贸易协定等聚合）
-                float cp2 = CodexEngine.GetMods(ks.KingdomId).Price;
+                // 法典：物价乘数（紧缩/贸易协定等聚合；快照读，后台零字典访问）
+                float cp2 = pi < kingdoms.Count ? kingdoms[pi].CodexMods.Price : 1f;
                 if (cp2 != 1f) ks.LocalPrice = Mathf.Clamp(ks.LocalPrice * cp2, 0.5f, 3f);
+                // 恢复 foreach 语义：ks 是 struct，已就地改写，无碍
                 meanPrice += ks.LocalPrice;
                 priceCount++;
             }
@@ -1369,10 +1372,18 @@ namespace EconomyMod.Core
                 // 中央银行家：双边贸易协定（边两端恰为本国↔协约国时流量+）
                 float bilateral = NationDiplomacy.BilateralFlowMult(ca.KingdomId, cb.KingdomId);
                 if (bilateral != 1f) flow *= bilateral;
-                // 法典：贸易流量乘数（自由贸易/计划/闭关等聚合，取两端较高一档）
-                float codexFlowA = CodexEngine.GetMods(ca.KingdomId).TradeFlow;
-                float codexFlowB = CodexEngine.GetMods(cb.KingdomId).TradeFlow;
-                float codexFlow = codexFlowA > codexFlowB ? codexFlowA : codexFlowB;
+                // 法典：贸易流量乘数（自由贸易/计划/闭关等聚合，取两端较高一档；快照读，后台零字典访问）
+                float codexFlow = 1f;
+                int cfA, cfB;
+                if (kingdomIndex.TryGetValue(ca.KingdomId, out cfA))
+                {
+                    codexFlow = kingdoms[cfA].CodexMods.TradeFlow;
+                    if (kingdomIndex.TryGetValue(cb.KingdomId, out cfB))
+                    {
+                        float fb = kingdoms[cfB].CodexMods.TradeFlow;
+                        if (fb > codexFlow) codexFlow = fb;
+                    }
+                }
                 if (codexFlow != 1f) flow *= codexFlow;
                 if (flow < 1f) continue; // 太小忽略，避免琐碎结算
 

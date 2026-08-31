@@ -547,5 +547,9 @@
   "toast_codex_reform": "[Кодекс] <{0}> меняет законы",
   "toast_codex_reform_major": "[Кодекс] <{0}> крупная конституционная реформа!",
   "ev_desc_codex_reform": "<{0}> меняет законы",
-  "ev_desc_codex_reform_major": "Крупная реформа"
+  "ev_desc_codex_reform_major": "Крупная реформа",
+  "cabinet_codex_suggest": "Совет: {0} {1}→{2}",
+  "cabinet_codex_adopt": "Принять",
+  "cabinet_codex_no_suggest": "Нет советов (баланс)",
+  "cabinet_dip_style": "Характер: {0}"
 }
