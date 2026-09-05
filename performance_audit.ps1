@@ -89,10 +89,10 @@ Assert-SourcePattern 'Core\InheritanceEngine.cs' 'if \(!aliveMap\.ContainsKey\(k
     'Inheritance death detection is not reusing the existing alive actor index.'
 Assert-SourcePattern 'Core\SpendingEngine.cs' 'BuildCooldownCycles\s*=\s*50' `
     'Native building creation is missing its cross-cycle city cooldown.'
-Assert-SourcePattern 'Core\SpendingEngine.cs' 'int craftCount = Mathf\.Clamp\(spend / 30, 3, 5\).*for \(int i = 0; i < craftCount; i\+\+\)' `
-    'Craft-arsenal spending no longer preserves its 3-5 item outcome.'
-Assert-SourcePattern 'Core\SpendingEngine.cs' 'int craftCount = Mathf\.Clamp\(spend / 40, 6, 10\).*for \(int i = 0; i < craftCount; i\+\+\)' `
-    'Wholesale spending no longer preserves its 6-10 item outcome.'
+Assert-SourcePattern 'Core\SpendingEngine.cs' 'WeakTierPrice = 30.*MidTierPrice = 80.*StrongTierPrice = 200' `
+    'Tiered equipment generation is missing its per-tier price ladder (strong=high cost).'
+Assert-SourcePattern 'Core\SpendingEngine.cs' 'private static int CraftTiered\(Actor actor, int budget, int maxRolls\).*while \(budget >= WeakTierPrice && rolls < maxRolls\)' `
+    'Tiered equipment purchases must be budget-bounded with a roll cap.'
 Assert-SourcePattern 'Core\SpendingEngine.cs' 'RunOncePerYear\(\).*PruneExpiredCityActions\(EconomyEngine\.CycleIndex\).*private static void PruneExpiredCityActions\(int cycle\).*PruneCooldowns\(_lastBuildCycle, cycle, BuildCooldownCycles\)' `
     'Stale building cooldowns still depend on a successful action at cycle multiples.'
 Assert-SourcePattern 'Core\TradeSimulationWorker.cs' 'ClearWorldReferences\(\).*_generation\+\+.*_readyResult = null' `

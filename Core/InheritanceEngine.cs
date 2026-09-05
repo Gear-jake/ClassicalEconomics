@@ -289,7 +289,7 @@ namespace EconomyMod.Core
 
                     if (UnrestConfig.Instance.LogToWorldLog)
                     {
-                        Debug.Log($"[ClassicalEconomics] 遗产分配 {SafeName(rec)} 遗产={total} 继承比例40% 净得={net} " +
+                        Debug.Log($"[ClassicalEconomics] 遗产分配 {SafeName(rec)} 遗产={total} 继承比例80% 净得={net} " +
                                   $"继承者={heirs.Count}人 城市={(city != null ? GameHelpers.SafeCityName(city) : "无")}");
                     }
                 }

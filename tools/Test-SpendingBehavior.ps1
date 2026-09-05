@@ -6,8 +6,8 @@ $craft = [Regex]::Match($source, 'private static bool TryCraftArsenal.*?private 
 $wholesale = [Regex]::Match($source, 'private static bool TryWholesaleWeapons.*?private static bool TryEraEvent', [Text.RegularExpressions.RegexOptions]::Singleline).Value
 
 $valid = $buy -notmatch 'CanUseCityAction'
-$valid = $valid -and [Regex]::IsMatch($craft, 'int craftCount = Mathf\.Clamp\(spend / 30, 3, 5\).*for \(int i = 0; i < craftCount; i\+\+\)', [Text.RegularExpressions.RegexOptions]::Singleline)
-$valid = $valid -and [Regex]::IsMatch($wholesale, 'int craftCount = Mathf\.Clamp\(spend / 40, 6, 10\).*for \(int i = 0; i < craftCount; i\+\+\)', [Text.RegularExpressions.RegexOptions]::Singleline)
+$valid = $valid -and [Regex]::IsMatch($craft, 'int success = CraftTiered\(actor, Mathf\.RoundToInt\(spend \* 0\.7f\), 5\)', [Text.RegularExpressions.RegexOptions]::Singleline)
+$valid = $valid -and [Regex]::IsMatch($wholesale, 'int success = CraftTiered\(actor, Mathf\.RoundToInt\(spend \* 0\.8f\), 10\)', [Text.RegularExpressions.RegexOptions]::Singleline)
 if (-not $valid) {
     Write-Host 'SPENDING_BEHAVIOR_RED: city cooldown or single-item crafting changes actor-level spending behavior'
     exit 1

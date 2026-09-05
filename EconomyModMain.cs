@@ -65,6 +65,7 @@ namespace EconomyMod
             SpendingEngine.Reset();
             NationEngine.Reset(); // 中央银行家：清空国家绑定/金库/政策（新地图从零开始）
             LawEngine.ResetAll(); // 法典：清空各国法律/国策/个性（新地图重新演化）
+            NationPowerEngine.Reset(); // 富国强兵：清空档位与国民特质
             HistoryService.ClearHistory();
             EventStreamService.Clear();
             DecisionEvents.Reset(); // 抉择事件：清空挂起/冷却（事件定义保留）
@@ -154,6 +155,9 @@ namespace EconomyMod
                     RegisterTrait(Core.LawEngine.LawTraitWelfare,  "ui/Icons/iconEraRevival",  10f, 0f, 0f, 0, "民生之国", "民生之国：国民幸福 +10");
                     RegisterTrait(Core.LawEngine.LawTraitMil,      "ui/Icons/iconEraFlourish", -4f, 10f, 4f, 0, "武备之国", "武备之国：国民伤害 +10、护甲 +4、幸福 -4");
                     RegisterTrait(Core.LawEngine.LawTraitAusterity,"ui/Icons/iconEraCollapse", -4f, 0f, 0f, 0, "紧缩之国", "紧缩之国：国民幸福 -4");
+                    RegisterTrait(Core.NationPowerEngine.TraitTier1, "ui/Icons/iconEraFlourish", 0f, 25f, 15f, 0, "富国强兵·壹", "富国强兵（一档）：国民伤害 +25、护甲 +15。经济强则兵甲利。");
+                    RegisterTrait(Core.NationPowerEngine.TraitTier2, "ui/Icons/iconEraFlourish", 0f, 50f, 30f, 0, "富国强兵·贰", "富国强兵（二档）：国民伤害 +50、护甲 +30。以一当十。");
+                    RegisterTrait(Core.NationPowerEngine.TraitTier3, "ui/Icons/iconEraGolden",   0f, 90f, 55f, 0, "富国强兵·叁", "富国强兵（三档）：国民伤害 +90、护甲 +55。小国亦可吞大国。");
                 }
                 else
                 {
@@ -165,6 +169,9 @@ namespace EconomyMod
                     RegisterTrait(Core.LawEngine.LawTraitWelfare,  "ui/Icons/iconEraRevival",  10f, 0f, 0f, 0, "Welfare State", "Welfare state: happiness +10");
                     RegisterTrait(Core.LawEngine.LawTraitMil,      "ui/Icons/iconEraFlourish", -4f, 10f, 4f, 0, "Militarized", "Militarized: damage +10, armor +4, happiness -4");
                     RegisterTrait(Core.LawEngine.LawTraitAusterity,"ui/Icons/iconEraCollapse", -4f, 0f, 0f, 0, "Austerity", "Austerity: happiness -4");
+                    RegisterTrait(Core.NationPowerEngine.TraitTier1, "ui/Icons/iconEraFlourish", 0f, 25f, 15f, 0, "Economic Might I", "Economic Might (tier 1): damage +25, armor +15. A rich state fields sharp steel.");
+                    RegisterTrait(Core.NationPowerEngine.TraitTier2, "ui/Icons/iconEraFlourish", 0f, 50f, 30f, 0, "Economic Might II", "Economic Might (tier 2): damage +50, armor +30. One against ten.");
+                    RegisterTrait(Core.NationPowerEngine.TraitTier3, "ui/Icons/iconEraGolden",   0f, 90f, 55f, 0, "Economic Might III", "Economic Might (tier 3): damage +90, armor +55. The small may swallow the great.");
                 }
             }
             catch (System.Exception e)
@@ -447,6 +454,7 @@ if (World.world == null)
                         UnrestEngine.ClearWorldReferences();
                         PopulationEngine.ClearWorldReferences();
                         BankingEngine.ClearWorldReferences();
+                        NationPowerEngine.ClearWorldReferences();
                         EventStreamService.Clear();
                         EconomyUI.OnWorldUnavailable();
                     }

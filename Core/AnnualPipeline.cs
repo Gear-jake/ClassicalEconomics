@@ -156,6 +156,8 @@ namespace EconomyMod.Core
                     NationEngine.RunAnnual(_year);
                     // 法典：全王国法律/国策年度演变（AI 国自动；玩家国 B3 接建议）＋乘数聚合
                     LawEngine.RunAnnual(_year);
+                    // 富国强兵：经济优势→国民战斗加成（小国打大国；档位变化才遍历国民）
+                    NationPowerEngine.Evaluate();
                     break;
                 case AnnualStage.Events:
                     // 抉择事件：到期结算 + 条件抽签（O(K×E)，无分配；弹窗延后到快照尾）
