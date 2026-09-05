@@ -27,42 +27,42 @@ namespace EconomyMod.Core
         /// <summary>建筑类型（世界内经济建筑）。</summary>
         public enum BuildingKind { Market = 0, Granary }
         private const int BuildingKindCount = 2;
-        public const float MarketCapBonus = 1.2f;   // 市场所在城市贸易容量 +20%
+        public const float MarketTaxBaseBonus = 0.10f; // 市场所在城市居民税基 +10%/座（v1.3.0 改义：原贸易容量加成随贸易模拟移除）
         public const float GranaryLossFactor = 0.7f; // 粮仓所在城市灾害财富蒸发 ×0.7
 
         private const int MaxSlots = 5;
         private const int SwitchCooldownYears = 10;
-        private const int RecordCapacity = 50;
+        internal const int RecordCapacity = 50;
 
         // ===== 绑定状态 =====
-        private static long _nationKingdomId;   // 0 = 未认领
-        private static string _nationName;
-        private static int _lastSwitchYear = int.MinValue;
+        internal static long _nationKingdomId;   // 0 = 未认领
+        internal static string _nationName;
+        internal static int _lastSwitchYear = int.MinValue;
 
         // ===== 金库 =====
-        private static long _treasury;
-        private static long _lastIncome;   // 上一期金库总收入（税负+政策收入）
-        private static long _lastExpense;  // 上一期金库总支出
+        internal static long _treasury;
+        internal static long _lastIncome;   // 上一期金库总收入（税负+政策收入）
+        internal static long _lastExpense;  // 上一期金库总支出
 
         // ===== 持续政策槽位 =====
-        private class PolicySlot
+        internal class PolicySlot
         {
             public PolicyKind Kind;
             public int Tier;
             public int StartYear;
             public long TotalSpent; // 累计净支出（收入型政策为负值计入）
         }
-        private static readonly List<PolicySlot> _slots = new List<PolicySlot>(MaxSlots);
+        internal static readonly List<PolicySlot> _slots = new List<PolicySlot>(MaxSlots);
 
         // ===== 一次性法令冷却（年）=====
-        private static int _reliefReadyYear = int.MinValue;
-        private static int _festivalReadyYear = int.MinValue;
+        internal static int _reliefReadyYear = int.MinValue;
+        internal static int _festivalReadyYear = int.MinValue;
         public const int ReliefCooldownYears = 5;
         public const int FestivalCooldownYears = 3;
         public const int BuildCooldownYears = 10;
 
         // ===== 世界建筑（cityId → kind；仅年度阶段主线程写，后台只读且时序不重叠）=====
-        private static readonly Dictionary<long, int> _cityBuildings = new Dictionary<long, int>();
+        internal static readonly Dictionary<long, int> _cityBuildings = new Dictionary<long, int>();
         private static readonly Dictionary<long, int> _buildReadyYear = new Dictionary<long, int>();
 
         // ===== 政绩记录（环形，UI 读取）=====
@@ -75,14 +75,9 @@ namespace EconomyMod.Core
             public float GiniAfter, AvgAfter, PriceAfter; // 下一年 RunAnnual 回填
             public bool Closed;
         }
-        private static readonly NationRecord[] _records = new NationRecord[RecordCapacity];
-        private static int _recordHead;
-        private static int _recordCount;
-
-        // ===== 后台计算读取的乘数（×1000 整数表示，避免浮点竞态歧义）=====
-        private static int _pactFlowPermille = 1000;   // 贸易协定：本国参与的边流量乘数
-        private static int _tariffImportPermille = 1000; // 关税：本国为进口方的流量乘数
-        private static int _tariffPricePermille = 1000;  // 关税：本国本地物价乘数
+        internal static readonly NationRecord[] _records = new NationRecord[RecordCapacity];
+        internal static int _recordHead;
+        internal static int _recordCount;
 
         // ===== 复用缓冲（年度路径，避免年度内重复分配）=====
         private static readonly List<Actor> _actorPool = new List<Actor>(256);
@@ -165,9 +160,6 @@ namespace EconomyMod.Core
             _treasury = 0;
             _lastIncome = 0;
             _lastExpense = 0;
-            _pactFlowPermille = 1000;
-            _tariffImportPermille = 1000;
-            _tariffPricePermille = 1000;
             GameHelpers.NotifyLocalized(reasonKey, name);
         }
 
@@ -188,9 +180,6 @@ namespace EconomyMod.Core
             _recordHead = 0;
             _recordCount = 0;
             for (int i = 0; i < RecordCapacity; i++) _records[i] = null;
-            _pactFlowPermille = 1000;
-            _tariffImportPermille = 1000;
-            _tariffPricePermille = 1000;
             _nativeBuildId = null;
             _nativeBuildName = null;
             NationDiplomacy.Reset();
@@ -244,7 +233,6 @@ namespace EconomyMod.Core
                 _slots[i].Tier = tier;
                 _slots[i].TotalSpent += reformFee;
                 ApplyPolicySideState(kind, tier);
-                RefreshTradeMultipliers();
                 EventStreamService.Record(EventStreamService.TypeNationPolicy, _nationName, tier + 1);
                 GameHelpers.NotifyLocalized("toast_nation_policy_on", PolicyName(kind), _nationName, tier + 1);
                 return true;
@@ -257,7 +245,6 @@ namespace EconomyMod.Core
             if (firstYear > 0 && !TryPay(firstYear)) { GameHelpers.NotifyLocalized("toast_nation_poor_treasury"); return false; }
             _slots.Add(new PolicySlot { Kind = kind, Tier = tier, StartYear = currentYear, TotalSpent = firstYear });
             ApplyPolicySideState(kind, tier);
-            RefreshTradeMultipliers();
             AddRecord(currentYear, PolicyKey(kind), firstYear);
             EventStreamService.Record(EventStreamService.TypeNationPolicy, _nationName, tier + 1);
             GameHelpers.NotifyLocalized("toast_nation_policy_on", PolicyName(kind), _nationName, tier + 1);
@@ -272,7 +259,6 @@ namespace EconomyMod.Core
                 if (_slots[i].Kind != kind) continue;
                 _slots.RemoveAt(i);
                 RemovePolicySideState(kind);
-                RefreshTradeMultipliers();
                 EventStreamService.Record(EventStreamService.TypeNationPolicy, _nationName, 0);
                 GameHelpers.NotifyLocalized("toast_nation_policy_off", PolicyName(kind), _nationName);
                 return true;
@@ -453,6 +439,7 @@ namespace EconomyMod.Core
 
         // ===== 世界建筑 =====
 
+        /// <summary>市场建筑记录查询（v1.3.0 改义：每座市场使该国居民税基 +10%，仅主线程年度税负路径使用）。</summary>
         public static bool IsMarketCity(long cityId) { return _nationKingdomId != 0 && _cityBuildings.TryGetValue(cityId, out int k) && k == (int)BuildingKind.Market; }
         public static bool IsGranaryCity(long cityId) { return _nationKingdomId != 0 && _cityBuildings.TryGetValue(cityId, out int k) && k == (int)BuildingKind.Granary; }
 
@@ -608,8 +595,15 @@ namespace EconomyMod.Core
                 }
                 catch (System.Exception) { }
             }
-            // 居民税：人口×人均×0.1%（受总上限约束；仓库已征满则居民税为 0）
-            long residentTarget = (long)((stats?.ActorCount ?? 0) * (stats?.AvgWealth ?? 0f) * 0.001f);
+            // 居民税：人口×人均×0.1%（受总上限约束；仓库已征满则居民税为 0）。
+            // 铸币政策：居民税 +8%/档；市场建筑：每座居民税基 +10%（v1.3.0 改义）
+            int mintTier = GetPolicyTier(PolicyKind.TradePact);
+            float residentMult = 1f + (mintTier >= 0 ? 0.08f * (mintTier + 1) : 0f);
+            int marketCount = 0;
+            foreach (var kv in _cityBuildings)
+                if (kv.Value == (int)BuildingKind.Market) marketCount++;
+            residentMult += MarketTaxBaseBonus * marketCount;
+            long residentTarget = (long)((stats?.ActorCount ?? 0) * (stats?.AvgWealth ?? 0f) * 0.001f * residentMult);
             long remaining = cap > 0 ? System.Math.Max(0, cap - income) : residentTarget;
             long residentIncome = CollectFromResidents(kingdom, System.Math.Min(residentTarget, remaining));
             income += residentIncome;
@@ -632,7 +626,7 @@ namespace EconomyMod.Core
                 }
                 if (slot.Kind == PolicyKind.Tariff)
                 {
-                    // 关税：从本国居民征收（消费税口径），进口流量/物价影响由后台乘数生效
+                    // 专卖：从本国居民征收消费税进金库（真实转移，守恒；v1.3.0 改义自关税）
                     long target = (long)costF;
                     long collected = CollectFromResidents(kingdom, target);
                     income += collected;
@@ -669,8 +663,7 @@ namespace EconomyMod.Core
 
             _lastIncome = income;
             _lastExpense = expense;
-            RefreshTradeMultipliers();
-            NationDiplomacy.RunAnnual(year); // 双边贸易协定年费（金库不足自动解除）
+            NationDiplomacy.RunAnnual(year); // 双边经济协定年费（金库不足自动解除）
         }
 
         /// <summary>从本国居民征收金币（关税/加税口径；真实转移，上限为居民财富的 10%）。</summary>
@@ -720,6 +713,12 @@ namespace EconomyMod.Core
             return TryPay(amount);
         }
 
+        /// <summary>金库入账（公开给外交模块用：双边经济协定纳贡收入）。</summary>
+        public static void AddTreasury(long amount)
+        {
+            if (amount > 0) _treasury += amount;
+        }
+
         /// <summary>金库扣款；不足返回 false（不部分扣款）。</summary>
         private static bool TryPay(long amount)
         {
@@ -736,25 +735,7 @@ namespace EconomyMod.Core
             return EconomyEngine.KingdomStats.TryGetValue(_nationKingdomId, out ks) ? ks : null;
         }
 
-        // ===== 后台计算读取的乘数（基础类型，无分配）=====
-
-        /// <summary>贸易协定：边涉及本国时流量乘数。</summary>
-        public static float PactFlowMult(long kingdomId)
-        {
-            return (_nationKingdomId != 0 && kingdomId == _nationKingdomId) ? _pactFlowPermille / 1000f : 1f;
-        }
-
-        /// <summary>关税：本国为进口方时流量乘数（&lt;1）。</summary>
-        public static float TariffImportMult(long kingdomId)
-        {
-            return (_nationKingdomId != 0 && kingdomId == _nationKingdomId) ? _tariffImportPermille / 1000f : 1f;
-        }
-
-        /// <summary>关税：本国本地物价乘数（&gt;1）。</summary>
-        public static float TariffPriceMult(long kingdomId)
-        {
-            return (_nationKingdomId != 0 && kingdomId == _nationKingdomId) ? _tariffPricePermille / 1000f : 1f;
-        }
+        // ===== 政策查询 =====
 
         /// <summary>宣传：本国动荡积累暂停。</summary>
         public static bool PropagandaActive(long kingdomId)
@@ -763,15 +744,6 @@ namespace EconomyMod.Core
             for (int i = 0; i < _slots.Count; i++)
                 if (_slots[i].Kind == PolicyKind.Propaganda) return true;
             return false;
-        }
-
-        private static void RefreshTradeMultipliers()
-        {
-            int pactTier = GetPolicyTier(PolicyKind.TradePact);
-            int tariffTier = GetPolicyTier(PolicyKind.Tariff);
-            _pactFlowPermille = pactTier >= 0 ? 1000 + 100 * (pactTier + 1) : 1000;
-            _tariffImportPermille = tariffTier >= 0 ? 1000 - 100 * (tariffTier + 1) : 1000;
-            _tariffPricePermille = tariffTier >= 0 ? 1000 + 30 * (tariffTier + 1) : 1000;
         }
 
         // ===== 政绩记录 =====

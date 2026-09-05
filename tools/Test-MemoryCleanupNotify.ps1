@@ -104,9 +104,9 @@ foreach ($member in @('LastFreedBytes', 'LastShrunkCount', 'LastCleanupRealtime'
 
 # ===== 4. 字典重建缩容访问器：声明存在，且唯一调用方是 MemoryCleanupEngine =====
 $pairs = @(
-    @{ File = 'tsw';   Text = $tswText;      Gets = @('FlowCityRefsForTrim', 'ResidentOwedForTrim', 'ResidentPaidForTrim', 'EdgeCacheForTrim', 'KnownCityTopologyForTrim', 'AccScratchForTrim', 'CityIndexScratchForTrim', 'KingdomIndexScratchForTrim', 'BoatsScratchForTrim', 'SeaCapacityScratchForTrim') },
+    @{ File = 'tsw';   Text = $tswText;      Gets = @('AccScratchForTrim') },
     @{ File = 'inh';   Text = $inheritText;  Gets = @('RecordsForTrim', 'AliveMapForTrim') },
-    @{ File = 'col';   Text = $collectorText; Gets = @('CityRefsForTrim') },
+    
     @{ File = 'trk';   Text = $trackerText;  Gets = @('DamageForTrim', 'PrevHealthForTrim', 'InactiveScansForTrim') }
 )
 $replaceNames = @()
@@ -117,19 +117,12 @@ foreach ($p in $pairs) {
 }
 # Replace 方法名清单（owner 文件内声明，唯一调用方是 MemoryCleanupEngine）
 $replaceNames = @(
-    'ReplaceFlowCityRefsForTrim', 'ReplaceResidentOwedForTrim', 'ReplaceResidentPaidForTrim',
-    'ReplaceEdgeCacheForTrim', 'ReplaceKnownCityTopologyForTrim', 'ReplaceAccScratchForTrim',
-    'ReplaceCityIndexScratchForTrim', 'ReplaceKingdomIndexScratchForTrim', 'ReplaceBoatsScratchForTrim',
-    'ReplaceSeaCapacityScratchForTrim', 'ReplaceRecordsForTrim', 'ReplaceAliveMapForTrim',
-    'ReplaceCityRefsForTrim', 'ReplaceDamageForTrim', 'ReplacePrevHealthForTrim', 'ReplaceInactiveScansForTrim'
+    'ReplaceAccScratchForTrim', 'ReplaceRecordsForTrim', 'ReplaceAliveMapForTrim',
+    'ReplaceDamageForTrim', 'ReplacePrevHealthForTrim', 'ReplaceInactiveScansForTrim'
 )
 $ownerFiles = @{
-    'ReplaceFlowCityRefsForTrim' = $tswText; 'ReplaceResidentOwedForTrim' = $tswText; 'ReplaceResidentPaidForTrim' = $tswText
-    'ReplaceEdgeCacheForTrim' = $tswText; 'ReplaceKnownCityTopologyForTrim' = $tswText; 'ReplaceAccScratchForTrim' = $tswText
-    'ReplaceCityIndexScratchForTrim' = $tswText; 'ReplaceKingdomIndexScratchForTrim' = $tswText
-    'ReplaceBoatsScratchForTrim' = $tswText; 'ReplaceSeaCapacityScratchForTrim' = $tswText
+    'ReplaceAccScratchForTrim' = $tswText
     'ReplaceRecordsForTrim' = $inheritText; 'ReplaceAliveMapForTrim' = $inheritText
-    'ReplaceCityRefsForTrim' = $collectorText
     'ReplaceDamageForTrim' = $trackerText; 'ReplacePrevHealthForTrim' = $trackerText; 'ReplaceInactiveScansForTrim' = $trackerText
 }
 $productSources = @(Get-ChildItem -LiteralPath $Root -Filter '*.cs' -File -Recurse | Where-Object {

@@ -110,43 +110,6 @@ namespace EconomyMod.Models
         /// <summary>税线倍数：财富超过全球人均×该值的公民需纳税（1.0~3.0）。</summary>
         public float WealthTaxLineMult = 1.5f;
 
-        // ===== 地理贸易网络（TradeSimulationWorker 后台模拟：城市为节点 / 王国为聚合层）=====
-
-        /// <summary>是否启用地理贸易网络（城市供需缺口 → 城市对寻路 → 金币经城市仓库零和结算）。</summary>
-        public bool TradeEnabled = true;
-
-        /// <summary>贸易流动比例：每年实际流动的贸易量占供需缺口比例（0~0.2）。</summary>
-        public float TradeFlowRatio = 0.05f;
-
-        /// <summary>每周期主线程寻路对数量上限（默认 100，限流保护主线程，剩余对下一周期补齐）。</summary>
-        public int MaxPathfindPairs = 100;
-
-        /// <summary>地形变化后全量重算寻路缓存的间隔（周期）。</summary>
-        public int PathRecomputeEvery = 20;
-
-        /// <summary>城市贸易最大距离：仅邻国或距离 ≤ 该值的城市对才做城市级寻路（防止城市对爆炸）。</summary>
-        public float MaxTradeRange = 120f;
-
-        /// <summary>海路惩罚系数：cost = 陆路距离 + 海路距离 × SeaRoutePenalty。</summary>
-        public float SeaRoutePenalty = 3.0f;
-
-        /// <summary>非邻国加成：非邻国城市对在基础 cost 上乘以该系数（邻国 = 1.0）。</summary>
-        public float NonNeighborPenalty = 2.0f;
-
-        /// <summary>单周期最大贸易边数（缓存上限，防止寻路结果无限膨胀）。</summary>
-        public int MaxEdges = 8000;
-
-        /// <summary>城市仓库容量基准（兜底）：capacity = countBuildings() × TradeCityBaseCapacity × 50%。
-        /// 启用 TradeUseRealStockpiles 时优先使用原版真实仓库容量（ResourceLibrary.gold.storage_max，
-        /// 每座城市的金库单槽上限），原版 API 不可用（=0）时才回退到本估算。</summary>
-        public int TradeCityBaseCapacity = 50;
-
-        /// <summary>使用原版真实仓库容量作为城市供需缺口基准（游戏原版自带仓库系统，
-        /// 直接读 ResourceLibrary.gold.storage_max 公开静态字段）；关闭则回退到建筑数估算。</summary>
-        public bool TradeUseRealStockpiles = true;
-
-        /// <summary>贸易寻路用 A* 真实路径长度计成本（绕山跨海更真实；关闭回退直线距离，默认开启）。</summary>
-        public bool TradeAstarEnabled = true;
 
         // ===== 人口约束（马尔萨斯，PopulationEngine）=====
 
@@ -176,16 +139,6 @@ namespace EconomyMod.Models
         /// <summary>强盛期防抖：连续满足条件期数。</summary>
         public int FlourishPeriods = 2;
 
-        // ===== 贸易军力（TradePowerEngine：贸易顺差/逆差 → 国民战斗加成）=====
-
-        /// <summary>是否启用贸易军力（顺差国国民伤害/护甲加成，逆差国惩罚）。</summary>
-        public bool TradePowerEnabled = true;
-
-        /// <summary>顺差国判定阈值：净顺差占 GDP 比例 ≥ 该值判定为顺差国（0.001~0.5）。</summary>
-        public float TradeSurplusRatio = 0.03f;
-
-        /// <summary>逆差国判定阈值：净逆差占 GDP 比例 ≥ 该值判定为逆差国（0.001~0.5）。</summary>
-        public float TradeDeficitRatio = 0.03f;
 
         // ===== 劳动分工（LaborEngine）=====
 
@@ -208,6 +161,11 @@ namespace EconomyMod.Models
 
         /// <summary>实时刷新单次处理预算：单次轻量刷新最多采集的存活单位数（默认与阈值一致，保证阈值下全量同步）。</summary>
         public int RealTimeRefreshBudget = 2000;
+
+        // ===== UI 缩放（内阁面板字体/按钮/行高，玩家可调）=====
+
+        /// <summary>内阁 UI 整体缩放系数（0.8~1.6，默认 1.2）：字号、按钮宽高、行高统一乘此系数。</summary>
+        public float UiScale = 1.2f;
 
         // ===== 货币供给与价格指数（CPI）=====
 

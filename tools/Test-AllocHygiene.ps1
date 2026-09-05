@@ -17,10 +17,10 @@ $source = [System.IO.File]::ReadAllText($SourcePath)
 #    Singleline non-greedy match is line-ending agnostic (`.` matches `\r` and `\n`).
 $region = [regex]::Match(
     $source,
-    'public static void PrepareRoutes\((?<body>.*?)private static int CompareCities\(',
+    'private static CycleResult Compute\((?<body>.*?)private static float ComputeGini\(',
     [System.Text.RegularExpressions.RegexOptions]::Singleline)
 if (-not $region.Success) {
-    Write-Host 'ALLOC_HYGIENE_RED: route-preparation region (PrepareRoutes .. CompareCities) not found; invariant unverifiable'
+    Write-Host 'ALLOC_HYGIENE_RED: cycle-path region (Compute .. ComputeGini) not found; invariant unverifiable'
     exit 1
 }
 $regionStart = $region.Index
@@ -40,7 +40,7 @@ for ($i = 0; $i -lt $lines.Count; $i++) {
     if ($line -notmatch 'new\s+(List|Dictionary)<') { continue }
 
     if ($lineStart -ge $regionStart -and $lineStart -lt $regionEnd) {
-        Write-Host "ALLOC_HYGIENE_RED: collection creation inside route-preparation region (PrepareRoutes .. CompareCities) at line $($i + 1): $($line.Trim())"
+        Write-Host "ALLOC_HYGIENE_RED: collection creation inside cycle-path region (Compute .. ComputeGini) at line $($i + 1): $($line.Trim())"
         exit 1
     }
 
@@ -56,5 +56,5 @@ for ($i = 0; $i -lt $lines.Count; $i++) {
     exit 1
 }
 
-Write-Host 'ALLOC_HYGIENE_GREEN: route-preparation cycle path has no local List/Dictionary allocation'
+Write-Host 'ALLOC_HYGIENE_GREEN: cycle path has no local List/Dictionary allocation'
 exit 0

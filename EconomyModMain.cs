@@ -41,7 +41,7 @@ namespace EconomyMod
             // 重新同步配置（可能修改了默认值）
             Services.EconomyConfigCallbacks.SyncFromModConfig();
             // 刷新 UI
-            EconomyUI.RefreshOverview();
+            EconomyUI.RefreshOverview(refreshCabinet: true);
             Debug.Log("[ClassicalEconomics] === 热重载完成 ===");
         }
 
@@ -56,7 +56,6 @@ namespace EconomyMod
             EconomyCycleModulator.Reset();
             SocialCrisisEngine.Reset();
             EraEngine.Reset();
-            TradePowerEngine.Reset();
             UnrestEngine.Reset();   // M7：清空震荡状态与收复战争跟踪
             PolicyEngine.Reset();   // M7：清空改革冷却
             KingdomMonitorEngine.Reset();
@@ -89,8 +88,7 @@ BiomeEconomy.ClearCache();
                           $"财富={EconomyEngine.GlobalGDP:F0} " +
                           $"人均={EconomyEngine.AvgWealth:F2} " +
                           $"Actor={EconomyEngine.AliveActorCount} " +
-                          $"贫富差距={EconomyEngine.GiniCoefficient:F2} " +
-                          $"贸易额={EconomyEngine.TotalTradeVolume:F0}");
+                          $"贫富差距={EconomyEngine.GiniCoefficient:F2}");
 
                 var topKingdoms = EconomyEngine.TopKingdoms(3);
                 foreach (var k in topKingdoms)
@@ -112,21 +110,8 @@ BiomeEconomy.ClearCache();
                 PriceIndex = EconomyCycleModulator.CurrentCPI
             };
             snapshot.Kingdoms = new List<KingdomStats>(EconomyEngine.KingdomStats.Values);
-            // 贸易净额排名（v0.13）：直接引用后台已聚合的城市/国家净额列表（本周期只读，零拷贝）
-            snapshot.TotalExport = EconomyEngine.TotalTradeVolume;
-            var last = TradeSimulationWorker.LastResult;
-            snapshot.CityBalances = CopyTopBalances(last != null ? last.CityBalances : null, 40);
-            snapshot.KingdomBalances = CopyTopBalances(last != null ? last.KingdomBalances : null, 40);
             HistoryService.AppendSnapshot(snapshot);
-            EconomyUI.RefreshOverview();
-        }
-
-        private static List<TradeBalance> CopyTopBalances(List<TradeBalance> source, int limit)
-        {
-            int count = source == null ? 0 : System.Math.Min(source.Count, limit);
-            var copy = new List<TradeBalance>(count);
-            for (int i = 0; i < count; i++) copy.Add(source[i]);
-            return copy;
+            EconomyUI.RefreshOverview(refreshCabinet: true);
         }
 
         // ===== 时代事件国民特质注册（EraEngine 国民加成用，替换原 cultural_awakening）=====
@@ -161,12 +146,9 @@ BiomeEconomy.ClearCache();
                     RegisterTrait(Core.EraEngine.ActorTraitRevival,  "ui/Icons/iconEraRevival",   35f, 10f, 0f, 10, "复兴", "迎来复兴：国民幸福 +35、伤害 +10、生育 +10");
                     RegisterTrait(Core.EraEngine.ActorTraitFlourish, "ui/Icons/iconEraFlourish",  20f, 5f, 5f, 0, "强盛期", "强盛期：国民幸福 +20、伤害 +5、护甲 +5");
                     RegisterTrait(Core.EraEngine.ActorTraitCollapse, "ui/Icons/iconEraCollapse",  -15f, 30f, 20f, 0, "经济崩溃", "经济崩溃：国民幸福 -15、伤害 +30、护甲 +20");
-                    RegisterTrait(Core.TradePowerEngine.ActorTraitSurplus, "ui/Icons/iconEraFlourish", 0f, 20f, 10f, 0, "贸易顺差", "贸易顺差：国民伤害 +20、护甲 +10");
-                    RegisterTrait(Core.TradePowerEngine.ActorTraitDeficit, "ui/Icons/iconEraCollapse", 0f, -20f, 0f, 0, "贸易逆差", "贸易逆差：国民伤害 -20");
                     RegisterTrait(Core.LawEngine.LawTraitEdu,      "ui/Icons/iconEraGolden",   8f, 0f, 0f, 2, "教育之国", "教育之国：国民幸福 +8、生育 +2");
                     RegisterTrait(Core.LawEngine.LawTraitWelfare,  "ui/Icons/iconEraRevival",  10f, 0f, 0f, 0, "民生之国", "民生之国：国民幸福 +10");
                     RegisterTrait(Core.LawEngine.LawTraitMil,      "ui/Icons/iconEraFlourish", -4f, 10f, 4f, 0, "武备之国", "武备之国：国民伤害 +10、护甲 +4、幸福 -4");
-                    RegisterTrait(Core.LawEngine.LawTraitTrade,    "ui/Icons/iconEraFlourish", 4f, 0f, 0f, 0, "货殖之国", "货殖之国：国民幸福 +4");
                     RegisterTrait(Core.LawEngine.LawTraitAusterity,"ui/Icons/iconEraCollapse", -4f, 0f, 0f, 0, "紧缩之国", "紧缩之国：国民幸福 -4");
                 }
                 else
@@ -175,12 +157,9 @@ BiomeEconomy.ClearCache();
                     RegisterTrait(Core.EraEngine.ActorTraitRevival,  "ui/Icons/iconEraRevival",   35f, 10f, 0f, 10, "Revival", "Revival: happiness +35, damage +10, birth rate +10");
                     RegisterTrait(Core.EraEngine.ActorTraitFlourish, "ui/Icons/iconEraFlourish",  20f, 5f, 5f, 0, "Flourishing", "Flourishing: happiness +20, damage +5, armor +5");
                     RegisterTrait(Core.EraEngine.ActorTraitCollapse, "ui/Icons/iconEraCollapse",  -15f, 30f, 20f, 0, "Economic Collapse", "Economic Collapse: happiness -15, damage +30, armor +20");
-                    RegisterTrait(Core.TradePowerEngine.ActorTraitSurplus, "ui/Icons/iconEraFlourish", 0f, 20f, 10f, 0, "Trade Surplus", "Trade Surplus: damage +20, armor +10");
-                    RegisterTrait(Core.TradePowerEngine.ActorTraitDeficit, "ui/Icons/iconEraCollapse", 0f, -20f, 0f, 0, "Trade Deficit", "Trade Deficit: damage -20");
                     RegisterTrait(Core.LawEngine.LawTraitEdu,      "ui/Icons/iconEraGolden",   8f, 0f, 0f, 2, "Scholar State", "Scholar state: happiness +8, birth +2");
                     RegisterTrait(Core.LawEngine.LawTraitWelfare,  "ui/Icons/iconEraRevival",  10f, 0f, 0f, 0, "Welfare State", "Welfare state: happiness +10");
                     RegisterTrait(Core.LawEngine.LawTraitMil,      "ui/Icons/iconEraFlourish", -4f, 10f, 4f, 0, "Militarized", "Militarized: damage +10, armor +4, happiness -4");
-                    RegisterTrait(Core.LawEngine.LawTraitTrade,    "ui/Icons/iconEraFlourish", 4f, 0f, 0f, 0, "Merchant Nation", "Merchant nation: happiness +4");
                     RegisterTrait(Core.LawEngine.LawTraitAusterity,"ui/Icons/iconEraCollapse", -4f, 0f, 0f, 0, "Austerity", "Austerity: happiness -4");
                 }
             }
@@ -316,7 +295,7 @@ BiomeEconomy.ClearCache();
                     TradeSimulationWorker.ComputeAndConsumeSync();        // 同步计算并发布（推进周期号）
                     DataCollector.ApplyWealthTax();
                 }
-                EconomyUI.RefreshOverview();
+                EconomyUI.RefreshOverview(refreshCabinet: true);
             }
             catch (System.Exception e)
             {
@@ -338,7 +317,7 @@ BiomeEconomy.ClearCache();
                 ? World.world.units.units_only_alive : null;
             if (aliveList != null && aliveList.Count >= cfg.RealTimeRefreshThreshold)
             {
-                EconomyUI.RefreshOverview(); // 仅刷新UI，不重算
+                EconomyUI.RefreshOverview(); // 仅刷新UI，不重算（内阁不参与每秒重建）
                 return;
             }
             // 在途周期/分帧收尾存在时跳过（同步计算会作废在途任务；年度周期收尾后自会刷新 UI，S2 防护）
@@ -346,7 +325,7 @@ BiomeEconomy.ClearCache();
             // 阈值下保持同步全量重算；单次处理上限由 real_time_refresh_budget 预算约束（默认 2000，阈值下不截断）
             DataCollector.Collect(applySideEffects: false, postCycle: false, maxUnits: cfg.RealTimeRefreshBudget);
             TradeSimulationWorker.ComputeAndConsumeSync(advanceCycle: false);
-            EconomyUI.RefreshOverview();
+            EconomyUI.RefreshOverview(); // 实时路径：不重建内阁（防每秒整页重建 GC 抖动）
         }
 
         /// <summary>
@@ -373,6 +352,7 @@ BiomeEconomy.ClearCache();
                     Services.OptimeCompatibility.TryInstall();
                     KingdomWindowIntegration.TryInstall(); // 中央银行家：原版界面入口（手动补丁，幂等）;
                     LawSave.TryInstall(); // 法典：存档持久化（手动补丁，幂等）
+                    NationSave.TryInstall(); // 中央银行家：存档持久化（手动补丁，幂等）
                 }
 
                 // 大地图快捷键（默认 G，可配置）：鼠标悬停国家 → 认领/打开内阁（RulerBox K 键同款）
@@ -461,7 +441,6 @@ if (World.world == null)
                         EraEngine.ClearWorldReferences();
                         SocialCrisisEngine.ClearWorldReferences();
                         UnrestEngine.ClearWorldReferences();
-                        TradePowerEngine.ClearWorldReferences();
                         PopulationEngine.ClearWorldReferences();
                         BankingEngine.ClearWorldReferences();
                         EventStreamService.Clear();

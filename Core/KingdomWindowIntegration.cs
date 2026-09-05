@@ -162,12 +162,13 @@ namespace EconomyMod.Core
         private const string SummaryName = "ClassicalEconomicsLawSummary";
         private static Text _summaryText;
 
-        /// <summary>创建摘要文本对象（幂等）；锚定按钮左下方。</summary>
+        /// <summary>创建摘要文本对象（幂等）；锚定按钮左下方。字号/卡片尺寸随 ui_scale 缩放（上限防挤爆原版窗口）。</summary>
         private static void EnsureSummaryText(StatsWindow window, Transform background)
         {
             if (_summaryText != null) return;
             try
             {
+                float s = UnrestConfig.Instance != null ? Mathf.Clamp(UnrestConfig.Instance.UiScale, 0.8f, 1.6f) : 1.2f;
                 var go = new GameObject(SummaryName, typeof(RectTransform), typeof(Text));
                 go.transform.SetParent(background, false);
                 var rt = go.GetComponent<RectTransform>();
@@ -175,16 +176,38 @@ namespace EconomyMod.Core
                 rt.anchorMax = new Vector2(1f, 1f);
                 rt.pivot = new Vector2(1f, 1f);
                 rt.anchoredPosition = new Vector2(-12f, -56f);
-                rt.sizeDelta = new Vector2(190f, 72f);
+                rt.sizeDelta = new Vector2(Mathf.Min(240f, 190f * s), Mathf.Min(96f, 72f * s));
                 var t = go.GetComponent<Text>();
                 t.font = LocalizedTextManager.current_font != null
                     ? LocalizedTextManager.current_font
                     : Resources.GetBuiltinResource<Font>("Arial.ttf");
-                t.fontSize = 11;
+                t.fontSize = Mathf.RoundToInt(11f * s);
                 t.alignment = TextAnchor.UpperRight;
                 t.color = new Color(0.95f, 0.88f, 0.6f, 0.95f);
                 t.lineSpacing = 1.05f;
                 _summaryText = t;
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>ui_scale 变更后重建摘要卡：销毁旧文本对象，为打开中的原版窗口立即重建。</summary>
+        public static void RefreshSummaryScale()
+        {
+            if (_summaryText != null)
+            {
+                try { Object.Destroy(_summaryText.gameObject); } catch (System.Exception) { }
+                _summaryText = null;
+            }
+            try
+            {
+                foreach (var w in Resources.FindObjectsOfTypeAll<StatsWindow>())
+                {
+                    Transform background = w != null ? w.transform.Find("Background") : null;
+                    if (background == null && w != null) background = FindChild(w.transform, "Background");
+                    if (background == null) continue;
+                    EnsureSummaryText(w, background);
+                    UpdateLawSummary(w, GetShownKingdom(w));
+                }
             }
             catch (System.Exception) { }
         }

@@ -52,6 +52,7 @@ namespace EconomyMod.UI
         private readonly List<GameObject>[] _pageLines = new List<GameObject>[PageCount];
         private CabinetPage _page = CabinetPage.Finance;
         private long _dipTargetId; // 外交详情页目标国（0 = 列表模式）
+        private bool _refreshing;  // 重入保护：年度刷新恰逢按钮触发时防止双重 Destroy
 
         private List<GameObject> CurLines => _pageLines[(int)_page];
         private GameObject CurPage => _pages[(int)_page];
@@ -78,7 +79,7 @@ namespace EconomyMod.UI
             tabRt.anchorMin = new Vector2(0, 1); tabRt.anchorMax = new Vector2(1, 1);
             tabRt.pivot = new Vector2(0.5f, 1f);
             tabRt.anchoredPosition = new Vector2(0, -(Padding + TitleLineHeight));
-            tabRt.sizeDelta = new Vector2(-Padding * 2, 30f);
+            tabRt.sizeDelta = new Vector2(-Padding * 2, Fs(30f));
             var hlg = tabBar.GetComponent<HorizontalLayoutGroup>();
             hlg.spacing = 4; hlg.childForceExpandWidth = true; hlg.childForceExpandHeight = true;
             hlg.childControlWidth = true; hlg.childControlHeight = true;
@@ -86,13 +87,13 @@ namespace EconomyMod.UI
             for (int i = 0; i < PageCount; i++)
             {
                 int page = i;
-                var btn = UIHelpers.CreateButton(UIHelpers.L(PageKeys[i]), tabBar.transform, -1, 28, _gameFont, TabOff, 12f);
+                var btn = UIHelpers.CreateButton(UIHelpers.L(PageKeys[i]), tabBar.transform, -1, Fs(28f), _gameFont, TabOff, Fs(12f));
                 btn.onClick.AddListener(() => SwitchPage((CabinetPage)page));
                 _tabButtons[i] = btn;
             }
 
             // 滚动内容区（页面容器挂这里）
-            var scrollGo = UIHelpers.CreateScrollContent(_panelRect, Padding, Padding + 30f + 34f);
+            var scrollGo = UIHelpers.CreateScrollContent(_panelRect, Padding, Padding + Fs(30f) + 34f);
             _content = scrollGo.gameObject;
             _contentRect = scrollGo;
 
@@ -138,6 +139,20 @@ namespace EconomyMod.UI
         }
 
         public override void RefreshNow()
+        {
+            if (_refreshing) return; // 重入保护（年度刷新与按钮点击同帧交错时跳过本次）
+            _refreshing = true;
+            try
+            {
+                DoRefreshNow();
+            }
+            finally
+            {
+                _refreshing = false;
+            }
+        }
+
+        private void DoRefreshNow()
         {
             // 整页彻底重建：销毁当前页所有子物体（防止 ChartCard 等因注册遗漏累积成黑块）
             for (int i = CurPage.transform.childCount - 1; i >= 0; i--)
@@ -226,7 +241,6 @@ namespace EconomyMod.UI
             };
             addPct("law_eff_production", m.Productivity);
             addPct("law_eff_tax", m.TaxRate);
-            addPct("law_eff_trade", m.TradeFlow);
             addPct("law_eff_price", m.Price);
             addPct("law_eff_consume", m.Consumer);
             addPct("law_eff_disaster", m.DisasterResist);
@@ -346,7 +360,7 @@ namespace EconomyMod.UI
                 if (EconomyEngine.KingdomStats.TryGetValue(kingdom.data.id, out var ks)) gdp = (long)ks.GDP;
                 var btn = UIHelpers.CreateButton(
                     UIHelpers.Lf("cabinet_claim_row", name, gdp),
-                    CurPage.transform, -1, 30, _gameFont, BtnGood);
+                    CurPage.transform, -1, Fs(30f), _gameFont, BtnGood, Fs(12f));
                 long kid = kingdom.data.id;
                 btn.onClick.AddListener(() =>
                 {
@@ -576,7 +590,7 @@ namespace EconomyMod.UI
             }
             catch (System.Exception) { }
 
-            var crest = UIHelpers.CreateText(name, topRow.transform, 15f, UIStyles.Gold, _gameFont, 28f);
+            var crest = UIHelpers.CreateText(name, topRow.transform, Fs(15f), UIStyles.Gold, _gameFont, Fs(28f));
             var crestLe = crest.GetComponent<LayoutElement>();
             if (crestLe == null) crestLe = crest.AddComponent<LayoutElement>();
             crestLe.flexibleWidth = 1f;
@@ -680,7 +694,7 @@ namespace EconomyMod.UI
                     NationDiplomacy.GetRelationScore(k), NationDiplomacy.GetGoodwill(kid));
 
                 // 整行按钮：点击进入详情（列表仅按页重建；详情单独取对象，无每帧开销）
-                var btn = UIHelpers.CreateButton(line, CurPage.transform, -1, 30, _gameFont, BtnColor, 12f);
+                var btn = UIHelpers.CreateButton(line, CurPage.transform, -1, Fs(30f), _gameFont, BtnColor, Fs(12f));
                 btn.onClick.AddListener(() => { _dipTargetId = kid; RefreshNow(); });
                 CurLines.Add(btn.gameObject);
                 shown++;
@@ -700,11 +714,11 @@ namespace EconomyMod.UI
             var row = NewRow(2, 28f);
             var nameTxt = UIHelpers.CreateText(
                 tier >= 0 ? UIHelpers.Lf("cabinet_policy_active", name, tier + 1) : name,
-                row.transform, 12f, tier >= 0 ? UIStyles.Positive : UIStyles.TextPrimary, _gameFont, 24f);
+                row.transform, Fs(12f), tier >= 0 ? UIStyles.Positive : UIStyles.TextPrimary, _gameFont, Fs(24f));
             var nameLe = nameTxt.GetComponent<LayoutElement>();
             if (nameLe == null) nameLe = nameTxt.AddComponent<LayoutElement>();
             nameLe.flexibleWidth = 1f;
-            var costTxt = UIHelpers.CreateText(costText, row.transform, 11f, Muted, _gameFont, 20f);
+            var costTxt = UIHelpers.CreateText(costText, row.transform, Fs(11f), Muted, _gameFont, Fs(20f));
             var costLe = costTxt.GetComponent<LayoutElement>();
             if (costLe == null) costLe = costTxt.AddComponent<LayoutElement>();
             costLe.flexibleWidth = 1f;
@@ -738,11 +752,11 @@ namespace EconomyMod.UI
             var row = NewRow(2, 28f);
             var nameTxt = UIHelpers.CreateText(
                 cooling ? UIHelpers.Lf("cabinet_decree_cooling", name) : name,
-                row.transform, 13f, cooling ? Muted : UIStyles.TextPrimary, _gameFont, 24f);
+                row.transform, Fs(13f), cooling ? Muted : UIStyles.TextPrimary, _gameFont, Fs(24f));
             var nameLe2 = nameTxt.GetComponent<LayoutElement>();
             if (nameLe2 == null) nameLe2 = nameTxt.AddComponent<LayoutElement>();
             nameLe2.flexibleWidth = 1f;
-            var costTxt = UIHelpers.CreateText(costText, row.transform, 11f, Muted, _gameFont, 20f);
+            var costTxt = UIHelpers.CreateText(costText, row.transform, Fs(11f), Muted, _gameFont, Fs(20f));
             var costLe2 = costTxt.GetComponent<LayoutElement>();
             if (costLe2 == null) costLe2 = costTxt.AddComponent<LayoutElement>();
             costLe2.flexibleWidth = 1f;
@@ -921,8 +935,16 @@ namespace EconomyMod.UI
         /// <summary>向当前页添加一行文本。</summary>
         private void AddLine(string text, Color color, float size)
         {
-            var go = UIHelpers.CreateText(text, CurPage.transform, size, color, _gameFont, 22f);
+            var go = UIHelpers.CreateText(text, CurPage.transform, Fs(size), color, _gameFont, 22f);
             CurLines.Add(go);
+        }
+
+        /// <summary>UI 整体缩放（设置页 ui_scale，0.8~1.6，默认 1.2）：字号/按钮宽高/行高统一乘此系数。</summary>
+        private static float Fs(float size)
+        {
+            var cfg = UnrestConfig.Instance;
+            float scale = cfg != null ? cfg.UiScale : 1.2f;
+            return size * Mathf.Clamp(scale, 0.8f, 1.6f);
         }
 
         private void AddDivider(Color color)
@@ -935,7 +957,7 @@ namespace EconomyMod.UI
             var row = new GameObject("CabinetRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             row.transform.SetParent(CurPage.transform, false);
             var le = row.AddComponent<LayoutElement>();
-            le.preferredHeight = height;
+            le.preferredHeight = Fs(height);
             le.flexibleWidth = 1f;
             var hlg = row.GetComponent<HorizontalLayoutGroup>();
             hlg.spacing = 4;
@@ -951,11 +973,11 @@ namespace EconomyMod.UI
 
         private void AddRowButton(GameObject row, string label, Color bg, System.Action onClick, float width = 120f, bool fill = false)
         {
-            var btn = UIHelpers.CreateButton(label, row.transform, width, 28, _gameFont, bg, 12f);
+            var btn = UIHelpers.CreateButton(label, row.transform, Fs(width), Fs(28f), _gameFont, bg, Fs(12f));
             var le = btn.gameObject.AddComponent<LayoutElement>();
-            le.preferredWidth = width;
+            le.preferredWidth = Fs(width);
             le.flexibleWidth = fill ? 1f : 0f; // fill=true 均分剩余（随窗口缩放）
-            le.preferredHeight = 28f;
+            le.preferredHeight = Fs(28f);
             btn.onClick.AddListener(() => onClick());
         }
 
@@ -991,6 +1013,23 @@ namespace EconomyMod.UI
         protected override void OnPanelResized()
         {
             if (_visible) RefreshNow();
+        }
+
+        /// <summary>UI 缩放配置变更后整窗重建（Tab 栏高度/滚动区偏移都依赖 Fs，仅刷当前页不够）。</summary>
+        public void RebuildPanelFromScale()
+        {
+            if (_panelRoot != null) Destroy(_panelRoot);
+            for (int i = 0; i < PageCount; i++)
+            {
+                _pages[i] = null;
+                _pageLines[i] = new List<GameObject>();
+            }
+            BuildPanel();
+            if (_visible)
+            {
+                _panelRoot.SetActive(true);
+                RefreshNow();
+            }
         }
     }
 }

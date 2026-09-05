@@ -57,7 +57,7 @@ $keys = @(
     @{ Id = 'nation_play_enabled';              Field = 'NationPlayEnabled';            Type = 'SWITCH'; Default = 'true';  Callback = 'OnNationPlayEnabledChanged';          Min = $null; Max = $null },
     @{ Id = 'treasury_income_ratio';            Field = 'TreasuryIncomeRatio';          Type = 'TEXT';   Default = '5';     Callback = 'OnTreasuryIncomeRatioChanged';        Min = 1;     Max = 20 },
     @{ Id = 'policy_slots';                     Field = 'PolicySlots';                  Type = 'TEXT';   Default = '3';     Callback = 'OnPolicySlotsChanged';                Min = 1;     Max = 5 },
-    @{ Id = 'trade_astar_enabled';              Field = 'TradeAstarEnabled';            Type = 'SWITCH'; Default = 'true';  Callback = 'OnTradeAstarEnabledChanged';          Min = $null; Max = $null },
+    @{ Id = 'ui_scale';                      Field = 'UiScale';                     Type = 'FLOAT';  Default = '1.2';   Callback = 'OnUiScaleChanged';                    Min = 0.8; Max = 1.6 },
     @{ Id = 'nation_claim_hotkey';              Field = 'NationClaimHotkey';            Type = 'STRING';   Default = 'G';     Callback = 'OnNationClaimHotkeyChanged';          Min = $null; Max = $null }
 )
 
@@ -76,7 +76,8 @@ foreach ($k in $keys) {
     if ($k.Type -eq 'STRING') {
         Assert-True ($item.Type -eq 'TEXT') "$($k.Id) must be declared as TEXT in default_config.json (STRING is a docs-gate type"
     } else {
-        Assert-True ($item.Type -eq $k.Type) "$($k.Id) Type must be $($k.Type), got $($item.Type)"
+        $expectedType = if ($k.Type -eq 'FLOAT') { 'TEXT' } else { $k.Type }
+        Assert-True ($item.Type -eq $expectedType) "$($k.Id) Type must be $($k.Type), got $($item.Type)"
     }
     Assert-True ($item.Callback -eq "EconomyConfigCallbacks:$($k.Callback)") "$($k.Id) callback must be EconomyConfigCallbacks:$($k.Callback)"
     if ($k.Type -eq 'SWITCH') {
@@ -105,6 +106,11 @@ foreach ($k in $keys) {
         Assert-True ($cbText -match "u\.$($k.Field) = ParseInt\(\w+\.TextVal, u\.$($k.Field), $($k.Min), $($k.Max)\)") "SyncFromModConfig must parse $($k.Id) via bounded ParseInt($($k.Min)..$($k.Max))"
         Assert-True ($cbText -match [regex]::Escape("public static void $($k.Callback)(string pValue)")) "callback $($k.Callback) missing or wrong signature"
         Assert-True ($cbText -match [regex]::Escape("UnrestConfig.Instance.$($k.Field) = ParseInt(pValue, UnrestConfig.Instance.$($k.Field), $($k.Min), $($k.Max));")) "callback $($k.Callback) must use bounded ParseInt($($k.Min)..$($k.Max))"
+    } elseif ($k.Type -eq 'FLOAT') {
+        Assert-True ($ucText -match ([regex]::Escape("public float $($k.Field) = $($k.Default)") + 'f?;')) "UnrestConfig.cs missing float field declaration for $($k.Field)"
+        Assert-True ($cbText -match "u\.$($k.Field) = ParseFloat\(\w+\.TextVal, u\.$($k.Field), ") "SyncFromModConfig must parse $($k.Id) via bounded ParseFloat"
+        Assert-True ($cbText -match [regex]::Escape("public static void $($k.Callback)(string pValue)")) "callback $($k.Callback) missing or wrong signature"
+        Assert-True ($cbText -match "UnrestConfig\.Instance\.$($k.Field) = ParseFloat\(pValue, UnrestConfig\.Instance\.$($k.Field), ") "callback $($k.Callback) must use bounded ParseFloat"
     } elseif ($k.Type -eq 'STRING') {
         Assert-True ($ucText -match [regex]::Escape('public string ' + $k.Field + ' = "' + $k.Default + '";')) "UnrestConfig.cs missing string field declaration for $($k.Field)"
         Assert-True ($cbText -match ("u\.$($k.Field) = ")) "SyncFromModConfig missing assignment for $($k.Field)"

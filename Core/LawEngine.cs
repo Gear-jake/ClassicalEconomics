@@ -128,7 +128,6 @@ namespace EconomyMod.Core
         public const string LawTraitEdu = "law_trait_edu";         // 教育之国
         public const string LawTraitWelfare = "law_trait_welfare"; // 民生之国
         public const string LawTraitMil = "law_trait_mil";         // 武备之国
-        public const string LawTraitTrade = "law_trait_trade";     // 货殖之国
         public const string LawTraitAusterity = "law_trait_austerity"; // 紧缩之国
 
         // ===== LawMods 聚合乘数（引擎唯一读取面）=====
@@ -459,10 +458,10 @@ namespace EconomyMod.Core
             switch (LawKeys[index])
             {
                 case LawTradeFreedom:
-                    // 自由贸易：贸易+、消费+、价格-；保护主义反效果在低档（用档位衰减表达）
-                    m.TradeFlow *= 1f + 0.08f * level;
+                    // 市场自由：消费+、价格-、幸福+（v1.3.0 贸易流量乘数已随贸易模拟移除）
                     m.Price *= 1f - 0.02f * level;
                     m.Consumer *= 1f + 0.03f * level;
+                    m.Happiness *= 1f + 0.015f * level;
                     break;
                 case LawPropertyRights:
                     m.Productivity *= 1f + 0.025f * level;
@@ -579,11 +578,9 @@ namespace EconomyMod.Core
                     break;
                 case LawPlannedEconomy:
                     m.Productivity *= 1f + 0.01f * level;
-                    m.TradeFlow *= 1f - 0.025f * level;
                     m.GiniShift -= 0.008f * level;
                     break;
                 case LawFreeMarket:
-                    m.TradeFlow *= 1f + 0.03f * level;
                     m.GiniShift += 0.01f * level;
                     m.Productivity *= 1f + 0.015f * level;
                     break;
@@ -617,8 +614,9 @@ namespace EconomyMod.Core
                     m.TaxRate *= 1f + 0.02f * level;
                     break;
                 case PolicyTradeDeal:
-                    m.TradeFlow *= 1f + 0.05f * level;
-                    m.Price *= 1f - 0.01f * level;
+                    // 通商惠工（v1.3.0 改义：贸易流量乘数已随贸易模拟移除）
+                    m.Consumer *= 1f + 0.02f * level;
+                    m.Happiness *= 1f + 0.01f * level;
                     break;
                 case PolicyPoorRelief:
                     m.GiniShift -= 0.008f * level;
@@ -654,15 +652,12 @@ namespace EconomyMod.Core
                 case PolicyBorderGuard:
                     m.UnrestAccum *= 1f - 0.012f * level;
                     m.Military += 0.05f * level;
-                    m.TradeFlow *= 1f - 0.01f * level;
                     break;
                 case PolicyDiplomacy:
-                    m.TradeFlow *= 1f + 0.03f * level;
                     m.Price *= 1f - 0.008f * level;
                     m.UnrestAccum *= 1f - 0.005f * level;
                     break;
                 case PolicyIsolation:
-                    m.TradeFlow *= 1f - 0.05f * level;
                     m.Price *= 1f + 0.02f * level;
                     m.UnrestAccum *= 1f - 0.015f * level;
                     break;
@@ -692,7 +687,6 @@ namespace EconomyMod.Core
                 if (GetLawLevel(kid, LawEducation) >= 3) target.Add(LawTraitEdu);
                 if (GetLawLevel(kid, LawHealthcare) >= 3) target.Add(LawTraitWelfare);
                 if (GetLawLevel(kid, LawMilitarism) >= 3 || st.Mods.Military >= 0.4f) target.Add(LawTraitMil);
-                if (GetLawLevel(kid, LawTradeFreedom) >= 4 || GetPolicyLevel(kid, PolicyTradeDeal) >= 1) target.Add(LawTraitTrade);
                 if (GetLawLevel(kid, LawTaxSystem) >= 4 || st.Mods.TaxRate >= 1.25f) target.Add(LawTraitAusterity);
 
                 // 移除已不再满足的特质
@@ -752,7 +746,6 @@ namespace EconomyMod.Core
         public float TaxRate;      // 国民税负/收入乘数
         public float GiniShift;    // 基尼平移（+ = 拉大）
         public float UnrestAccum;  // 动荡积累速度乘数
-        public float TradeFlow;    // 贸易边流量乘数
         public float Price;    // 本地物价乘数
         public float Consumer;     // 消费额乘数
         public float DisasterResist; // 灾害财富蒸发乘数（<1 更抗）
@@ -765,7 +758,7 @@ namespace EconomyMod.Core
         public static LawMods Neutral => new LawMods
         {
         Productivity = 1f, TaxRate = 1f, GiniShift = 0f, UnrestAccum = 1f,
-        TradeFlow = 1f, Price = 1f, Consumer = 1f, DisasterResist = 1f,
+        Price = 1f, Consumer = 1f, DisasterResist = 1f,
         BuildCost = 1f, Wage = 1f, Military = 0f, Happiness = 1f, Birth = 1f
         };
     }

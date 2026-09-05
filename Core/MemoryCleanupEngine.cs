@@ -124,28 +124,18 @@ namespace EconomyMod.Core
         // ===== 字典重建缩容（.NET Framework 无 Dictionary.TrimExcess；重建+换引用，
         // ===== 保留全部内容与语义；仅在空闲期调用，绝不与周期/后台计算并发）=====
 
-        /// <summary>TradeSimulationWorker 的 10 个静态字典：_flowCityRefs + 9 个 scratch/缓存字典。</summary>
+        /// <summary>TradeSimulationWorker 的静态字典：_accScratch（统计聚合 scratch）。</summary>
         private static int CompactTradeDictionaries()
         {
             int n = 0;
-            n += CompactDict(TradeSimulationWorker.FlowCityRefsForTrim, TradeSimulationWorker.ReplaceFlowCityRefsForTrim);
-            n += CompactDict(TradeSimulationWorker.ResidentOwedForTrim, TradeSimulationWorker.ReplaceResidentOwedForTrim);
-            n += CompactDict(TradeSimulationWorker.ResidentPaidForTrim, TradeSimulationWorker.ReplaceResidentPaidForTrim);
-            n += CompactDict(TradeSimulationWorker.EdgeCacheForTrim, TradeSimulationWorker.ReplaceEdgeCacheForTrim);
-            n += CompactDict(TradeSimulationWorker.KnownCityTopologyForTrim, TradeSimulationWorker.ReplaceKnownCityTopologyForTrim);
             n += CompactDict(TradeSimulationWorker.AccScratchForTrim, TradeSimulationWorker.ReplaceAccScratchForTrim);
-            n += CompactDict(TradeSimulationWorker.CityIndexScratchForTrim, TradeSimulationWorker.ReplaceCityIndexScratchForTrim);
-            n += CompactDict(TradeSimulationWorker.KingdomIndexScratchForTrim, TradeSimulationWorker.ReplaceKingdomIndexScratchForTrim);
-            n += CompactDict(TradeSimulationWorker.BoatsScratchForTrim, TradeSimulationWorker.ReplaceBoatsScratchForTrim);
-            n += CompactDict(TradeSimulationWorker.SeaCapacityScratchForTrim, TradeSimulationWorker.ReplaceSeaCapacityScratchForTrim);
             return n;
         }
 
-        /// <summary>DataCollector._cityRefs 与 DamageTracker 的 3 个字典。</summary>
+        /// <summary>DamageTracker 的 3 个字典。</summary>
         private static int CompactCollectorAndTrackerDictionaries()
         {
             int n = 0;
-            n += CompactDict(DataCollector.CityRefsForTrim, DataCollector.ReplaceCityRefsForTrim);
             n += CompactDict(DamageTracker.DamageForTrim, DamageTracker.ReplaceDamageForTrim);
             n += CompactDict(DamageTracker.PrevHealthForTrim, DamageTracker.ReplacePrevHealthForTrim);
             n += CompactDict(DamageTracker.InactiveScansForTrim, DamageTracker.ReplaceInactiveScansForTrim);

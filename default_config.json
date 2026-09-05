@@ -181,66 +181,6 @@
       "Callback": "EconomyConfigCallbacks:OnWealthTaxLineChanged"
     },
     {
-      "Id": "trade_enabled",
-      "Type": "SWITCH",
-      "BoolVal": true,
-      "Callback": "EconomyConfigCallbacks:OnTradeEnabledChanged"
-    },
-    {
-      "Id": "trade_flow_ratio",
-      "Type": "TEXT",
-      "TextVal": "0.05",
-      "Callback": "EconomyConfigCallbacks:OnTradeFlowRatioChanged"
-    },
-    {
-      "Id": "trade_max_pathfind_pairs",
-      "Type": "TEXT",
-      "TextVal": "100",
-      "Callback": "EconomyConfigCallbacks:OnMaxPathfindPairsChanged"
-    },
-    {
-      "Id": "trade_path_recompute",
-      "Type": "TEXT",
-      "TextVal": "20",
-      "Callback": "EconomyConfigCallbacks:OnPathRecomputeChanged"
-    },
-    {
-      "Id": "trade_max_range",
-      "Type": "TEXT",
-      "TextVal": "120",
-      "Callback": "EconomyConfigCallbacks:OnMaxTradeRangeChanged"
-    },
-    {
-      "Id": "trade_sea_penalty",
-      "Type": "TEXT",
-      "TextVal": "3.0",
-      "Callback": "EconomyConfigCallbacks:OnSeaRoutePenaltyChanged"
-    },
-    {
-      "Id": "trade_non_neighbor_penalty",
-      "Type": "TEXT",
-      "TextVal": "2.0",
-      "Callback": "EconomyConfigCallbacks:OnNonNeighborPenaltyChanged"
-    },
-    {
-      "Id": "trade_max_edges",
-      "Type": "TEXT",
-      "TextVal": "8000",
-      "Callback": "EconomyConfigCallbacks:OnMaxEdgesChanged"
-    },
-    {
-      "Id": "trade_city_capacity",
-      "Type": "TEXT",
-      "TextVal": "50",
-      "Callback": "EconomyConfigCallbacks:OnTradeCityCapacityChanged"
-    },
-    {
-      "Id": "trade_use_real_stockpiles",
-      "Type": "SWITCH",
-      "BoolVal": true,
-      "Callback": "EconomyConfigCallbacks:OnTradeUseRealStockpilesChanged"
-    },
-    {
       "Id": "population_enabled",
       "Type": "SWITCH",
       "BoolVal": true,
@@ -287,24 +227,6 @@
       "Type": "TEXT",
       "TextVal": "2",
       "Callback": "EconomyConfigCallbacks:OnFlourishPeriodsChanged"
-    },
-    {
-      "Id": "trade_power_enabled",
-      "Type": "SWITCH",
-      "BoolVal": true,
-      "Callback": "EconomyConfigCallbacks:OnTradePowerEnabledChanged"
-    },
-    {
-      "Id": "trade_surplus_ratio",
-      "Type": "TEXT",
-      "TextVal": "0.03",
-      "Callback": "EconomyConfigCallbacks:OnTradeSurplusRatioChanged"
-    },
-    {
-      "Id": "trade_deficit_ratio",
-      "Type": "TEXT",
-      "TextVal": "0.03",
-      "Callback": "EconomyConfigCallbacks:OnTradeDeficitRatioChanged"
     },
     {
       "Id": "labor_enabled",
@@ -487,16 +409,16 @@
       "Callback": "EconomyConfigCallbacks:OnPolicySlotsChanged"
     },
     {
-      "Id": "trade_astar_enabled",
-      "Type": "SWITCH",
-      "BoolVal": true,
-      "Callback": "EconomyConfigCallbacks:OnTradeAstarEnabledChanged"
-    },
-    {
       "Id": "nation_claim_hotkey",
       "Type": "TEXT",
       "TextVal": "G",
       "Callback": "EconomyConfigCallbacks:OnNationClaimHotkeyChanged"
+    },
+    {
+      "Id": "ui_scale",
+      "Type": "TEXT",
+      "TextVal": "1.2",
+      "Callback": "EconomyConfigCallbacks:OnUiScaleChanged"
     }
   ]
 }

@@ -131,10 +131,12 @@ var kingdoms = GameHelpers.KingdomSnapshot();
                     defaultAmount = actualDefaultLoss;
                 }
 
-                // 危机传染：违约率超过阈值时，逆差贸易伙伴遭受损失
+                // 危机传染：违约率超过阈值时，弱国（GDP 低于违约国）遭受损失——经贸联系强的弱势伙伴首当其冲
                 if (defaultRate > contagionThreshold)
                 {
                     var kingdomStats = EconomyEngine.KingdomStats;
+                    long defaulterGdp = 0L;
+                    if (kingdomStats.TryGetValue(kingdomId, out var selfStats)) defaulterGdp = selfStats.GDP;
                     // 危机传染评估年度上限：每年最多评估 cap 个伙伴王国（默认 500，远超正常王国数，保持现状量级）
                     int contagionChecked = 0;
                     int contagionCap = cfg.BankingContagionCapPerYear;
@@ -142,7 +144,7 @@ var kingdoms = GameHelpers.KingdomSnapshot();
                     {
                         if (++contagionChecked > contagionCap) break;
                         if (kvp.Key == kingdomId || kvp.Key == 0) continue;
-                        if (kvp.Value.TradeBalance < 0) // 逆差王国 = 贸易伙伴
+                        if (kvp.Value.GDP < defaulterGdp) // 弱国 = 经贸联系强的伙伴
                         {
                             var partnerKingdom = GameHelpers.FindKingdom(kvp.Key);
                             if (partnerKingdom == null || partnerKingdom.units == null) continue;

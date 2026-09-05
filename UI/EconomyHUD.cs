@@ -844,7 +844,6 @@ namespace EconomyMod.UI
                 ("GDP", EconomyEngine.GlobalGDP.ToString("F0"), UIStyles.Gold),
                 (UIHelpers.L("col_avg"), EconomyEngine.AvgWealth.ToString("F1"), UIStyles.Info),
                 (UIHelpers.L("col_gini"), EconomyEngine.GiniCoefficient.ToString("F3"), GiniColor(EconomyEngine.GiniCoefficient)),
-                (UIHelpers.L("stat_trade"), EconomyEngine.TotalTradeVolume.ToString("F0"), UIStyles.Positive),
                 (UIHelpers.L("stat_bubble"), EconomyCycleModulator.BubbleValue.ToString("F0"), UIStyles.Warning)
             };
             _lines.Add(UIComponents.CreateStatGrid(_content.transform, stats, _gameFont, contentW));

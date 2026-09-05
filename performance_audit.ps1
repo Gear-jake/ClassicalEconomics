@@ -39,26 +39,16 @@ if ($sourceCount -lt 39) {
     $failures.Add("Expected at least 39 C# source files, found $sourceCount")
 }
 
-Assert-SourcePattern 'Core\TradeSimulationWorker.cs' '_edgeCache\.Count >= maxEdges' `
-    'Trade route candidate insertion is missing the MaxEdges hard guard.'
 Assert-SourcePattern 'build_local.ps1' '\$excludedDirectories\s*=\s*@\([^\)]*''tools''' `
     'Build source discovery does not exclude test and benchmark tools.'
 Assert-SourcePattern 'build_local.ps1' 'ClassicalEconomicsBuild_\$mutexHash.*AbandonedMutexException.*finally.*ReleaseMutex' `
     'Build script does not serialize access to shared diagnostics and output files.'
 Assert-SourcePattern 'build_local.ps1' '\$mutexScope\s*=\s*\[System\.IO\.Path\]::GetFullPath\(\$PSScriptRoot\)\.ToUpperInvariant\(\)' `
     'Build mutex is not scoped to the repository that owns the shared diagnostics files.'
-Assert-SourcePattern 'Core\TradeSimulationWorker.cs' 'FindNearestTwoPairs.*while \(left >= 0 \|\| right < target\.Count\).*leftDx > bound && rightDx > bound' `
-    'Trade nearest-pair search is not using exact distance-bounded expansion.'
 Assert-SourcePattern 'Core\DamageTracker.cs' 'MaxAttackersPerVictim\s*=\s*16' `
     'Damage history is missing its per-victim attacker bound.'
 Assert-SourcePattern 'Core\BankingEngine.cs' 'bool firstContagion = !_contagionLossByKingdom\.TryGetValue\(kvp\.Key, out accumulatedLoss\);.*if \(firstContagion\) LastContagions\+\+;' `
     'Banking contagion count still double-counts the same affected kingdom.'
-Assert-SourcePattern 'Core\PolicyEngine.cs' 'long tariffTarget = stats\.TradeBalance < 0 \? \(long\)\(-stats\.TradeBalance \* 0\.1f\) : 0L;.*tariff = CollectTariff\(kingdom\.units, cityPool, tariffTarget\);.*private static long CollectTariff' `
-    'Deficit trade policy still reports success without a real economic transfer.'
-Assert-SourcePattern 'Core\PolicyEngine.cs' 'private static long AddGoldToCity\(City city, long amount\).*long added = 0L;.*try \{ city\.addResourcesToRandomStockpile\("gold", give\); \}.*catch \(System\.Exception\) \{ break; \}.*return added;' `
-    'One city stockpile failure can still abort the annual policy chain.'
-Assert-SourcePattern 'Core\PolicyEngine.cs' 'actor\.addMoney\(-charge\);.*deposited \+= AddGoldToCity.*if \(deposited < charge\) GameHelpers\.AddPositiveMoney\(actor, charge - deposited\);.*collected \+= deposited;' `
-    'Uncredited tariff is not refunded to the original payer.'
 Assert-SourcePattern 'Core\SocialCrisisEngine.cs' 'if \(receiverKingdoms\.Count == 0\) return 0L;.*long actualExtract = GameHelpers\.DeductCoins\(units, extract\);.*if \(actualExtract <= 0\) return 0L;.*long perKingdom = actualExtract / receiverKingdoms\.Count;.*return actualExtract;' `
     'Revolution redistribution still pays requested value instead of actual deductions.'
 Assert-SourcePattern 'Core\SocialCrisisEngine.cs' 'long per = amount / poorCount;.*long remain = amount - per \* poorCount;.*long give = per \+ \(first \? remain : 0L\);.*GameHelpers\.AddPositiveMoney\(a, give\);.*given \+= give;' `
@@ -107,14 +97,10 @@ Assert-SourcePattern 'Core\SpendingEngine.cs' 'int craftCount = Mathf\.Clamp\(sp
     'Wholesale spending no longer preserves its 6-10 item outcome.'
 Assert-SourcePattern 'Core\SpendingEngine.cs' 'RunOncePerYear\(\).*PruneExpiredCityActions\(EconomyEngine\.CycleIndex\).*private static void PruneExpiredCityActions\(int cycle\).*PruneCooldowns\(_lastBuildCycle, cycle, BuildCooldownCycles\)' `
     'Stale building cooldowns still depend on a successful action at cycle multiples.'
-Assert-SourcePattern 'Core\TradeSimulationWorker.cs' 'public struct TradeFlow' `
-    'Trade flows are heap objects instead of reusable list values.'
 Assert-SourcePattern 'Core\TradeSimulationWorker.cs' 'ClearWorldReferences\(\).*_generation\+\+.*_readyResult = null' `
     'World exit does not invalidate pending worker generations and results.'
 Assert-SourcePattern 'Core\TradeSimulationWorker.cs' 'int idx = _cycleIndex \+ 1;.*bool queued = ThreadPool\.QueueUserWorkItem.*if \(!queued\) throw new InvalidOperationException.*_cycleIndex = idx;.*return true;' `
     'Rejected worker submission still advances the cycle index.'
-Assert-SourcePattern 'Core\TradeSimulationWorker.cs' 'internal float NextSmDecay.*private static void Publish.*_smDecay = res\.NextSmDecay' `
-    'Trade EMA state is still committed by stale background workers.'
 Assert-SourcePattern 'Core\EconomyCycleModulator.cs' 'if \(!_initialized\).*MoneySupply = gdp;.*CurrentCPI = 1f;.*float actualStimulus = 0f;.*actualStimulus = \(float\)count \* perActor;.*MoneySupply \+= actualStimulus;.*BubbleValue \+= actualStimulus \* cfg\.BoomBubbleFactor' `
     'CPI and bubble state do not track baseline and actual injected coins.'
 Assert-SourcePattern 'Core\EconomyCycleModulator.cs' 'bool bubbleExceeded = bubbleThreshold > 0f && BubbleValue >= bubbleThreshold;.*_highGiniStreak >= cfg\.CycleGiniPeriods \|\|\s*bubbleExceeded' `
@@ -127,8 +113,6 @@ Assert-SourcePattern 'Core\PolicyEngine.cs' 'if \(isBoom\).*removeTrait\("tax_ra
     'Fiscal policy does not remove the opposite tax trait.'
 Assert-SourcePattern 'Core\EconomyEngine.cs' 'ResetCycle\(\).*GlobalGDP = 0f.*KingdomStats\.Clear\(\)' `
     'Economy reset leaves published metrics or kingdom objects retained.'
-Assert-SourcePattern 'EconomyModMain.cs' 'CopyTopBalances\(last != null \? last\.CityBalances : null, 40\)' `
-    'History still retains complete city balance lists for every snapshot.'
 Assert-SourcePattern 'EconomyModMain.cs' 'if \(currentYear != _lastCollectedYear\)\s*\{\s*if \(RunOneCycle\(currentYear\)\) _lastCollectedYear = currentYear;\s*\}' `
     'Failed annual collection still consumes the game year instead of retrying.'
 Assert-SourcePattern 'EconomyModMain.cs' 'private int _pendingYear = -1;.*if \(RunOneCycle\(currentYear\)\) _lastCollectedYear = currentYear;.*private bool RunOneCycle\(int year\).*if \(_cyclePending\) _pendingYear = year;.*int year = _pendingYear >= 0 \? _pendingYear : GetCurrentGameYear\(\);.*_pendingYear = -1;' `
@@ -255,7 +239,6 @@ function Assert-NoCycleAllocation {
     }
 }
 
-Assert-NoCycleAllocation 'Core\TradeSimulationWorker.cs' 'public static void ApplyTradeFlows(' 'private static long AddTradeGold(' 'TradeSimulationWorker.ApplyTradeFlows'
 Assert-NoCycleAllocation 'Core\DataCollector.cs' 'public static void ApplyWealthTax(' 'private static void UpdateTopRich(' 'DataCollector.ApplyWealthTax'
 Assert-NoCycleAllocation 'Core\SpendingEngine.cs' 'public static void RunOncePerYear(' 'public static void ClearWorldReferences(' 'SpendingEngine.RunOncePerYear'
 Assert-NoCycleAllocation 'Core\BankingEngine.cs' 'public static void Evaluate(' '' 'BankingEngine.Evaluate'

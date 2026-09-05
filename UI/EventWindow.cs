@@ -196,7 +196,6 @@ namespace EconomyMod.UI
                 case EventStreamService.TypePolicyFail:   return e.Value == 3 ? UIHelpers.L("ev_desc_policy_fail_civilwar")
                     : e.Value == 2 ? UIHelpers.L("ev_desc_policy_fail_death")
                     : e.Value == 4 ? UIHelpers.L("ev_desc_policy_fail_fiscal")
-                    : e.Value == 5 ? UIHelpers.L("ev_desc_policy_fail_trade")
                     : UIHelpers.L("ev_desc_policy_fail_abdicate");
                 case EventStreamService.TypeKingInherit:  return UIHelpers.L("ev_desc_king_inherit");
                 case EventStreamService.TypeDisaster:     return UIHelpers.Lf("ev_desc_disaster", e.Value);

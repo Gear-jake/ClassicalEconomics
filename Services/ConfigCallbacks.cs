@@ -70,15 +70,9 @@ namespace EconomyMod.Services
             "depression_max_duration", "recovery_max_duration", "survival_line", "war_plunder_ratio",
             "war_waste_ratio", "revolution_delay_years", "revolution_kill_ratio",
             "uprising_gini_threshold", "uprising_delay_years", "kill_rich_ratio", "kill_rich_redist_ratio",
-            "wealth_tax_enabled", "wealth_tax_ratio", "wealth_tax_line", "trade_enabled",
-            "trade_flow_ratio",
-            "trade_max_pathfind_pairs", "trade_path_recompute", "trade_max_range",
-            "trade_sea_penalty", "trade_non_neighbor_penalty", "trade_max_edges",
-            "trade_city_capacity", "trade_use_real_stockpiles",
             "population_enabled", "population_overcrowd", "era_enabled",
             "era_duration_years", "collapse_drop_ratio", "collapse_duration_years",
             "flourish_military_ratio", "flourish_periods", "labor_enabled", "labor_wage_base",
-            "trade_power_enabled", "trade_surplus_ratio", "trade_deficit_ratio",
             "real_time_refresh", "real_time_interval", "real_time_refresh_threshold", "real_time_refresh_budget", "money_velocity", "inflation_bubble_boost",
             "disaster_enabled", "disaster_wealth_loss", "disaster_mine_bonus", "banking_enabled",
             "credit_rate", "default_rate_depression", "crisis_contagion_threshold",
@@ -89,7 +83,7 @@ namespace EconomyMod.Services
             "memory_cleanup_enabled", "memory_cleanup_force_gc", "memory_cleanup_interval_seconds",
             "memory_cleanup_notify_enabled",
             "nation_play_enabled", "treasury_income_ratio", "policy_slots",
-            "trade_astar_enabled", "nation_claim_hotkey"
+            "nation_claim_hotkey", "ui_scale",
         };
 
         /// <summary>
@@ -175,16 +169,6 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("wealth_tax_ratio", out var wtr))        u.WealthTaxRatio = ParseFloat(wtr.TextVal, u.WealthTaxRatio, 0f, 0.5f);
                 if (group.TryGetValue("wealth_tax_line", out var wtl))         u.WealthTaxLineMult = ParseFloat(wtl.TextVal, u.WealthTaxLineMult, 1f, 3f);
                 // 地理贸易网络（城市为节点 / 王国为聚合层）
-                if (group.TryGetValue("trade_enabled", out var te))       u.TradeEnabled = te.BoolVal;
-                if (group.TryGetValue("trade_flow_ratio", out var tfr))    u.TradeFlowRatio = ParseFloat(tfr.TextVal, u.TradeFlowRatio, 0f, 0.2f);
-                if (group.TryGetValue("trade_max_pathfind_pairs", out var mp))   u.MaxPathfindPairs = ParseInt(mp.TextVal, u.MaxPathfindPairs, 1, 500);
-                if (group.TryGetValue("trade_path_recompute", out var pr))       u.PathRecomputeEvery = ParseInt(pr.TextVal, u.PathRecomputeEvery, 5, 100);
-                if (group.TryGetValue("trade_max_range", out var mtr))           u.MaxTradeRange = ParseFloat(mtr.TextVal, u.MaxTradeRange, 10f, 500f);
-                if (group.TryGetValue("trade_sea_penalty", out var sp))          u.SeaRoutePenalty = ParseFloat(sp.TextVal, u.SeaRoutePenalty, 1f, 10f);
-                if (group.TryGetValue("trade_non_neighbor_penalty", out var nnp)) u.NonNeighborPenalty = ParseFloat(nnp.TextVal, u.NonNeighborPenalty, 1f, 10f);
-                if (group.TryGetValue("trade_max_edges", out var me))            u.MaxEdges = ParseInt(me.TextVal, u.MaxEdges, 100, 50000);
-                if (group.TryGetValue("trade_city_capacity", out var tcc))       u.TradeCityBaseCapacity = ParseInt(tcc.TextVal, u.TradeCityBaseCapacity, 10, 500);
-                if (group.TryGetValue("trade_use_real_stockpiles", out var trs)) u.TradeUseRealStockpiles = trs.BoolVal;
                 // 人口约束（马尔萨斯）
                 if (group.TryGetValue("population_enabled", out var pe))   u.PopulationEnabled = pe.BoolVal;
                 if (group.TryGetValue("population_overcrowd", out var po)) u.OvercrowdRatio = ParseFloat(po.TextVal, u.OvercrowdRatio, 0.5f, 1.0f);
@@ -196,9 +180,6 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("flourish_military_ratio", out var fmr)) u.FlourishMilitaryRatio = ParseFloat(fmr.TextVal, u.FlourishMilitaryRatio, 0.05f, 0.9f);
                 if (group.TryGetValue("flourish_periods", out var fp))        u.FlourishPeriods = ParseInt(fp.TextVal, u.FlourishPeriods, 1, 10);
                 // 贸易军力（顺差/逆差 → 国民战斗加成）
-                if (group.TryGetValue("trade_power_enabled", out var tpe))     u.TradePowerEnabled = tpe.BoolVal;
-                if (group.TryGetValue("trade_surplus_ratio", out var tsr))     u.TradeSurplusRatio = ParseFloat(tsr.TextVal, u.TradeSurplusRatio, 0.001f, 0.5f);
-                if (group.TryGetValue("trade_deficit_ratio", out var tdr))     u.TradeDeficitRatio = ParseFloat(tdr.TextVal, u.TradeDeficitRatio, 0.001f, 0.5f);
                 // 劳动分工
                 if (group.TryGetValue("labor_enabled", out var le))       u.LaborEnabled = le.BoolVal;
                 if (group.TryGetValue("labor_wage_base", out var lwb))    u.LaborWageBase = ParseFloat(lwb.TextVal, u.LaborWageBase, 0f, 5f);
@@ -239,8 +220,9 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("nation_play_enabled", out var npe)) u.NationPlayEnabled = npe.BoolVal;
                 if (group.TryGetValue("treasury_income_ratio", out var tir)) u.TreasuryIncomeRatio = ParseInt(tir.TextVal, u.TreasuryIncomeRatio, 1, 20);
                 if (group.TryGetValue("policy_slots", out var psl)) u.PolicySlots = ParseInt(psl.TextVal, u.PolicySlots, 1, 5);
-                if (group.TryGetValue("trade_astar_enabled", out var tae)) u.TradeAstarEnabled = tae.BoolVal;
                 if (group.TryGetValue("nation_claim_hotkey", out var nch) && !string.IsNullOrWhiteSpace(nch.TextVal)) u.NationClaimHotkey = nch.TextVal.Trim().ToUpperInvariant();
+                // UI 缩放（内阁字体/按钮）
+                if (group.TryGetValue("ui_scale", out var us)) u.UiScale = ParseFloat(us.TextVal, u.UiScale, 0.8f, 1.6f);
             }
             catch (System.Exception e)
             {
@@ -288,7 +270,6 @@ namespace EconomyMod.Services
             // 语言切换后：刷新设置窗口标签 + 四个悬浮窗标题/静态文本 + 重新注入按钮 tooltip（4 语言）
             try { RegisterConfigLocale(); } catch (System.Exception) { }
             try { EconomyHUD.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
-            try { TradeShareWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { EventWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { RichListWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { EconomyUI.ReapplyTooltips(); } catch (System.Exception) { }
@@ -459,55 +440,15 @@ namespace EconomyMod.Services
 
         // ===== 地理贸易网络回调 =====
 
-        public static void OnTradeEnabledChanged(bool pValue)
-        {
-            UnrestConfig.Instance.TradeEnabled = pValue;
-        }
 
-        public static void OnTradeFlowRatioChanged(string pValue)
-        {
-            UnrestConfig.Instance.TradeFlowRatio = ParseFloat(pValue, UnrestConfig.Instance.TradeFlowRatio, 0f, 0.2f);
-        }
 
-        public static void OnMaxPathfindPairsChanged(string pValue)
-        {
-            UnrestConfig.Instance.MaxPathfindPairs = ParseInt(pValue, UnrestConfig.Instance.MaxPathfindPairs, 1, 500);
-        }
 
-        public static void OnPathRecomputeChanged(string pValue)
-        {
-            UnrestConfig.Instance.PathRecomputeEvery = ParseInt(pValue, UnrestConfig.Instance.PathRecomputeEvery, 5, 100);
-        }
 
-        public static void OnMaxTradeRangeChanged(string pValue)
-        {
-            UnrestConfig.Instance.MaxTradeRange = ParseFloat(pValue, UnrestConfig.Instance.MaxTradeRange, 10f, 500f);
-        }
 
-        public static void OnSeaRoutePenaltyChanged(string pValue)
-        {
-            UnrestConfig.Instance.SeaRoutePenalty = ParseFloat(pValue, UnrestConfig.Instance.SeaRoutePenalty, 1f, 10f);
-        }
 
-        public static void OnNonNeighborPenaltyChanged(string pValue)
-        {
-            UnrestConfig.Instance.NonNeighborPenalty = ParseFloat(pValue, UnrestConfig.Instance.NonNeighborPenalty, 1f, 10f);
-        }
 
-        public static void OnMaxEdgesChanged(string pValue)
-        {
-            UnrestConfig.Instance.MaxEdges = ParseInt(pValue, UnrestConfig.Instance.MaxEdges, 100, 50000);
-        }
 
-        public static void OnTradeCityCapacityChanged(string pValue)
-        {
-            UnrestConfig.Instance.TradeCityBaseCapacity = ParseInt(pValue, UnrestConfig.Instance.TradeCityBaseCapacity, 10, 500);
-        }
 
-        public static void OnTradeUseRealStockpilesChanged(bool pValue)
-        {
-            UnrestConfig.Instance.TradeUseRealStockpiles = pValue;
-        }
 
         // ===== 人口约束（马尔萨斯）回调 =====
 
@@ -555,20 +496,8 @@ namespace EconomyMod.Services
 
         // ===== 贸易军力回调 =====
 
-        public static void OnTradePowerEnabledChanged(bool pValue)
-        {
-            UnrestConfig.Instance.TradePowerEnabled = pValue;
-        }
 
-        public static void OnTradeSurplusRatioChanged(string pValue)
-        {
-            UnrestConfig.Instance.TradeSurplusRatio = ParseFloat(pValue, UnrestConfig.Instance.TradeSurplusRatio, 0.001f, 0.5f);
-        }
 
-        public static void OnTradeDeficitRatioChanged(string pValue)
-        {
-            UnrestConfig.Instance.TradeDeficitRatio = ParseFloat(pValue, UnrestConfig.Instance.TradeDeficitRatio, 0.001f, 0.5f);
-        }
 
         // ===== 劳动分工回调 =====
 
@@ -740,15 +669,25 @@ namespace EconomyMod.Services
             UnrestConfig.Instance.PolicySlots = ParseInt(pValue, UnrestConfig.Instance.PolicySlots, 1, 5);
         }
 
-        public static void OnTradeAstarEnabledChanged(bool pValue)
-        {
-            UnrestConfig.Instance.TradeAstarEnabled = pValue;
-        }
 
         public static void OnNationClaimHotkeyChanged(string pValue)
         {
             var v = (pValue ?? "").Trim();
             UnrestConfig.Instance.NationClaimHotkey = string.IsNullOrEmpty(v) ? "" : v.ToUpperInvariant();
+        }
+
+        /// <summary>UI 缩放：改后即时重建可见的内阁面板与原版窗口法典摘要卡。</summary>
+        public static void OnUiScaleChanged(string pValue)
+        {
+            UnrestConfig.Instance.UiScale = ParseFloat(pValue, UnrestConfig.Instance.UiScale, 0.8f, 1.6f);
+            try
+            {
+                var cab = CabinetWindow.Instance;
+                if (cab != null && cab.IsVisible) cab.RebuildPanelFromScale();
+            }
+            catch (System.Exception) { }
+            try { EconomyMod.Core.KingdomWindowIntegration.RefreshSummaryScale(); }
+            catch (System.Exception) { }
         }
     }
 }

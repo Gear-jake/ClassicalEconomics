@@ -24,9 +24,6 @@ namespace EconomyMod.Core
         /// <summary>最近一次采集得到的财富 Top10（降序；未采集时为空）。</summary>
         public static readonly List<RichEntryData> TopRich = new List<RichEntryData>(10);
 
-        /// <summary>地理贸易网络：本周期 cityId → City 引用映射（仅主线程寻路用，每周期复用防 GC）。</summary>
-        private static Dictionary<long, City> _cityRefs = new Dictionary<long, City>(128);
-
         /// <summary>
         /// 采集时顺带收集的"富裕"智慧生物（wealth &gt; SpendingEngine.WealthyThreshold），
         /// 供 SpendingEngine.RunOncePerYear 直接消费，避免每年重复全量遍历。
@@ -50,7 +47,6 @@ TopRich.Clear();
             WealthyPool.Clear();
             _poorPool.Clear();
             _richPool.Clear();
-            _cityRefs.Clear();
         }
 
         private static void AddPositiveMoney(Actor actor, long amount)
@@ -150,61 +146,6 @@ TopRich.Clear();
                         LawEngine.GetMods(k.data.id)); // 法典快照：主线程读一次，后台零并发访问
                 }
             }
-
-            // 城市快照（地理贸易网络节点）→ 纯数据，供后台按边贸易计算；
-            // 同时维护 cityId → City 引用映射（仅主线程寻路用，每周期复用防 GC）
-            _cityRefs.Clear();
-            if (kingdoms != null && UnrestConfig.Instance.TradeEnabled)
-            {
-                foreach (var k in kingdoms)
-                {
-                    if (k == null || k.data == null) continue;
-                    long kid = k.data.id;
-                    System.Collections.Generic.IEnumerable<City> cityList = null;
-                    try { cityList = k.getCities(); } catch (System.Exception) { }
-                    if (cityList == null) continue;
-                    foreach (var c in cityList)
-                    {
-                        if (c == null) continue;
-                        WorldTile tile = null;
-                        try { tile = c.getTile(false); } catch (System.Exception) { }
-                        if (tile == null) continue; // 无 tile 的城市无法定位，跳过
-                        int tx = tile.x, ty = tile.y;
-                        long cityId = ((long)tx << 32) | (uint)ty;
-                        int gold = 0, buildings = 0, boats = 0, cap = 0;
-                        // amount_gold 为属性（访问器 get_amount_gold，CS0571 不可显式调用）
-                        try { gold = c.amount_gold; } catch (System.Exception) { }
-                        try { buildings = c.countBuildings(); } catch (System.Exception) { }
-                        try { boats = c.countBoats(); } catch (System.Exception) { }
-                        // 原版仓库真实容量（游戏原版自带仓库系统）：ResourceLibrary.gold 为
-                        // public static 资源资产（全局命名空间），storage_max 为公开 int 字段。
-                        // 实测 storage_max 可能是「无上限」哨兵值（≈6 亿，接近 int 上限），
-                        // 直接用作 gap 基准会让 gap=gold−6亿 恒为负、所有城市都是缺口 → 无贸易。
-                        // 故加合理性检查：超过 10 万金币视为无效，回退到建筑数估算。
-                        if (UnrestConfig.Instance.TradeUseRealStockpiles)
-                        {
-                            try
-                            {
-                                var goldAsset = ResourceLibrary.gold;
-                                if (goldAsset != null)
-                                {
-                                    cap = goldAsset.storage_max;
-                                    if (cap > 100000) cap = 0; // 哨兵值/无上限 → 回退建筑估算
-                                }
-                            }
-                            catch (System.Exception) { cap = 0; }
-                        }
-                        // 邻国王国（City.neighbours_kingdoms 为 internal 不可访问）：
-                        // 改由 PrepareRoutes 用王国几何距离（Kingdom.distanceBetweenKingdom）判定
-                        TradeSimulationWorker.AddCitySnapshot(cityId, kid, GameHelpers.SafeCityName(c),
-                            gold, buildings, boats, cap, tx, ty);
-                        _cityRefs[cityId] = c;
-                    }
-                }
-            }
-
-            // 主线程寻路限流（更新缓存并复制到本周期边缓冲）——必须在 PostCycle 之前
-            TradeSimulationWorker.PrepareRoutes(_cityRefs);
 
             // 提交后台计算（主线程零计算；结果由 EconomyTickRunner 轮询消费）。
             // postCycle=false（按钮同步路径）时不投递后台任务，交由调用方同步计算。
@@ -365,8 +306,7 @@ if (_entryPool.Count < 16) _entryPool.Add(e);
             return 0;
         }
 
-        /// <summary>对全部静态 List 缓冲/缓存执行 TrimExcess，返回实际收缩的列表数；
-        /// _cityRefs 由 MemoryCleanupEngine 通过 ForTrim 访问器重建缩容。</summary>
+        /// <summary>对全部静态 List 缓冲/缓存执行 TrimExcess，返回实际收缩的列表数。</summary>
         public static int TrimMemory()
         {
             int shrunk = 0;
@@ -377,11 +317,5 @@ if (_entryPool.Count < 16) _entryPool.Add(e);
             shrunk += TrimList(_entryPool);
             return shrunk;
         }
-
-        /// <summary>供 MemoryCleanupEngine 重建缩容时读取当前引用（仅空闲期调用，绝不与采集周期并发）。</summary>
-        internal static Dictionary<long, City> CityRefsForTrim => _cityRefs;
-
-        /// <summary>将重建后的紧凑字典换回（仅 MemoryCleanupEngine 空闲期调用）。</summary>
-        internal static void ReplaceCityRefsForTrim(Dictionary<long, City> compact) { _cityRefs = compact; }
     }
 }

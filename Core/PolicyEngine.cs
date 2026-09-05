@@ -10,14 +10,14 @@ namespace EconomyMod.Core
     public enum PolicyKind
     {
         Redistribution, // 贫富调节（高基尼，激进，失败后果严重）
-        Fiscal,         // 财政政策（繁荣减税刺激/萧条增税补财政，失败后果轻微）
-        Trade           // 贸易政策（关税调节，失败后果中度）
+        Fiscal          // 财政政策（繁荣减税刺激/萧条增税补财政，失败后果轻微）
     }
 
     /// <summary>
     /// 国家政策引擎：高基尼王国每年以一定概率尝试"贫富调节政策"来降低基尼指数。
-    /// M3 扩展为政策工具箱：按经济情境选择政策（贫富调节/财政/贸易），失败后果分级——
-    /// 贫富调节失败最严重（退位/驾崩/内战），财政失败轻微（仅降低支持），贸易失败中度（贸易伙伴报复）。
+    /// M3 扩展为政策工具箱：按经济情境选择政策（贫富调节/财政），失败后果分级——
+    /// 贫富调节失败最严重（退位/驾崩/内战），财政失败轻微（仅降低支持）。
+    /// （v1.3.0：贸易政策已随贸易模拟移除。）
     /// </summary>
     public static class PolicyEngine
     {
@@ -81,7 +81,7 @@ namespace EconomyMod.Core
                 else
                 {
                     FailPolicy(kingdom, stats, kind);
-                    // 财政失败后果轻微，不进入冷却（可每年轻试）；贫富调节/贸易失败进入冷却
+                    // 财政失败后果轻微，不进入冷却（可每年轻试）；贫富调节失败进入冷却
                     if (kind != PolicyKind.Fiscal)
                         _cooldown[kid] = currentYear + CooldownYears;
                 }
@@ -101,7 +101,7 @@ namespace EconomyMod.Core
             }
         }
 
-        /// <summary>按经济情境选择政策类型：高基尼→贫富调节；繁荣→减税(财政)；萧条→增税(财政)；贸易逆差大→关税(贸易)。</summary>
+        /// <summary>按经济情境选择政策类型：高基尼→贫富调节；繁荣→减税(财政)；萧条→增税(财政)。</summary>
         private static PolicyKind PickPolicyKind(KingdomStats stats)
         {
             var phase = EconomyCycleModulator.CurrentPhase;
@@ -109,8 +109,6 @@ namespace EconomyMod.Core
             if (stats.GiniCoefficient > 0.75f) return PolicyKind.Redistribution;
             // 萧条 → 增税补财政
             if (phase == EconomyPhase.Depression) return PolicyKind.Fiscal;
-            // 贸易逆差大 → 关税调节
-            if (stats.TradeBalance < -stats.GDP * 0.03f) return PolicyKind.Trade;
             // 繁荣 → 减税刺激
             if (phase == EconomyPhase.Boom) return PolicyKind.Fiscal;
             // 默认贫富调节
@@ -127,7 +125,7 @@ namespace EconomyMod.Core
             return Random.value < success;
         }
 
-        /// <summary>政策成功：按类型分派（贫富调节=劫富济贫；财政=税率调整；贸易=关税调节）。</summary>
+        /// <summary>政策成功：按类型分派（贫富调节=劫富济贫；财政=税率调整）。</summary>
         private static void ApplyPolicy(Kingdom kingdom, KingdomStats stats, PolicyKind kind)
         {
             switch (kind)
@@ -147,10 +145,6 @@ namespace EconomyMod.Core
 
                 case PolicyKind.Fiscal:
                     ApplyFiscalPolicy(kingdom, stats);
-                    break;
-
-                case PolicyKind.Trade:
-                    ApplyTradePolicy(kingdom, stats);
                     break;
             }
         }
@@ -182,82 +176,7 @@ namespace EconomyMod.Core
             catch (System.Exception) { }
         }
 
-        /// <summary>贸易政策：逆差王国向居民征收关税并转入城市仓库，金币真实转移。</summary>
-        private static void ApplyTradePolicy(Kingdom kingdom, KingdomStats stats)
-        {
-            string kName = GameHelpers.SafeKingdomName(kingdom);
-            long tariffTarget = stats.TradeBalance < 0 ? (long)(-stats.TradeBalance * 0.1f) : 0L;
-            long tariff = 0L;
-            var cityPool = _cityPool;
-            cityPool.Clear();
-            try
-            {
-                var cities = kingdom.getCities();
-                if (cities != null)
-                {
-                    foreach (var city in cities) if (city != null) cityPool.Add(city);
-                }
-                if (tariffTarget > 0 && cityPool.Count > 0 && kingdom.units != null)
-                {
-                    tariff = CollectTariff(kingdom.units, cityPool, tariffTarget);
-                }
-            }
-            finally
-            {
-                cityPool.Clear();
-            }
-            GameHelpers.NotifyLocalized("toast_policy_tariff", kName, tariff);
-            EventStreamService.Record(EventStreamService.TypePolicy, kName, 4);
-            if (UnrestConfig.Instance.LogToWorldLog)
-                Debug.Log($"[ClassicalEconomics] 政策成功(贸易) 王国<{kName}> 关税收入{tariff}");
-        }
-
-        private static long AddGoldToCity(City city, long amount)
-        {
-            long added = 0L;
-            while (city != null && amount > 0)
-            {
-                int give = (int)System.Math.Min(amount, (long)int.MaxValue);
-                try { city.addResourcesToRandomStockpile("gold", give); }
-                catch (System.Exception) { break; }
-                added += give;
-                amount -= give;
-            }
-            return added;
-        }
-
-        private static long CollectTariff(List<Actor> units, List<City> cities, long target)
-        {
-            long remaining = target;
-            long collected = 0L;
-            int nextCity = 0;
-            foreach (var actor in units)
-            {
-                if (actor == null || !actor.isAlive() || remaining <= 0) continue;
-                int coins;
-                try { coins = Mathf.Max(0, Mathf.RoundToInt(actor.money)); }
-                catch (System.Exception) { continue; }
-                if (coins <= 0) continue;
-
-                int charge = System.Math.Min(coins, (int)System.Math.Min(remaining, (long)int.MaxValue));
-                try { actor.addMoney(-charge); }
-                catch (System.Exception) { continue; }
-
-                long deposited = 0L;
-                for (int offset = 0; offset < cities.Count && deposited < charge; offset++)
-                {
-                    int cityIndex = (nextCity + offset) % cities.Count;
-                    deposited += AddGoldToCity(cities[cityIndex], charge - deposited);
-                }
-                nextCity = (nextCity + 1) % cities.Count;
-                if (deposited < charge) GameHelpers.AddPositiveMoney(actor, charge - deposited);
-                collected += deposited;
-                remaining -= deposited;
-            }
-            return collected;
-        }
-
-        /// <summary>政策失败：后果分级——贫富调节最严重（退位/死亡/内战），贸易中度（贸易伙伴报复），财政轻微（仅支持下降）。</summary>
+        /// <summary>政策失败：后果分级——贫富调节最严重（退位/死亡/内战），财政轻微（仅支持下降）。</summary>
         private static void FailPolicy(Kingdom kingdom, KingdomStats stats, PolicyKind kind)
         {
             string kName = GameHelpers.SafeKingdomName(kingdom);
@@ -269,32 +188,6 @@ namespace EconomyMod.Core
                 EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 4); // 4=财政失败
                 if (UnrestConfig.Instance.LogToWorldLog)
                     Debug.Log($"[ClassicalEconomics] 政策失败(财政) 王国<{kName}> 基尼={stats.GiniCoefficient:F2}");
-                return;
-            }
-
-            // 贸易失败：中度后果（贸易伙伴报复，损失部分城市财富）
-            if (kind == PolicyKind.Trade)
-            {
-                long loss = Mathf.Max(0, Mathf.RoundToInt(stats.GDP * 0.01f));
-                if (loss > 0)
-                {
-                    var cities = kingdom.getCities();
-                    if (cities != null)
-                    {
-                        foreach (var city in cities)
-                        {
-                            if (city == null) continue;
-                            int gold;
-                            try { gold = city.getResourcesAmount("gold"); } catch { gold = 0; }
-                            int take = Mathf.Min(gold, Mathf.RoundToInt(loss / Mathf.Max(1, cities.Count())));
-                            if (take > 0) { try { city.takeResource("gold", take); } catch { } }
-                        }
-                    }
-                }
-                GameHelpers.NotifyLocalized("toast_policy_tariff_fail", kName, loss);
-                EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 5); // 5=贸易失败
-                if (UnrestConfig.Instance.LogToWorldLog)
-                    Debug.Log($"[ClassicalEconomics] 政策失败(贸易) 王国<{kName}> 损失{loss}");
                 return;
             }
 

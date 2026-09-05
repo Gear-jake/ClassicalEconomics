@@ -12,7 +12,6 @@ namespace EconomyMod.Core
     /// </summary>
     public enum AnnualStage
     {
-        TradeFlows,
         WealthTax,
         CycleModulator,
         Unrest,
@@ -23,7 +22,6 @@ namespace EconomyMod.Core
         Spending,
         EraEvaluate,
         EraTick,
-        TradePower,
         Disaster,
         Banking,
         Nation,
@@ -49,12 +47,12 @@ namespace EconomyMod.Core
         public static AnnualStage CurrentStage => _cursor;
 
         /// <summary>
-        /// 启动年度收尾：后台统计已消费（TryConsume 成功），从贸易流阶段开始分帧推进。
+        /// 启动年度收尾：后台统计已消费（TryConsume 成功），从富豪税阶段开始分帧推进。
         /// </summary>
         public static void Start(int year)
         {
             _year = year;
-            _cursor = AnnualStage.TradeFlows;
+            _cursor = AnnualStage.WealthTax;
             _windowStartTicks = Stopwatch.GetTimestamp();
             _windowExtended = false;
             _reduced = false;
@@ -116,10 +114,6 @@ namespace EconomyMod.Core
         {
             switch (stage)
             {
-                case AnnualStage.TradeFlows:
-                    // 贸易金流：金币经城市仓库在王国间零和结算（原版机制）
-                    TradeSimulationWorker.ApplyTradeFlows();
-                    break;
                 case AnnualStage.WealthTax:
                     // 年度富豪税（依赖本周期全球人均，须在统计消费后）
                     DataCollector.ApplyWealthTax();
@@ -151,10 +145,6 @@ namespace EconomyMod.Core
                     break;
                 case AnnualStage.EraTick:
                     EraEngine.Tick(_year);
-                    break;
-                case AnnualStage.TradePower:
-                    // 贸易军力：顺差国国民战斗加成 / 逆差国惩罚（依赖后台已算好的净贸易额）
-                    TradePowerEngine.Evaluate();
                     break;
                 case AnnualStage.Disaster:
                     // 灾害经济冲击：检测城市人口骤降，施加财富蒸发（火山矿产加成）

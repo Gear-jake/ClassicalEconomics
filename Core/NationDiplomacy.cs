@@ -6,21 +6,22 @@ namespace EconomyMod.Core
 {
     /// <summary>
     /// 外交（经济+外交大臣）：以本国（NationEngine 认领国）名义对目标国家执行
-    /// 宣战 / 求和 / 结盟 / 外交赠礼 / 双边贸易协定。全部动作实时生效（不等待年度结算）。
+    /// 宣战 / 求和 / 结盟 / 外交赠礼 / 双边经济协定。全部动作实时生效（不等待年度结算）。
     /// 直接编译期调用原版 DiplomacyManager / WarManager / AllianceManager（与 RulerBox 的
     /// DiplomacyActionsWindow 同源 API，均为公开成员），异常时 fail-closed 并提示，不再依赖反射探测。
     /// 赠礼产生本模组"外交好感"（原版无公开好感写入 API），与结盟门槛共同构成赠礼的实际意义。
+    /// （v1.3.0：双边协定自"贸易协定"改义为"经济协定"——按对方 GDP 比例向本国金库纳贡，流量加成随贸易模拟移除。）
     /// </summary>
     public static class NationDiplomacy
     {
-        // 双边贸易协定：targetKingdomId → tier（少/中/大 = 0/1/2），上限 2 个
-        private static readonly Dictionary<long, int> _pacts = new Dictionary<long, int>();
+        // 双边经济协定：targetKingdomId → tier（少/中/大 = 0/1/2），上限 2 个
+        internal static readonly Dictionary<long, int> _pacts = new Dictionary<long, int>();
         public const int MaxPacts = 2;
-        public const float PactFlowPerTier = 0.10f; // 每档 +10% 边流量
-        public const float PactAnnualCostRatio = 0.003f; // 年费 = GDP×0.3%×档
+        public const float PactIncomeRatio = 0.003f; // 协定收入 = 对方 GDP×0.3%×(档+1)，从对方居民征收（守恒）
+        public const float PactAnnualCostRatio = 0.003f; // 年费（维护成本）= 本国 GDP×0.3%×档
 
         // 外交好感（赠礼累计）：targetKingdomId → goodwill；结盟门槛 = 原版好感 + 本值 ≥ 0
-        private static readonly Dictionary<long, int> _goodwill = new Dictionary<long, int>();
+        internal static readonly Dictionary<long, int> _goodwill = new Dictionary<long, int>();
         public const int GiftAmount = 500;          // 赠礼金额（金库金币）
         public const int GiftGoodwill = 25;         // 每次赠礼好感
         public const int GoodwillCap = 200;         // 好感上限
@@ -285,18 +286,7 @@ namespace EconomyMod.Core
             return false;
         }
 
-        /// <summary>双边协定边流量乘数：边两端恰为 本国↔协约国 时生效。</summary>
-        public static float BilateralFlowMult(long kingdomA, long kingdomB)
-        {
-            long mine = NationEngine.NationKingdomId;
-            if (mine == 0 || _pacts.Count == 0) return 1f;
-            long other = kingdomA == mine ? kingdomB : (kingdomB == mine ? kingdomA : 0L);
-            if (other == 0L) return 1f;
-            int tier = PactTier(other);
-            return tier >= 0 ? 1f + PactFlowPerTier * (tier + 1) : 1f;
-        }
-
-        /// <summary>年度管线：双边协定年费（金库 → 消耗）。</summary>
+        /// <summary>年度管线：双边经济协定年费（金库 → 消耗）+ 协约国纳贡收入（对方居民 → 本国金库）。</summary>
         public static void RunAnnual(int year)
         {
             if (_pacts.Count == 0) return;
@@ -306,7 +296,17 @@ namespace EconomyMod.Core
             foreach (var kv in _pacts)
             {
                 long fee = (long)(gdp * PactAnnualCostRatio * NationEngine.TierMult(kv.Value));
-                if (fee > 0 && !NationEngine.TrySpend(fee)) expire.Add(kv.Key); // 金库不足 → 协定自动解除
+                if (fee > 0 && !NationEngine.TrySpend(fee)) { expire.Add(kv.Key); continue; } // 金库不足 → 协定自动解除
+
+                // 纳贡收入：从协约国居民征收 对方GDP×0.3%×(档+1) 进本国金库（真实转移，守恒）
+                var partner = GameHelpers.FindKingdom(kv.Key);
+                if (partner == null || partner.units == null) continue;
+                float partnerGdp = 0f;
+                if (EconomyEngine.KingdomStats.TryGetValue(kv.Key, out var ps)) partnerGdp = ps.GDP;
+                long target = (long)(partnerGdp * PactIncomeRatio * (kv.Value + 1));
+                if (target <= 0) continue;
+                long collected = GameHelpers.DeductCoins(partner.units, target);
+                if (collected > 0) NationEngine.AddTreasury(collected);
             }
             for (int i = 0; i < expire.Count; i++) _pacts.Remove(expire[i]);
         }

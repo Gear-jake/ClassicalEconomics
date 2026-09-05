@@ -1,32 +1,32 @@
 # Classical Economics
 
-> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.2.1fix* ｜ Requires NeoModLoader (NML)
+> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.3.0* ｜ Requires NeoModLoader (NML)
 
 ## Feature Overview
 
 **Macroeconomics**
 - Wealth tracking for every race (demons, aliens...): GDP, average wealth, Gini coefficient, CPI per kingdom
 - Business cycle: Boom → Recession → Depression → Recovery; bubble bursts, famine and inflation
-- Geographic trade: real A* path costs, sea penalties, biome comparative advantage, net-trade rankings
-- Labor wages, banking credit & default contagion, disaster shocks, inheritance with damage-based split
+- Labor wages, banking credit & default contagion (spreading to weaker kingdoms), disaster shocks, inheritance with damage-based split
 - Social unrest: rebellion → uprising → revolution; war plunder and dynasty monitoring
 
 **Playable Government · Central Banker**
 - Hover a kingdom on the map and press **G** (rebindable): claim / open the Cabinet
 - Royal treasury: founding grant + periodic levies; policies, decrees, buildings and diplomacy spend real gold
-- 6 ongoing policies x 3 tiers with slots, one-shot decrees (relief / festival), **vanilla building placement** (10 kinds, click the map to build)
-- Track record + nation GDP trend chart (last 40 cycles)
-- Diplomacy: war / peace (ransom when weaker) / alliances / gifts / bilateral trade pacts - two-level  style (list → detail: three-layer crest + nation stats)
+- 6 ongoing policies x 3 tiers with slots (coinage / state monopoly / propaganda / poor relief...), one-shot decrees (relief / festival), **vanilla building placement** (10 kinds, click the map to build)
+- Track record + nation GDP trend chart (last 40 cycles); **the Central Banker fully persists** (treasury, claim, policies, buildings, records, diplomacy and GDP chart history all save and restore)
+- Diplomacy: war / peace (ransom when weaker) / alliances / gifts / bilateral economic pacts - two-level style (list → detail: three-layer crest + nation stats)
 
 **National Law Law**
 - **Every kingdom (AI included): 28 laws x 5 tiers + 16 policies x 3 tiers**, evolving yearly from national situation and 6 national natures
-- Mutex law pairs, paid upgrades / free downgrades; effects genuinely wired into 10 engines (production/trade/price/Gini/unrest/consumption/disaster/build cost/wages/military)
+- Mutex law pairs, paid upgrades / free downgrades; effects genuinely wired into 9 engines (production/price/Gini/unrest/consumption/disaster/build cost/wages/military)
 - Law bonuses visible on **citizen traits** (Scholar State, Militarized, etc.); codex persisted in saves
-- Live aggregate-effect summary + semantic tier names (e.g. Trade Freedom: No protection → Closed country)
+- Live aggregate-effect summary + semantic tier names (e.g. Commercial Policy: Laissez-faire → Command economy)
 
-**Performance & Quality**
-- Frame-budgeted yearly settlement (4 ms/frame; taxes never reduced); automatic memory cleanup
-- 46 automated gates + performance audit; every gold transfer conserved
+**UI & Performance**
+- The Cabinet **auto-refreshes after each yearly settlement**; **adjustable UI scale for fonts and buttons (0.8-1.6x, applies instantly from settings)**
+- Frame-budgeted yearly settlement (4 ms/frame; taxes never reduced); automatic memory cleanup; background-thread statistics with no main-thread pathfinding
+- 42 automated gates + performance audit; every gold transfer conserved
 - Four-language UI (简体 / 繁體 / English / Русский); slate-and-gold 9-slice UI
 
 ## Installation
@@ -60,8 +60,8 @@ The NML settings window adds a **Performance** group. Every key below is synchro
 | `nation_play_enabled` | true | switch | Central banker gameplay: nation claiming, royal treasury, ongoing policies and one-shot decrees (default ON) |
 | `treasury_income_ratio` | 5 | 1-20 | Royal treasury income ratio: percent of city warehouse gold levied each cycle |
 | `policy_slots` | 3 | 1-5 | Ongoing policy slot cap: maximum simultaneous ongoing policies |
-| `trade_astar_enabled` | true | switch | Trade edges cost by real A* path length (realistic detours around mountains/seas; OFF falls back to straight-line distance) |
 | `nation_claim_hotkey` | G | text | Hover a kingdom on the map and press this key to claim/open the cabinet (Unity KeyCode name; blank disables) |
+| `ui_scale` | 1.2 | 0.8-1.6 | Overall scale of the cabinet panel font and buttons; applies immediately |
 
 The economy panel overview shows a memory status line: last cleanup time, freed amount, managed heap and Unity used/reserved memory (`hud_mem_cleanup` / `hud_mem_cleanup_pending` / `hud_mem_usage`; the toast text is `memory_cleanup_toast`; all are locale strings in four languages, not config keys). The managed heap is the Mono GC view shared by the mod and the game; Unity used/reserved is the native-asset view — if the managed heap stays flat while Unity used keeps rising, the growth comes from the game itself, not the mod.
 

@@ -43,7 +43,7 @@ foreach ($case in [regex]::Matches($lawModSection, 'case (Law[A-Za-z0-9_]+):')) 
     $end = $lawModSection.IndexOf('case ', $case.Index + 5)
     if ($end -lt 0) { $end = $lawModSection.Length }
     $body = $lawModSection.Substring($case.Index, $end - $case.Index)
-    Assert ($body -match 'm\.(Productivity|TaxRate|GiniShift|UnrestAccum|TradeFlow|Price|Consumer|DisasterResist|BuildCost|Wage|Military|Happiness|Birth)') "law $name does not modify any LawMods multiplier"
+    Assert ($body -match 'm\.(Productivity|TaxRate|GiniShift|UnrestAccum|Price|Consumer|DisasterResist|BuildCost|Wage|Military|Happiness|Birth)') "law $name does not modify any LawMods multiplier"
 }
 foreach ($case in [regex]::Matches($policyModSection, 'case (Policy[A-Za-z0-9_]+):')) {
     $name = $case.Groups[1].Value

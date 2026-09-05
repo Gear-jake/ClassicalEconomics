@@ -26,9 +26,6 @@ namespace EconomyMod.Core
         /// <summary>基尼系数（0=完全均等，1=完全不均等）。</summary>
         public static float GiniCoefficient { get; private set; }
 
-        /// <summary>全王国贸易出口总额（顺差之和，金流模拟量）。</summary>
-        public static long TotalTradeVolume { get; private set; }
-
         /// <summary>全球年总产出（生产函数：Workers × Productivity × CapitalFactor）。</summary>
         public static float TotalProduction { get; private set; }
 
@@ -45,7 +42,6 @@ namespace EconomyMod.Core
             AliveActorCount = 0;
             CycleIndex = 0;
             GiniCoefficient = 0f;
-            TotalTradeVolume = 0L;
             TotalProduction = 0f;
             KingdomStats.Clear();
             _topKingdomPool.Clear();
@@ -61,7 +57,6 @@ namespace EconomyMod.Core
             AliveActorCount = res.AliveActorCount;
             GiniCoefficient = res.GiniCoefficient;
             CycleIndex = res.CycleIndex;
-            TotalTradeVolume = res.TotalTradeVolume;
             TotalProduction = res.TotalProduction;
 
             KingdomStats.Clear();
@@ -76,7 +71,6 @@ namespace EconomyMod.Core
                     ActorCount = ks.ActorCount,
                     GiniCoefficient = ks.Gini,
                     Population = ks.Population,
-                    TradeBalance = ks.TradeBalance,
                     LocalPrice = ks.LocalPrice
                 };
                 // 法典：基尼平移（济贫抑富 / 自由市场拉大）

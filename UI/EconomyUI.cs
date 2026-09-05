@@ -124,8 +124,6 @@ private static PowersTab _tab;
             RichListWindow.Create();
             // 创建事件流悬浮窗（独立于经济窗口，点击铃铛按钮切换显隐）
             EventWindow.Create();
-            // 创建贸易份额趋势悬浮窗（各国各城市出口份额趋势，独立窗口）
-            TradeShareWindow.Create();
             // 创建内阁面板（中央银行家：国家认领/金库/政策/法令/记录）
             CabinetWindow.Create();
 
@@ -173,7 +171,7 @@ private static PowersTab _tab;
                 () =>
                 {
                     HistoryService.ClearHistory();
-                    RefreshOverview();
+                    RefreshOverview(true);
                 },
                 IconLoader.Get("trash"),
                 _tab.transform, Vector2.zero);
@@ -199,15 +197,6 @@ private static PowersTab _tab;
             RegisterTooltip(btnEvents, "economy_events");
             PowerButtonCreator.AddButtonToTab(btnEvents, _tab, null);
 
-            // 创建"贸易净额"工具按钮（复用金币图标）：切换贸易净额排名悬浮窗显隐
-            var btnShare = PowerButtonCreator.CreateSimpleButton(
-                "economy_trade_share",
-                () => TradeShareWindow.Instance?.Toggle(),
-                IconLoader.Get("coin"),
-                _tab.transform, Vector2.zero);
-            RegisterTooltip(btnShare, "economy_trade_share");
-            PowerButtonCreator.AddButtonToTab(btnShare, _tab, null);
-
             // 创建"切换经济阶段"按钮（循环切换：繁荣→衰退→萧条→复苏→繁荣）
             // 合并原4个阶段按钮，降低工具栏认知负荷（11→8按钮）
             var btnCyclePhase = PowerButtonCreator.CreateSimpleButton(
@@ -223,7 +212,7 @@ private static PowersTab _tab;
                         default:                      next = EconomyPhase.Boom; break;
                     }
                     EconomyCycleModulator.SetPhaseManual(next);
-                    RefreshOverview();
+                    RefreshOverview(true);
                 },
                 IconLoader.Get("phase_boom"),
                 _tab.transform, Vector2.zero);
@@ -263,8 +252,10 @@ private static PowersTab _tab;
         /// <summary>
         /// 刷新概览数据（采集周期或手动采集后调用）。
         /// 富豪榜悬浮窗若处于打开状态，同步刷新其数据。
+        /// refreshCabinet=true 时内阁面板也整页重建：年度快照/手动采集/语言切换等低频路径使用；
+        /// 每秒实时刷新传 false，避免整页重建（含 GDP 图）造成 GC 抖动。
         /// </summary>
-        public static void RefreshOverview()
+        public static void RefreshOverview(bool refreshCabinet = false)
         {
             if (EconomyHUD.Instance != null && EconomyHUD.Instance.IsVisible)
             {
@@ -278,9 +269,9 @@ private static PowersTab _tab;
             {
                 EventWindow.Instance.RefreshNow();
             }
-            if (TradeShareWindow.Instance != null && TradeShareWindow.Instance.IsVisible)
+            if (refreshCabinet && CabinetWindow.Instance != null && CabinetWindow.Instance.IsVisible)
             {
-                TradeShareWindow.Instance.RefreshNow();
+                CabinetWindow.Instance.RefreshNow();
             }
         }
 
@@ -290,7 +281,7 @@ private static PowersTab _tab;
             EconomyHUD.Instance?.OnWorldUnavailable();
             RichListWindow.Instance?.OnWorldUnavailable();
             EventWindow.Instance?.OnWorldUnavailable();
-            TradeShareWindow.Instance?.OnWorldUnavailable();
+            CabinetWindow.Instance?.OnWorldUnavailable();
         }
     }
 }

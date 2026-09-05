@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using EconomyMod.Models;
 
 namespace EconomyMod.Services
@@ -7,6 +9,8 @@ namespace EconomyMod.Services
     /// 历史快照内存层：环形数组缓冲（固定 ≤ 容量）。
     /// 每次启动都会 ClearHistory（历史仅本局有效），因此不落盘——
     /// 消除文件 IO 与后台线程，避免 Unity 主线程 GC 停顿。
+    /// （v1.3.0：新增 Serialize/Restore——GDP 折线历史随王国存档键 rb_hist 落盘，
+    /// 读档后恢复折线图并消除“读另一存档串档”。）
     /// </summary>
     public static class HistoryService
     {
@@ -60,6 +64,65 @@ namespace EconomyMod.Services
             _head = 0;
             _count = 0;
             _recentPool.Clear();
+        }
+
+        /// <summary>
+        /// 序列化最近 50 条快照为紧凑字符串（按时间正序）：
+        /// "year:gdp:avg:gini:phase:cpi;..."，float 用 InvariantCulture 防文化小数点差异。
+        /// </summary>
+        public static string Serialize()
+        {
+            var sb = new StringBuilder(1024);
+            int start = (_head - _count + Capacity) % Capacity;
+            var inv = CultureInfo.InvariantCulture;
+            for (int i = 0; i < _count; i++)
+            {
+                var s = _buffer[(start + i) % Capacity];
+                if (s == null) continue;
+                sb.Append(s.GameYear).Append(':')
+                  .Append(s.GlobalGDP).Append(':')
+                  .Append(s.AvgWealth.ToString("F2", inv)).Append(':')
+                  .Append(s.GiniCoefficient.ToString("F4", inv)).Append(':')
+                  .Append(s.Phase).Append(':')
+                  .Append(s.PriceIndex.ToString("F3", inv)).Append(';');
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>从 Serialize 生成的字符串恢复环形缓冲（解析失败条目跳过；空串=清空）。</summary>
+        public static void Restore(string data)
+        {
+            ClearHistory();
+            if (string.IsNullOrEmpty(data)) return;
+            var inv = CultureInfo.InvariantCulture;
+            try
+            {
+                string[] entries = data.Split(';');
+                for (int i = 0; i < entries.Length; i++)
+                {
+                    if (string.IsNullOrEmpty(entries[i])) continue;
+                    string[] f = entries[i].Split(':');
+                    if (f.Length < 6) continue;
+                    var snap = new EconomySnapshot();
+                    int iv;
+                    long lv;
+                    float fv;
+                    if (!int.TryParse(f[0], out iv)) continue;
+                    snap.GameYear = iv;
+                    if (!long.TryParse(f[1], out lv)) continue;
+                    snap.GlobalGDP = lv;
+                    if (!float.TryParse(f[2], NumberStyles.Float, inv, out fv)) continue;
+                    snap.AvgWealth = fv;
+                    if (!float.TryParse(f[3], NumberStyles.Float, inv, out fv)) continue;
+                    snap.GiniCoefficient = fv;
+                    if (!int.TryParse(f[4], out iv)) continue;
+                    snap.Phase = iv;
+                    if (!float.TryParse(f[5], NumberStyles.Float, inv, out fv)) continue;
+                    snap.PriceIndex = fv;
+                    AppendSnapshot(snap);
+                }
+            }
+            catch (System.Exception) { ClearHistory(); }
         }
     }
 }

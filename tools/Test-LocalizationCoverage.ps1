@@ -97,7 +97,7 @@ foreach ($pair in @(
 
 # ===== 3) 语言切换必须刷新全部四个窗口标题 =====
 $cbText = [System.IO.File]::ReadAllText((Join-Path $Root 'Services\ConfigCallbacks.cs'), $utf8)
-foreach ($w in @('EconomyHUD', 'TradeShareWindow', 'EventWindow', 'RichListWindow')) {
+foreach ($w in @('EconomyHUD', 'EventWindow', 'RichListWindow')) {
     if ($cbText -notmatch ([regex]::Escape("$w.Instance?.RefreshAllTexts()"))) {
         $failures.Add("OnLanguageChanged does not refresh $w title/content")
     }
@@ -105,7 +105,7 @@ foreach ($w in @('EconomyHUD', 'TradeShareWindow', 'EventWindow', 'RichListWindo
 
 # ===== 4) 组合键：工具栏按钮 tooltip（id 与 id_description）必须四语言齐全 =====
 $buttonIds = @('economy_toggle', 'economy_intervene', 'economy_collect', 'economy_clear',
-               'economy_rich', 'economy_events', 'economy_trade_share', 'economy_cycle_phase')
+               'economy_rich', 'economy_events', 'economy_cycle_phase')
 foreach ($id in $buttonIds) {
     foreach ($loc in $langKeys.Keys) {
         if (-not $langKeys[$loc].Contains($id)) { $failures.Add("$loc missing toolbar tooltip key '$id'") }

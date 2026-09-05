@@ -40,8 +40,8 @@ function Test-Anchor([string]$haystack, [string]$pattern, [string]$label) {
 
 # 1) AnnualStage enum declares the exact original closeout order (EraEvaluate before EraTick,
 #    Snapshot strictly last before Done; mirrors the pre-split FinishCycle).
-$stageOrder = 'enum AnnualStage\s*\{[^}]*TradeFlows,\s*WealthTax,\s*CycleModulator,\s*Unrest,\s*Policy,\s*KingdomMonitor,\s*SocialCrisis,\s*Population,\s*Spending,\s*EraEvaluate,\s*EraTick,\s*TradePower,\s*Disaster,\s*Banking,\s*Nation,\s*Snapshot,\s*Done'
-Test-Anchor $pipeline $stageOrder 'AnnualStage enum must declare the closeout order (TradeFlows..Banking, Nation, Snapshot, Done)'
+$stageOrder = 'enum AnnualStage\s*\{[^}]*WealthTax,\s*CycleModulator,\s*Unrest,\s*Policy,\s*KingdomMonitor,\s*SocialCrisis,\s*Population,\s*Spending,\s*EraEvaluate,\s*EraTick,\s*Disaster,\s*Banking,\s*Nation,\s*Snapshot,\s*Done'
+Test-Anchor $pipeline $stageOrder 'AnnualStage enum must declare the closeout order (WealthTax..Banking, Nation, Snapshot, Done)'
 
 # 2) frame budget: derived from UnrestConfig.FrameBudgetMs and enforced per frame; Snapshot exempt.
 Test-Anchor $pipeline 'int budgetMs = cfg\.FrameBudgetMs' 'Tick must derive the frame budget from UnrestConfig.FrameBudgetMs'
@@ -60,7 +60,7 @@ Test-Anchor $pipeline 'case AnnualStage\.Banking:.*if \(!_reduced\) BankingEngin
 Test-Anchor $pipeline 'case AnnualStage\.Snapshot:.*EconomyMod\.EconomyModMain\.WriteCycleSnapshot' 'Snapshot stage must call EconomyModMain.WriteCycleSnapshot'
 Test-Anchor $main 'public static void WriteCycleSnapshot\(int year\)' 'EconomyModMain must expose WriteCycleSnapshot(int year)'
 Test-Anchor $main 'WriteCycleSnapshot\(int year\).*HistoryService\.AppendSnapshot\(snapshot\).*EconomyUI\.RefreshOverview\(\)' 'Snapshot/UI tail must live inside WriteCycleSnapshot'
-Test-Anchor $main 'CopyTopBalances\(last != null \? last\.CityBalances : null, 40\)' 'WriteCycleSnapshot must preserve the CopyTopBalances(...,40) pinned pattern'
+Test-Anchor $main 'HistoryService\.AppendSnapshot\(snapshot\)' 'WriteCycleSnapshot must append the annual snapshot to history'
 
 # ---- green anchors: pipeline wiring in EconomyModMain ----
 
@@ -132,7 +132,7 @@ if (-not (Test-PipelineContent $pipeline)) {
 }
 
 # M1: stage order broken (Banking and Disaster swapped in the enum)
-Test-Mutation 'stage-order' ($pipeline -replace 'TradePower,\s*Disaster,\s*Banking,', 'TradePower, Banking, Disaster,')
+Test-Mutation 'stage-order' ($pipeline -replace 'Disaster,\s*Banking,', 'Banking, Disaster,')
 
 # M2: frame budget removed (per-frame slice condition dropped)
 Test-Mutation 'frame-budget' ($pipeline -replace '_cursor != AnnualStage\.Snapshot && ElapsedMs\(frameStart\) >= budgetMs', '_cursor != AnnualStage.Snapshot')
