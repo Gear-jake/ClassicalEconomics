@@ -772,5 +772,6 @@
   "event_chance_ai": "Шанс событий (AI)",
   "event_chance_ai Description": "Годовой шанс для стран AI (0-1); они решают сами, итог попадает в ленту.",
   "event_cooldown_years": "Глобальная пауза событий",
-  "event_cooldown_years Description": "Минимум лет между любыми событиями (1-10)."
+  "event_cooldown_years Description": "Минимум лет между любыми событиями (1-10).",
+  "event_choice_kingdom": "Решение: 〈{0}〉"
 }

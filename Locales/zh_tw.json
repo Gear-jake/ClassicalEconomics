@@ -772,5 +772,6 @@
   "event_chance_ai": "AI 事件機率",
   "event_chance_ai Description": "AI 各國每年觸發抉擇事件的機率（0~1），AI 按國性自動決策並記入事件流。",
   "event_cooldown_years": "事件全局冷卻",
-  "event_cooldown_years Description": "任意兩個王國事件之間至少相隔的年數（1~10）。"
+  "event_cooldown_years Description": "任意兩個王國事件之間至少相隔的年數（1~10）。",
+  "event_choice_kingdom": "〈{0}〉的抉擇"
 }

@@ -772,5 +772,6 @@
   "event_chance_ai": "AI Event Chance",
   "event_chance_ai Description": "Yearly chance for AI kingdoms (0-1); they decide by national character and the result lands in the event feed.",
   "event_cooldown_years": "Global Event Cooldown",
-  "event_cooldown_years Description": "Minimum years between any two kingdom events (1-10)."
+  "event_cooldown_years Description": "Minimum years between any two kingdom events (1-10).",
+  "event_choice_kingdom": "The choice of 〈{0}〉"
 }
