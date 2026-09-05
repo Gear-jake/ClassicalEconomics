@@ -57,6 +57,9 @@ $keys = @(
     @{ Id = 'nation_play_enabled';              Field = 'NationPlayEnabled';            Type = 'SWITCH'; Default = 'true';  Callback = 'OnNationPlayEnabledChanged';          Min = $null; Max = $null },
     @{ Id = 'treasury_income_ratio';            Field = 'TreasuryIncomeRatio';          Type = 'TEXT';   Default = '5';     Callback = 'OnTreasuryIncomeRatioChanged';        Min = 1;     Max = 20 },
     @{ Id = 'policy_slots';                     Field = 'PolicySlots';                  Type = 'TEXT';   Default = '3';     Callback = 'OnPolicySlotsChanged';                Min = 1;     Max = 5 },
+    @{ Id = 'event_chance_player';           Field = 'EventChancePlayer';           Type = 'FLOAT';  Default = '0.35';  Callback = 'OnEventChancePlayerChanged';          Min = 0; Max = 1 },
+    @{ Id = 'event_chance_ai';               Field = 'EventChanceAi';               Type = 'FLOAT';  Default = '0.15';  Callback = 'OnEventChanceAiChanged';              Min = 0; Max = 1 },
+    @{ Id = 'event_cooldown_years';          Field = 'EventCooldownYears';          Type = 'TEXT';   Default = '3';     Callback = 'OnEventCooldownYearsChanged';         Min = 1; Max = 10 },
     @{ Id = 'ui_scale';                      Field = 'UiScale';                     Type = 'FLOAT';  Default = '1.2';   Callback = 'OnUiScaleChanged';                    Min = 0.8; Max = 1.6 },
     @{ Id = 'nation_claim_hotkey';              Field = 'NationClaimHotkey';            Type = 'STRING';   Default = 'G';     Callback = 'OnNationClaimHotkeyChanged';          Min = $null; Max = $null }
 )

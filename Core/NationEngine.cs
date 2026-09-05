@@ -654,7 +654,7 @@ namespace EconomyMod.Core
         }
 
         /// <summary>从本国居民征收金币（关税/加税口径；真实转移，上限为居民财富的 10%）。</summary>
-        private static long CollectFromResidents(Kingdom kingdom, long target)
+        internal static long CollectFromResidents(Kingdom kingdom, long target)
         {
             if (target <= 0 || kingdom == null || kingdom.units == null) return 0L;
             var units = SnapshotActors(kingdom, _actorPool);
@@ -672,7 +672,7 @@ namespace EconomyMod.Core
         }
 
         /// <summary>把钱分给本国贫困线（人均×0.8）以下国民（余数补第一人，精确守恒）。</summary>
-        private static void DistributeToPoor(Kingdom kingdom, long amount, EconomyMod.Models.KingdomStats stats)
+        internal static void DistributeToPoor(Kingdom kingdom, long amount, EconomyMod.Models.KingdomStats stats)
         {
             if (amount <= 0 || kingdom == null || kingdom.units == null) return;
             float line = (stats?.AvgWealth ?? 0f) * 0.8f;

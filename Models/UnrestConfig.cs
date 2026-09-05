@@ -167,6 +167,17 @@ namespace EconomyMod.Models
         /// <summary>内阁 UI 整体缩放系数（0.8~1.6，默认 1.2）：字号、按钮宽高、行高统一乘此系数。</summary>
         public float UiScale = 1.2f;
 
+        // ===== 王国抉择事件（DecisionEvents）=====
+
+        /// <summary>玩家国每年触发抉择事件的概率（0~1，默认 0.35；0 = 关闭玩家事件）。</summary>
+        public float EventChancePlayer = 0.35f;
+
+        /// <summary>AI 国每年触发抉择事件的概率（0~1，默认 0.15；AI 按国性自动决策，结果进事件流）。</summary>
+        public float EventChanceAi = 0.15f;
+
+        /// <summary>全局冷却年数：两次王国事件之间至少相隔的年数（1~10，默认 3）。</summary>
+        public int EventCooldownYears = 3;
+
         // ===== 货币供给与价格指数（CPI）=====
 
         /// <summary>货币流通速度（默认0.5）：CPI = 货币供给 / (总产出 × 流通速度)。</summary>

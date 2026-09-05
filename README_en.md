@@ -1,6 +1,6 @@
 # Classical Economics
 
-> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.3.0* ｜ Requires NeoModLoader (NML)
+> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.4.0* ｜ Requires NeoModLoader (NML)
 
 ## Feature Overview
 
@@ -22,6 +22,11 @@
 - Mutex law pairs, paid upgrades / free downgrades; effects genuinely wired into 9 engines (production/price/Gini/unrest/consumption/disaster/build cost/wages/military)
 - Law bonuses visible on **citizen traits** (Scholar State, Militarized, etc.); codex persisted in saves
 - Live aggregate-effect summary + semantic tier names (e.g. Commercial Policy: Laissez-faire → Command economy)
+
+**Decision Events**
+- 16 events across 6 families (finance/disaster/court/military/civil/diplomacy); condition-filtered yearly draw, max one per kingdom per year
+- Player kingdom: non-modal choice window + Cabinet to-do; the cautious option runs on timeout; AI kingdoms decide by national character and land in the event feed
+- Event window rebuilt: filter chips (all/decisions/states & wars/economy) + fold by year + single-column timeline; **an always-open event window rebuilds only once per year**
 
 **UI & Performance**
 - The Cabinet **auto-refreshes after each yearly settlement**; **adjustable UI scale for fonts and buttons (0.8-1.6x, applies instantly from settings)**
@@ -61,6 +66,9 @@ The NML settings window adds a **Performance** group. Every key below is synchro
 | `treasury_income_ratio` | 5 | 1-20 | Royal treasury income ratio: percent of city warehouse gold levied each cycle |
 | `policy_slots` | 3 | 1-5 | Ongoing policy slot cap: maximum simultaneous ongoing policies |
 | `nation_claim_hotkey` | G | text | Hover a kingdom on the map and press this key to claim/open the cabinet (Unity KeyCode name; blank disables) |
+| `event_chance_player` | 0.35 | 0-1 | Yearly chance of a decision event for your claimed kingdom (0 disables) |
+| `event_chance_ai` | 0.15 | 0-1 | Yearly chance for AI kingdoms (they decide by national character) |
+| `event_cooldown_years` | 3 | 1-10 | Minimum years between any two kingdom events |
 | `ui_scale` | 1.2 | 0.8-1.6 | Overall scale of the cabinet panel font and buttons; applies immediately |
 
 The economy panel overview shows a memory status line: last cleanup time, freed amount, managed heap and Unity used/reserved memory (`hud_mem_cleanup` / `hud_mem_cleanup_pending` / `hud_mem_usage`; the toast text is `memory_cleanup_toast`; all are locale strings in four languages, not config keys). The managed heap is the Mono GC view shared by the mod and the game; Unity used/reserved is the native-asset view — if the managed heap stays flat while Unity used keeps rising, the growth comes from the game itself, not the mod.

@@ -84,6 +84,7 @@ namespace EconomyMod.Services
             "memory_cleanup_notify_enabled",
             "nation_play_enabled", "treasury_income_ratio", "policy_slots",
             "nation_claim_hotkey", "ui_scale",
+            "event_chance_player", "event_chance_ai", "event_cooldown_years",
         };
 
         /// <summary>
@@ -223,6 +224,10 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("nation_claim_hotkey", out var nch) && !string.IsNullOrWhiteSpace(nch.TextVal)) u.NationClaimHotkey = nch.TextVal.Trim().ToUpperInvariant();
                 // UI 缩放（内阁字体/按钮）
                 if (group.TryGetValue("ui_scale", out var us)) u.UiScale = ParseFloat(us.TextVal, u.UiScale, 0.8f, 1.6f);
+                // 王国抉择事件（频率）
+                if (group.TryGetValue("event_chance_player", out var ecp)) u.EventChancePlayer = ParseFloat(ecp.TextVal, u.EventChancePlayer, 0f, 1f);
+                if (group.TryGetValue("event_chance_ai", out var eca)) u.EventChanceAi = ParseFloat(eca.TextVal, u.EventChanceAi, 0f, 1f);
+                if (group.TryGetValue("event_cooldown_years", out var ecx)) u.EventCooldownYears = ParseInt(ecx.TextVal, u.EventCooldownYears, 1, 10);
             }
             catch (System.Exception e)
             {
@@ -675,6 +680,21 @@ namespace EconomyMod.Services
         {
             var v = (pValue ?? "").Trim();
             UnrestConfig.Instance.NationClaimHotkey = string.IsNullOrEmpty(v) ? "" : v.ToUpperInvariant();
+        }
+
+        public static void OnEventChancePlayerChanged(string pValue)
+        {
+            UnrestConfig.Instance.EventChancePlayer = ParseFloat(pValue, UnrestConfig.Instance.EventChancePlayer, 0f, 1f);
+        }
+
+        public static void OnEventChanceAiChanged(string pValue)
+        {
+            UnrestConfig.Instance.EventChanceAi = ParseFloat(pValue, UnrestConfig.Instance.EventChanceAi, 0f, 1f);
+        }
+
+        public static void OnEventCooldownYearsChanged(string pValue)
+        {
+            UnrestConfig.Instance.EventCooldownYears = ParseInt(pValue, UnrestConfig.Instance.EventCooldownYears, 1, 10);
         }
 
         /// <summary>UI 缩放：改后即时重建可见的内阁面板与原版窗口法典摘要卡。</summary>

@@ -20,6 +20,8 @@ namespace EconomyMod
 
             // 注册时代事件国民特质（盛世/复兴/强盛期/经济崩溃），供 EraEngine 国民加成使用
             RegisterEraTraits();
+            // 抉择事件：解析 events.json（一次，fail-open 空池）
+            DecisionEvents.Load();
 
             if (gameObject.GetComponent<EconomyTickRunner>() == null)
                 gameObject.AddComponent<EconomyTickRunner>();
@@ -65,6 +67,7 @@ namespace EconomyMod
             LawEngine.ResetAll(); // 法典：清空各国法律/国策/个性（新地图重新演化）
             HistoryService.ClearHistory();
             EventStreamService.Clear();
+            DecisionEvents.Reset(); // 抉择事件：清空挂起/冷却（事件定义保留）
         }
 
         /// <summary>
@@ -105,6 +108,14 @@ namespace EconomyMod
             snapshot.Kingdoms = new List<KingdomStats>(EconomyEngine.KingdomStats.Values);
             HistoryService.AppendSnapshot(snapshot);
             EconomyUI.RefreshOverview(refreshCabinet: true);
+            // 抉择事件：Events 阶段排队的弹窗延后到快照尾（管线中途不造 UI）
+            if (DecisionEvents.PopupQueued)
+            {
+                DecisionEvents.ClearPopupQueued();
+                UI.EventChoiceWindow.Instance?.ShowPending();
+            }
+            // 事件窗年度重建：常开窗口每个游戏年最多重建一次（打开时与用户操作另有触发）
+            UI.EventWindow.Instance?.OnYearBoundary();
         }
 
         // ===== 时代事件国民特质注册（EraEngine 国民加成用，替换原 cultural_awakening）=====

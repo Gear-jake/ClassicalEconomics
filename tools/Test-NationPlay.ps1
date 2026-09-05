@@ -70,7 +70,7 @@ Assert ($nation -notmatch 'GC\s*\.\s*Collect') 'NationEngine must not call GC.Co
 
 # ===== 2. 年度管线：Nation 阶段在 Banking 之后、Snapshot 之前，顺序不变量 =====
 $enumMatch = [regex]::Match($pipeline, 'public enum AnnualStage\s*\{(?<body>.*?)\}', [System.Text.RegularExpressions.RegexOptions]::Singleline)
-Assert ($enumMatch.Success -and $enumMatch.Groups['body'].Value -match '\bBanking,\s*\r?\n\s*Nation,\s*\r?\n\s*Snapshot') 'AnnualStage enum must declare Nation between Banking and Snapshot'
+Assert ($enumMatch.Success -and $enumMatch.Groups['body'].Value -match '\bBanking,\s*\r?\n\s*Nation,') 'AnnualStage enum must declare Nation after Banking (index assertions pin it before Snapshot)'
 $runIdx2 = $pipeline.IndexOf('case AnnualStage.Banking:')
 $nationIdx = $pipeline.IndexOf('case AnnualStage.Nation:')
 $snapIdx = $pipeline.IndexOf('case AnnualStage.Snapshot:')

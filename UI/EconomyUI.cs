@@ -126,6 +126,8 @@ private static PowersTab _tab;
             EventWindow.Create();
             // 创建内阁面板（中央银行家：国家认领/金库/政策/法令/记录）
             CabinetWindow.Create();
+            // 创建抉择事件小窗（非模态，快照尾按需弹出；S4-1：不在 RefreshOverview 里刷新）
+            EventChoiceWindow.Create();
 
             // 创建底部工具栏 Tab（带金币图标）；
             // 先注入 Tab 名称/描述本地化键（vanilla LTM 按 key 查找，缺失会打印 missing text 日志）
@@ -265,10 +267,8 @@ private static PowersTab _tab;
             {
                 RichListWindow.Instance.RefreshNow();
             }
-            if (EventWindow.Instance != null && EventWindow.Instance.IsVisible)
-            {
-                EventWindow.Instance.RefreshNow();
-            }
+            // 事件窗不在此刷新（S4-1）：隐藏零调用；打开时由打开动作渲染一次，
+            // 之后仅每个游戏年（WriteCycleSnapshot→OnYearBoundary）或用户操作重建。
             if (refreshCabinet && CabinetWindow.Instance != null && CabinetWindow.Instance.IsVisible)
             {
                 CabinetWindow.Instance.RefreshNow();
@@ -281,6 +281,7 @@ private static PowersTab _tab;
             EconomyHUD.Instance?.OnWorldUnavailable();
             RichListWindow.Instance?.OnWorldUnavailable();
             EventWindow.Instance?.OnWorldUnavailable();
+            EventChoiceWindow.Instance?.OnWorldUnavailable();
             CabinetWindow.Instance?.OnWorldUnavailable();
         }
     }

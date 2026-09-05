@@ -415,6 +415,24 @@
       "Callback": "EconomyConfigCallbacks:OnNationClaimHotkeyChanged"
     },
     {
+      "Id": "event_chance_player",
+      "Type": "TEXT",
+      "TextVal": "0.35",
+      "Callback": "EconomyConfigCallbacks:OnEventChancePlayerChanged"
+    },
+    {
+      "Id": "event_chance_ai",
+      "Type": "TEXT",
+      "TextVal": "0.15",
+      "Callback": "EconomyConfigCallbacks:OnEventChanceAiChanged"
+    },
+    {
+      "Id": "event_cooldown_years",
+      "Type": "TEXT",
+      "TextVal": "3",
+      "Callback": "EconomyConfigCallbacks:OnEventCooldownYearsChanged"
+    },
+    {
       "Id": "ui_scale",
       "Type": "TEXT",
       "TextVal": "1.2",

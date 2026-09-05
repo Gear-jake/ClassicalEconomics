@@ -143,6 +143,13 @@ namespace EconomyMod.Core
                     try { nation.data.set("rb_nat_goodwill", sb.ToString()); }
                     catch (System.Exception) { }
                 }
+
+                // 抉择事件：挂起/冷却/全局冷却（rb_ev_*，挂认领国 data）
+                DecisionEvents.Serialize((key, value) =>
+                {
+                    try { nation.data.set(key, value ?? ""); }
+                    catch (System.Exception) { }
+                });
             }
             catch (System.Exception) { }
         }
@@ -157,6 +164,13 @@ namespace EconomyMod.Core
                 // 历史：从任意王国读 rb_hist（写盘时挂认领国或第一个王国）
                 string hist = ReadAnyKingdomKey("rb_hist");
                 if (hist != null) HistoryService.Restore(hist);
+
+                // 抉择事件状态（挂认领国 data，与写盘同键位）
+                string evPending = ReadAnyKingdomKey("rb_ev_pending");
+                string evCooldown = ReadAnyKingdomKey("rb_ev_cooldown");
+                string evLastGlobal = ReadAnyKingdomKey("rb_ev_lastGlobal");
+                if (evPending != null || evCooldown != null)
+                    DecisionEvents.Restore(evPending, evCooldown, evLastGlobal);
 
                 // 认领国状态：遍历王国找到写有 rb_nat_kingdom 键的数据
                 var snapshot = GameHelpers.KingdomSnapshot();

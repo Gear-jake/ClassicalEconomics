@@ -378,6 +378,8 @@ namespace EconomyMod.UI
         private void BuildFinancePage()
         {
             int year = SafeYear();
+            // 待决事件区（S3-2）：有挂起抉择事件时置顶显示，无则零占位
+            if (DecisionEvents.PendingCount > 0) BuildPendingEventsRow();
             AddLine(UIHelpers.Lf("cabinet_nation", NationEngine.NationName), UIStyles.Gold, 14f);
             AddLine(UIHelpers.Lf("cabinet_treasury", NationEngine.FormatGold(NationEngine.Treasury)),
                 UIStyles.Gold, 14f);
@@ -699,6 +701,24 @@ namespace EconomyMod.UI
                 CurLines.Add(btn.gameObject);
                 shown++;
             }
+        }
+
+        /// <summary>待决事件行（S3-2）：显示挂起数与最早一件的剩余年，点击打开抉择小窗。</summary>
+        private void BuildPendingEventsRow()
+        {
+            var first = DecisionEvents.FirstPending;
+            int left = first != null ? System.Math.Max(0, first.Def.timeoutYears - first.ElapsedYears) : 0;
+            var row = NewRow(2, 28f);
+            var txt = UIHelpers.CreateText(
+                UIHelpers.Lf("cabinet_pending_row", DecisionEvents.PendingCount, left),
+                row.transform, Fs(12f), UIStyles.Warning, _gameFont, Fs(24f));
+            var le = txt.GetComponent<LayoutElement>();
+            if (le == null) le = txt.AddComponent<LayoutElement>();
+            le.flexibleWidth = 1f;
+            AddRowButton(row, UIHelpers.L("cabinet_pending_open"), BtnGood, () =>
+            {
+                UI.EventChoiceWindow.Instance?.ShowPending();
+            }, 90f);
         }
 
         private void BuildPolicyRow(NationEngine.PolicyKind kind, int year)

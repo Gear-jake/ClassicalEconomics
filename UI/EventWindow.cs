@@ -1,22 +1,23 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using EconomyMod.Services;
 
 namespace EconomyMod.UI
 {
     /// <summary>
-    /// 经济事件流悬浮窗：独立于经济概览窗口的非模态窗口。
-    /// 与富豪榜同款交互——标题栏拖拽、四边/四角缩放、右上角 × 关闭、可滚动内容。
-    /// 展示（v0.8.3 双区块 + 统计行）：
-    ///   1) 关键类型统计行（革命×N·起义×N·泡沫×N…仅发生过才显示，历史累计次数）；
-    ///   2) 重大事件区块（史书级，容量 100 防覆盖，倒序最新在上）；
-    ///   3) 普通事件区块（最近 60 条，倒序最新在上）。
-    /// 由 EconomyUI 的"事件"工具按钮切换显隐，周期刷新时同步刷新。
+    /// 经济事件流悬浮窗（v1.4.0 重制）：单列时间线 + 过滤 chips + 按年折叠。
+    /// - 过滤：全部 / 抉择 / 国家·战争 / 经济·民生（family 归类既有事件类型）；
+    /// - 折叠：按游戏年分组，默认展开最近 3 年，更早年份按年收起、点击展开（再点收起）；
+    /// - 性能（S4-1）：隐藏时零调用；打开时渲染一次；此后仅 每个游戏年（OnYearBoundary，快照尾调用）
+    ///   或 用户主动操作（切过滤/折叠）重建——RefreshOverview 不再触发事件窗重建。
     /// </summary>
     public class EventWindow : FloatingWindow
     {
         private static EventWindow _instance;
         private int _renderedVersion = int.MinValue;
+        private int _filter;                       // 0=全部 1=抉择 2=国家·战争 3=经济·民生
+        private readonly HashSet<int> _expandedYears = new HashSet<int>();
 
         private const float PanelWidth = UIStyles.ListWidth;
         private const float PanelHeight = UIStyles.ListHeight;
@@ -46,7 +47,13 @@ namespace EconomyMod.UI
             _instance = CreateWindow<EventWindow>("EconomyEvents");
         }
 
-        /// <summary>重建内容（打开或周期刷新时调用）。</summary>
+        /// <summary>年度边界（快照尾调用）：打开状态下每年重建一次。</summary>
+        public void OnYearBoundary()
+        {
+            if (_visible) { InvalidateContent(); RefreshNow(); }
+        }
+
+        /// <summary>重建内容（打开/年度边界/用户操作时调用；版本无变化时跳过）。</summary>
         public override void RefreshNow()
         {
             int version = EventStreamService.Version;
@@ -70,7 +77,39 @@ namespace EconomyMod.UI
         {
             base.OnWorldUnavailable();
             InvalidateContent();
+            _expandedYears.Clear();
         }
+
+        private static void Rebuild()
+        {
+            _instance.InvalidateContent();
+            _instance.RefreshNow();
+        }
+
+        // ===== family 过滤（0=全部 1=抉择 2=国家·战争 3=经济·民生）=====
+
+        private static int FamilyOf(string typeKey)
+        {
+            switch (typeKey)
+            {
+                case EventStreamService.TypeDecision:
+                    return 1;
+                case EventStreamService.TypeUnrest: case EventStreamService.TypeIncite:
+                case EventStreamService.TypeSuppress: case EventStreamService.TypePlunder:
+                case EventStreamService.TypeRevolution: case EventStreamService.TypeUprising:
+                case EventStreamService.TypeUnrestPeace: case EventStreamService.TypeUnrestResolved:
+                case EventStreamService.TypePolicyFail: case EventStreamService.TypeKingInherit:
+                case EventStreamService.TypeLawReform: case EventStreamService.TypeNationClaim:
+                case EventStreamService.TypeNationPolicy: case EventStreamService.TypeNationDiplomacy:
+                    return 2;
+                default: // 建造/军械/批发/时代/崩溃/政策/灾害/银行/泡沫/救济/庆典/建筑
+                    return 3;
+            }
+        }
+
+        private static readonly string[] FilterKeys = { "events_filter_all", "events_filter_decision", "events_filter_politics", "events_filter_economy" };
+        private static readonly Color ChipOn = new Color(0.25f, 0.42f, 0.3f, 0.95f);
+        private static readonly Color ChipOff = new Color(0.28f, 0.29f, 0.34f, 0.9f);
 
         private void BuildList()
         {
@@ -80,49 +119,94 @@ namespace EconomyMod.UI
 
             // 副标题：当前年份 + 事件总数
             AddLine(UIHelpers.Lf("event_subtitle", year, total), SubColor, 12f);
+
+            // 过滤 chips（一行四个，均分）
+            var chipRow = new GameObject("FilterChips", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            chipRow.transform.SetParent(_content.transform, false);
+            var chipLe = chipRow.AddComponent<LayoutElement>();
+            chipLe.preferredHeight = 26f;
+            chipLe.flexibleWidth = 1f;
+            var hlg = chipRow.GetComponent<HorizontalLayoutGroup>();
+            hlg.spacing = 4;
+            hlg.childForceExpandWidth = true;
+            hlg.childControlWidth = true;
+            hlg.childControlHeight = true;
+            _lines.Add(chipRow);
+            for (int f = 0; f < FilterKeys.Length; f++)
+            {
+                int filter = f;
+                var chip = UIHelpers.CreateButton(UIHelpers.L(FilterKeys[f]), chipRow.transform, -1, 26,
+                    _gameFont, _filter == f ? ChipOn : ChipOff, 11f);
+                chip.onClick.AddListener(() =>
+                {
+                    if (_filter == filter) return;
+                    _filter = filter;
+                    Rebuild();
+                });
+            }
             AddDivider(DividerColor);
 
-            if (total == 0)
+            // 合并双缓冲 → 过滤 → 按年降序
+            var all = new List<EventStreamService.EventEntry>(EventStreamService.MajorCount + EventStreamService.Count);
+            var major = EventStreamService.GetMajorRecent(EventStreamService.MajorCapacity);
+            for (int i = 0; i < major.Count; i++) all.Add(major[i]);
+            var minor = EventStreamService.GetMinorRecent(EventStreamService.Capacity);
+            for (int i = 0; i < minor.Count; i++) all.Add(minor[i]);
+            if (_filter != 0)
+            {
+                for (int i = all.Count - 1; i >= 0; i--)
+                    if (FamilyOf(all[i].TypeKey) != _filter) all.RemoveAt(i);
+            }
+            if (all.Count == 0)
             {
                 AddLine(UIHelpers.L("events_none"), new Color(0.7f, 0.7f, 0.7f), 12f);
                 return;
             }
+            all.Sort((a, b) => b.GameYear.CompareTo(a.GameYear));
 
-            // 关键类型统计行：历史累计次数，仅显示发生过的事件（革命/起义/泡沫/灾害/银行/崩溃/改革失败/王位/掠夺/时代）
-            if (AddTypeStats() > 0)
+            // 按年折叠：默认展开最近 3 年，更早的收起（点击年份行展开/收起）
+            const int DefaultExpandedYears = 3;
+            int yearCursor = 0;
+            int distinctYears = 0;
+            while (yearCursor < all.Count)
             {
-                AddDivider(DividerColor);
-            }
+                int y = all[yearCursor].GameYear;
+                int end = yearCursor;
+                while (end < all.Count && all[end].GameYear == y) end++;
+                int count = end - yearCursor;
+                bool expanded = distinctYears < DefaultExpandedYears || _expandedYears.Contains(y);
+                distinctYears++;
 
-            // 重大事件区块（史书级，容量 100 防覆盖，倒序最新在上）
-            if (EventStreamService.MajorCount > 0)
-            {
-                AddLine(UIHelpers.L("events_major"), HeaderColor, 13f);
-                var major = EventStreamService.GetMajorRecent(EventStreamService.MajorCapacity);
-                for (int i = major.Count - 1; i >= 0; i--)
+                if (!expanded)
                 {
-                    var e = major[i];
-                    AddEventRow(e);
+                    var fold = UIHelpers.CreateButton(
+                        UIHelpers.Lf("events_fold_year", y, count),
+                        _content.transform, -1, 24, _gameFont, new Color(0.28f, 0.29f, 0.34f, 0.7f), 11f);
+                    fold.onClick.AddListener(() =>
+                    {
+                        if (!_expandedYears.Add(y)) _expandedYears.Remove(y);
+                        Rebuild();
+                    });
+                    var foldLe = fold.gameObject.AddComponent<LayoutElement>();
+                    foldLe.flexibleWidth = 1f;
+                    _lines.Add(fold.gameObject);
+                    yearCursor = end;
+                    continue;
                 }
-                AddDivider(DividerColor);
-            }
 
-            // 普通事件区块（最近 60 条，倒序最新在上）
-            if (EventStreamService.Count > 0)
-            {
-                AddLine(UIHelpers.L("events_recent"), HeaderColor, 13f);
-                var minor = EventStreamService.GetMinorRecent(EventStreamService.Capacity);
-                for (int i = minor.Count - 1; i >= 0; i--)
-                {
-                    var e = minor[i];
-                    AddEventRow(e);
-                }
+                AddLine(UIHelpers.Lf("events_year_hdr", y), HeaderColor, 12f);
+                for (int i = yearCursor; i < end; i++)
+                    AddEventRow(all[i]);
+                AddDivider(DividerColor);
+                yearCursor = end;
             }
         }
 
         private void AddEventRow(EventStreamService.EventEntry e)
         {
-            string desc = EventDesc(e);
+            string desc = string.IsNullOrEmpty(e.Detail)
+                ? EventDesc(e)
+                : UIHelpers.L(e.Detail); // 抉择事件：Detail=结果键（含选项后果文案）
             string kingdomPart = string.IsNullOrEmpty(e.KingdomName) ? "" : " · " + e.KingdomName;
             AddLine(UIHelpers.Lf("events_row", e.GameYear, kingdomPart, desc),
                 EventColor(e.TypeKey), 12f);
@@ -209,6 +293,8 @@ namespace EconomyMod.UI
                 case EventStreamService.TypeNationDiplomacy: return UIHelpers.Lf("ev_desc_nation_diplomacy", e.KingdomName, e.Value);
                 case EventStreamService.TypeLawReform:
                     return e.Value >= 2 ? UIHelpers.L("ev_desc_law_reform_major") : UIHelpers.Lf("ev_desc_law_reform", e.KingdomName);
+                case EventStreamService.TypeDecision:
+                    return UIHelpers.Lf("ev_desc_decision", e.Value);
                 default:                                return UIHelpers.L(e.TypeKey);
             }
         }
@@ -238,6 +324,7 @@ namespace EconomyMod.UI
                 case EventStreamService.TypeDisaster:     return UIStyles.EvDisaster;
                 case EventStreamService.TypeBanking:      return UIStyles.EvBanking;
                 case EventStreamService.TypeBubbleBurst:  return UIStyles.EvBubble;
+                case EventStreamService.TypeDecision:     return UIStyles.Gold;
                 default:                                return TextColor;
             }
         }

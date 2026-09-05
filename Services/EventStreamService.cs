@@ -14,8 +14,8 @@ namespace EconomyMod.Services
     /// </summary>
     public static class EventStreamService
     {
-        /// <summary>普通事件容量（高频消费类）。</summary>
-        public const int Capacity = 60;
+        /// <summary>普通事件容量（高频消费类）。v1.4.0：60→90，AI 抉择事件入史书级后仍扩大普通缓冲防冲刷。</summary>
+        public const int Capacity = 90;
 
         /// <summary>重大事件容量（史书级，防覆盖）。</summary>
         public const int MajorCapacity = 100;
@@ -49,6 +49,7 @@ namespace EconomyMod.Services
         public const string TypeNationBuild    = "ev_nation_build";    // 中央银行家：兴建建筑
         public const string TypeNationDiplomacy = "ev_nation_diplomacy"; // 中央银行家：外交动作（1宣战2求和3结盟4赠礼5协定6解约）
         public const string TypeLawReform = "ev_law_reform"; // 法典：AI 国家变法（1一般 2重大互斥）
+        public const string TypeDecision = "ev_decision";   // 抉择事件（玩家选择/AI 决策结果，值=选项序号+1）
 
         /// <summary>
         /// 是否为重大事件（史书级）：低频高价值，走独立环形缓冲防被高频事件覆盖。
@@ -69,6 +70,7 @@ namespace EconomyMod.Services
                 case TypePolicyFail:
                 case TypeKingInherit:
                 case TypePlunder:
+                case TypeDecision:
                     return true;
                 default:
                     return false;
@@ -81,6 +83,7 @@ namespace EconomyMod.Services
             public string TypeKey;
             public string KingdomName; // 可为空（如全球性饥荒）
             public long Value;
+            public string Detail;      // 可选：渲染用本地化键（抉择事件结果键）；空 = 走 TypeKey 常规描述
         }
 
         // 普通事件环形数组缓冲：_head 指向下一个写入位置，_count 为当前条数（≤Capacity）
@@ -107,7 +110,7 @@ namespace EconomyMod.Services
         public static int Version { get; private set; }
 
         /// <summary>记录一条事件：按类型分流到重大/普通环形缓冲。</summary>
-        public static void Record(string typeKey, string kingdomName, long value)
+        public static void Record(string typeKey, string kingdomName, long value, string detail = null)
         {
             if (!IsKnownType(typeKey)) return;
 
@@ -119,6 +122,7 @@ namespace EconomyMod.Services
             entry.TypeKey = typeKey;
             entry.KingdomName = string.IsNullOrEmpty(kingdomName) ? "" : kingdomName;
             entry.Value = value;
+            entry.Detail = detail;
             // 环形写入：满环直接复用被覆盖槽位的对象，稳定期零 EventEntry 分配。
             if (major)
             {
@@ -150,7 +154,7 @@ namespace EconomyMod.Services
                 case TypeBubbleBurst:
                 case TypeNationClaim: case TypeNationPolicy: case TypeNationRelief:
                 case TypeNationFestival: case TypeNationBuild: case TypeNationDiplomacy:
-                case TypeLawReform:
+                case TypeLawReform: case TypeDecision:
                     return true;
                 default:
                     return false;
@@ -265,6 +269,7 @@ namespace EconomyMod.Services
             entry.TypeKey = null;
             entry.KingdomName = null;
             entry.Value = 0L;
+            entry.Detail = null;
             if (_entryPool.Count < Capacity + MajorCapacity) _entryPool.Add(entry);
         }
     }

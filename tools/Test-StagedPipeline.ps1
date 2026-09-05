@@ -40,8 +40,8 @@ function Test-Anchor([string]$haystack, [string]$pattern, [string]$label) {
 
 # 1) AnnualStage enum declares the exact original closeout order (EraEvaluate before EraTick,
 #    Snapshot strictly last before Done; mirrors the pre-split FinishCycle).
-$stageOrder = 'enum AnnualStage\s*\{[^}]*WealthTax,\s*CycleModulator,\s*Unrest,\s*Policy,\s*KingdomMonitor,\s*SocialCrisis,\s*Population,\s*Spending,\s*EraEvaluate,\s*EraTick,\s*Disaster,\s*Banking,\s*Nation,\s*Snapshot,\s*Done'
-Test-Anchor $pipeline $stageOrder 'AnnualStage enum must declare the closeout order (WealthTax..Banking, Nation, Snapshot, Done)'
+$stageOrder = 'enum AnnualStage\s*\{[^}]*WealthTax,\s*CycleModulator,\s*Unrest,\s*Policy,\s*KingdomMonitor,\s*SocialCrisis,\s*Population,\s*Spending,\s*EraEvaluate,\s*EraTick,\s*Disaster,\s*Banking,\s*Nation,\s*Events,\s*Snapshot,\s*Done'
+Test-Anchor $pipeline $stageOrder 'AnnualStage enum must declare the closeout order (WealthTax..Nation, Events, Snapshot, Done)'
 
 # 2) frame budget: derived from UnrestConfig.FrameBudgetMs and enforced per frame; Snapshot exempt.
 Test-Anchor $pipeline 'int budgetMs = cfg\.FrameBudgetMs' 'Tick must derive the frame budget from UnrestConfig.FrameBudgetMs'

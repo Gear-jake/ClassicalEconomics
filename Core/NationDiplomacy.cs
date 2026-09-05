@@ -275,6 +275,23 @@ namespace EconomyMod.Core
         /// <summary>取消协定（免费）。</summary>
 
 
+        /// <summary>对除本国外全部王国增减外交好感（抉择事件通道；clamp 到好感上限内）。</summary>
+        public static void AddGoodwillAll(int delta)
+        {
+            if (delta == 0) return;
+            var kingdoms = World.world != null ? World.world.kingdoms : null;
+            if (kingdoms == null) return;
+            long mine = NationEngine.NationKingdomId;
+            foreach (var k in kingdoms)
+            {
+                if (k == null || k.data == null || k.data.id == 0 || k.data.id == mine) continue;
+                int v = GetGoodwill(k.data.id) + delta;
+                if (v > GoodwillCap) v = GoodwillCap;
+                if (v < -GoodwillCap) v = -GoodwillCap;
+                _goodwill[k.data.id] = v;
+            }
+        }
+
         /// <summary>年度管线：双边经济协定年费（金库 → 消耗）+ 协约国纳贡收入（对方居民 → 本国金库）。</summary>
         public static void RunAnnual(int year)
         {
