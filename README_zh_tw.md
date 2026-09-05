@@ -40,7 +40,7 @@
 
 ## 連結
 
-- 更新總覽（0.13.0 → 1.2.1fix）：docs/更新總覽_0.13.0_至今_簡體中文.md
+- 更新總覽（0.13.0 → 1.3.0）：docs/更新總覽_0.13.0_至今_簡體中文.md
 - [GitHub Releases](https://github.com/Gear-jake/ClassicalEconomics/releases)
 
 ---

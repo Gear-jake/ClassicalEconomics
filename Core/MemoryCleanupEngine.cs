@@ -132,10 +132,12 @@ namespace EconomyMod.Core
             return n;
         }
 
-        /// <summary>DamageTracker 的 3 个字典。</summary>
+        /// <summary>InheritanceEngine 与 DamageTracker 的字典。</summary>
         private static int CompactCollectorAndTrackerDictionaries()
         {
             int n = 0;
+            n += CompactDict(InheritanceEngine.RecordsForTrim, InheritanceEngine.ReplaceRecordsForTrim);
+            n += CompactDict(InheritanceEngine.AliveMapForTrim, InheritanceEngine.ReplaceAliveMapForTrim);
             n += CompactDict(DamageTracker.DamageForTrim, DamageTracker.ReplaceDamageForTrim);
             n += CompactDict(DamageTracker.PrevHealthForTrim, DamageTracker.ReplacePrevHealthForTrim);
             n += CompactDict(DamageTracker.InactiveScansForTrim, DamageTracker.ReplaceInactiveScansForTrim);

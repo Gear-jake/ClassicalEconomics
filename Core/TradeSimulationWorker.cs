@@ -36,12 +36,8 @@ namespace EconomyMod.Core
             public string Name;
             public int Population;
             public int Capacity;
-            public long Food;
             public int Cities;
             public int Boats;
-            public int Specialty; // BiomeSpecialty（主线程采集阶段读取，后台线程只读，避免后台访问 Unity 对象）
-            public float CityX;   // 首都城市 tile x 坐标（主线程反射读取，后台只读；NaN=未知）
-            public float CityY;   // 首都城市 tile y 坐标
             public LawMods LawMods; // 法典聚合快照（主线程采集时读一次；后台只读该拷贝，杜绝跨线程读写共享字典）
         }
 
@@ -56,12 +52,10 @@ namespace EconomyMod.Core
             public int ActorCount;
             public int Population;
             public int Capacity;
-            public float FoodPerCapita;
             public float Pressure;    // 人口/承载（超载 &gt;1）
             public int Workers;       // 有职业人口
             public float Productivity; // 平均劳动生产率（职业倍率均值）
             public float Production;  // 年产出 = Workers × Productivity × CapitalFactor（生产函数）
-            public int Specialty;     // BiomeSpecialty（主线程采集阶段读取的纯数据）
             public float LocalPrice;  // 区域价格指数（全局 CPI × 本地供需系数，1.0=基准）
         }
 
@@ -129,13 +123,12 @@ namespace EconomyMod.Core
         }
 
         public static void AddKingdom(long id, string name, int population, int capacity,
-            long food, int cities, int boats, int specialty, float cityX, float cityY, LawMods mods = default(LawMods))
+            int cities, int boats, LawMods mods = default(LawMods))
         {
             _collectKingdoms.Add(new KingdomFacts
             {
                 Id = id, Name = name, Population = population, Capacity = capacity,
-                Food = food, Cities = cities, Boats = boats, Specialty = specialty,
-                CityX = cityX, CityY = cityY, LawMods = mods
+                Cities = cities, Boats = boats, LawMods = mods
             });
         }
 
@@ -398,9 +391,7 @@ namespace EconomyMod.Core
                     Name = f.Name,
                     Population = f.Population,
                     Capacity = f.Capacity,
-                    FoodPerCapita = f.Population > 0 ? (float)f.Food / f.Population : 0f,
-                    Pressure = f.Capacity > 0 ? (float)f.Population / f.Capacity : 0f,
-                    Specialty = f.Specialty
+                    Pressure = f.Capacity > 0 ? (float)f.Population / f.Capacity : 0f
                 };
                 if (acc.TryGetValue(f.Id, out var a))
                 {

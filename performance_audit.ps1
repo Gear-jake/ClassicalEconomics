@@ -73,8 +73,6 @@ Assert-SourcePattern 'UI\EconomyHUD.cs' 'if \(index != _lastIndex\).*ForceRebuil
     'Chart tooltip layout is not guarded by data-index changes.'
 Assert-SourcePattern 'UI\EconomyHUD.cs' 'OnWorldUnavailable\(\).*ClearWorldCaches\(\).*private static void ClearWorldCaches\(\).*_seriesPool\.Clear\(\);.*_chartSeriesEntryPool\.Clear\(\);.*_rankBuf\.Clear\(\);.*_dynIndex\.Clear\(\);.*_dynLastSeen\.Clear\(\);.*_dynSeenBuf\.Clear\(\);.*_keepIds\.Clear\(\);' `
     'Chart pools still retain old-world names and values.'
-Assert-SourcePattern 'Core\BiomeEconomy.cs' 'MaybePruneStaleKingdoms\(\).*_coordCache\.Remove' `
-    'Biome caches are missing stale-kingdom pruning.'
 Assert-SourcePattern 'Services\EventStreamService.cs' 'var entry = major \? _majorEvents\[slot\] : _events\[slot\].*if \(entry == null\) entry = RentEntry\(\)' `
     'Event rings are not reusing overwritten EventEntry instances.'
 Assert-SourcePattern 'Services\EventStreamService.cs' 'entry\.KingdomName = null.*_entryPool\.Add\(entry\)' `

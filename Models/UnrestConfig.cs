@@ -197,7 +197,7 @@ namespace EconomyMod.Models
         /// <summary>萧条期违约率：萧条阶段借款人按此比例违约。</summary>
         public float DefaultRateDepression = 0.3f;
 
-        /// <summary>银行危机传染阈值：违约率超过此值时，贸易伙伴也受波及。</summary>
+        /// <summary>银行危机传染阈值：违约率超过此值时，弱国（GDP 低于违约国）也受波及。</summary>
         public float CrisisContagionThreshold = 0.2f;
 
         // ===== 年度操作上限（性能保护：默认与现状同量级，可配置调低限流）=====

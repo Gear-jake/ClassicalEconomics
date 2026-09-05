@@ -74,12 +74,17 @@ namespace EconomyMod.Core
                 try { nation.data.set("rb_nat_treasury", NationEngine._treasury.ToString(CultureInfo.InvariantCulture)); }
                 catch (System.Exception) { }
 
-                // 政策槽（只写实际占用的槽位；读档按键存在性恢复）
-                for (int i = 0; i < NationEngine._slots.Count && i < MaxSlotKeys; i++)
+                // 政策槽：固定写满 MaxSlotKeys 个键——空槽写空串覆盖盘上旧值，
+                // 防止"删除槽位后再存档，读档时旧键复活已删槽位"
+                for (int i = 0; i < MaxSlotKeys; i++)
                 {
-                    var s = NationEngine._slots[i];
-                    string v = string.Format(CultureInfo.InvariantCulture, "{0}:{1}:{2}:{3}",
-                        (int)s.Kind, s.Tier, s.StartYear, s.TotalSpent);
+                    string v = "";
+                    if (i < NationEngine._slots.Count)
+                    {
+                        var s = NationEngine._slots[i];
+                        v = string.Format(CultureInfo.InvariantCulture, "{0}:{1}:{2}:{3}",
+                            (int)s.Kind, s.Tier, s.StartYear, s.TotalSpent);
+                    }
                     try { nation.data.set("rb_nat_slot_" + i, v); }
                     catch (System.Exception) { }
                 }

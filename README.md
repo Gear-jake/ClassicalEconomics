@@ -76,7 +76,7 @@ NML 设置页新增 **性能** 分组，全部键已同步实现于 `default_con
 
 ## 链接
 
-- 更新总览（0.13.0 → 1.2.1fix）：docs/更新总览_0.13.0_至今_简体中文.md
+- 更新总览（0.13.0 → 1.3.0）：docs/更新总览_0.13.0_至今_简体中文.md
 - [GitHub Releases](https://github.com/Gear-jake/ClassicalEconomics/releases)
 
 ---

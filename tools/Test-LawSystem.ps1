@@ -50,7 +50,7 @@ foreach ($case in [regex]::Matches($policyModSection, 'case (Policy[A-Za-z0-9_]+
     $end = $policyModSection.IndexOf('case ', $case.Index + 5)
     if ($end -lt 0) { $end = $policyModSection.Length }
     $body = $policyModSection.Substring($case.Index, $end - $case.Index)
-    Assert ($body -match 'm\.(Productivity|TaxRate|GiniShift|UnrestAccum|TradeFlow|Price|Consumer|DisasterResist|BuildCost|Wage|Military|Happiness|Birth)') "policy $name does not modify any LawMods multiplier"
+    Assert ($body -match 'm\.(Productivity|TaxRate|GiniShift|UnrestAccum|Price|Consumer|DisasterResist|BuildCost|Wage|Military|Happiness|Birth)') "policy $name does not modify any LawMods multiplier"
 }
 
 # 3) 互斥组定义与切换逻辑

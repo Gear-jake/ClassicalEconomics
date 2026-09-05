@@ -267,11 +267,12 @@ namespace EconomyMod.Services
         public static void OnLanguageChanged(string pValue)
         {
             UnrestConfig.Instance.Language = NormalizeLanguage(pValue);
-            // 语言切换后：刷新设置窗口标签 + 四个悬浮窗标题/静态文本 + 重新注入按钮 tooltip（4 语言）
+            // 语言切换后：刷新设置窗口标签 + 悬浮窗/内阁标题与静态文本 + 重新注入按钮 tooltip（4 语言）
             try { RegisterConfigLocale(); } catch (System.Exception) { }
             try { EconomyHUD.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { EventWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { RichListWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
+            try { CabinetWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { EconomyUI.ReapplyTooltips(); } catch (System.Exception) { }
         }
 

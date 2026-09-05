@@ -10,7 +10,7 @@ namespace EconomyMod.Core
     /// 银行信贷与危机传染引擎：
     /// 富人（财富 > 2×人均）自动放贷给同城穷人，年利率 CreditRate。
     /// 萧条期违约率 DefaultRateDepression 飙升，违约导致放贷人（富人）财富损失。
-    /// 违约率超过 CrisisContagionThreshold 时触发银行危机，沿贸易路线传染逆差贸易伙伴。
+    /// 违约率超过 CrisisContagionThreshold 时触发银行危机，向弱国（GDP 低于违约国）传染。
     /// 统计级模拟（不存储个债记录），零内存膨胀。
     /// </summary>
     public static class BankingEngine
@@ -51,7 +51,7 @@ namespace EconomyMod.Core
         /// 2. 信贷规模 = 富人财富 × CreditRate
         /// 3. 违约 = 信贷规模 × 违约率（萧条期 DefaultRateDepression，其他期 2%）
         /// 4. 违约导致富人财富损失
-        /// 5. 违约率 > CrisisContagionThreshold 时，逆差贸易伙伴遭受传染损失
+        /// 5. 违约率 > CrisisContagionThreshold 时，弱国（GDP 低于违约国）遭受传染损失
         /// </summary>
         [Hotfixable]
         public static void Evaluate()

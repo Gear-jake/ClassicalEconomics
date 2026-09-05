@@ -202,10 +202,7 @@ namespace EconomyMod.Core
         }
 
         /// <summary>重置某国（换地图/读档回退）。</summary>
-        public static void ResetNation(long kingdomId)
-        {
-            _states.Remove(kingdomId);
-        }
+
 
         /// <summary>世界重置/换地图全清。</summary>
         public static void ResetAll()
@@ -319,11 +316,7 @@ namespace EconomyMod.Core
             return true;
         }
 
-        public static void SetStyle(Kingdom kingdom, int style)
-        {
-            if (kingdom == null || kingdom.data == null) return;
-            Get(kingdom.data.id).Style = System.Math.Max(0, System.Math.Min(StyleCount - 1, style));
-        }
+
 
         /// <summary>AI 国家变法费用（实现集中于 LawAi.CollectAIFunds，避免重复）。</summary>
         private static bool CollectAIFunds(Kingdom kingdom, long cost)

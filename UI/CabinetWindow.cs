@@ -935,7 +935,7 @@ namespace EconomyMod.UI
         /// <summary>向当前页添加一行文本。</summary>
         private void AddLine(string text, Color color, float size)
         {
-            var go = UIHelpers.CreateText(text, CurPage.transform, Fs(size), color, _gameFont, 22f);
+            var go = UIHelpers.CreateText(text, CurPage.transform, Fs(size), color, _gameFont, Fs(22f));
             CurLines.Add(go);
         }
 

@@ -37,7 +37,7 @@ namespace EconomyMod
         {
             Debug.Log("[ClassicalEconomics] === 开始热重载 ===");
             // 重置全部经济引擎状态（新代码从干净状态运行）
-            ResetAllEngines(full: false);
+            ResetAllEngines();
             // 重新同步配置（可能修改了默认值）
             Services.EconomyConfigCallbacks.SyncFromModConfig();
             // 刷新 UI
@@ -45,11 +45,8 @@ namespace EconomyMod
             Debug.Log("[ClassicalEconomics] === 热重载完成 ===");
         }
 
-        /// <summary>
-        /// 重置全部经济引擎状态（热重载 / 新地图共用序列）。
-        /// full=true 时额外执行新地图专属清理：清 biome 缓存。
-        /// </summary>
-        private static void ResetAllEngines(bool full)
+        /// <summary>重置全部经济引擎状态（热重载 / 新地图共用序列）。</summary>
+        private static void ResetAllEngines()
         {
             TradeSimulationWorker.Reset();
             EconomyEngine.ResetCycle();
@@ -68,10 +65,6 @@ namespace EconomyMod
             LawEngine.ResetAll(); // 法典：清空各国法律/国策/个性（新地图重新演化）
             HistoryService.ClearHistory();
             EventStreamService.Clear();
-            if (full)
-            {
-BiomeEconomy.ClearCache();
-            }
         }
 
         /// <summary>
@@ -461,15 +454,13 @@ if (World.world == null)
                     if (currentYear <= 1)
                     {
                         // 新地图/新游戏：年份归零，全部状态重置
-                        ResetAllEngines(full: true);
+                        ResetAllEngines();
                         Debug.Log("[ClassicalEconomics] 检测到新地图/新游戏，历史已清空，周期从 #1 重新开始");
                     }
                     else
                     {
                         // 读档：保留历史快照/周期/时代/动荡状态，仅重建失效引用并继续运行
                         InheritanceEngine.Reset();
-                        // 读档后的王国 ID 可能属于另一存档，biome/坐标缓存按 ID 缓存必须失效
-                        BiomeEconomy.ClearCache();
                         Debug.Log($"[ClassicalEconomics] 检测到读档（年份 {currentYear}），保留历史与周期状态，继续运行");
                     }
                 }

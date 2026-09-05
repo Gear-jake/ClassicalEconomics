@@ -9,7 +9,7 @@ namespace EconomyMod.Core
     /// 玩家认领一个王国作为"本国"，所有动作经金库真实金币支付（全程守恒：城市仓库 → 金库 → 国民/消耗），
     /// 本国仍照常受 AI 引擎治理，玩家动作是叠加层不是接管。
     /// 年度管线在 Banking 之后、Snapshot 之前执行 RunAnnual（既有阶段相对顺序不变）。
-    /// 金库只在年度阶段变更；后台贸易计算仅读取基础类型乘数（与配置同模式，无并发写）。
+    /// 金库只在年度阶段与玩家操作时变更（主线程）；后台统计不接触任何 NationEngine 状态。
     /// </summary>
     public static class NationEngine
     {
@@ -199,21 +199,8 @@ namespace EconomyMod.Core
         }
 
         /// <summary>只读槽位快照（UI 用；返回内部引用列表，仅主线程 UI 调用）。</summary>
-        public static IReadOnlyList<PolicySlotView> GetSlotViews()
-        {
-            var list = new List<PolicySlotView>(_slots.Count);
-            for (int i = 0; i < _slots.Count; i++)
-                list.Add(new PolicySlotView { Kind = _slots[i].Kind, Tier = _slots[i].Tier, StartYear = _slots[i].StartYear, TotalSpent = _slots[i].TotalSpent });
-            return list;
-        }
 
-        public class PolicySlotView
-        {
-            public PolicyKind Kind;
-            public int Tier;
-            public int StartYear;
-            public long TotalSpent;
-        }
+
 
         /// <summary>启用（或改档）持续政策：占一个槽位；改档按改制约收费（一档年费）。</summary>
         public static bool EnablePolicy(PolicyKind kind, int tier, int currentYear)

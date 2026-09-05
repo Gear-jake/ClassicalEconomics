@@ -125,7 +125,7 @@ TopRich.Clear();
                 }
             }
 
-            // 王国事实（人口/承载/食物/城市/船只/首都坐标）→ 纯数据，供后台人口/贸易模拟
+            // 王国事实（人口/承载/食物/城市/船只/首都坐标）→ 纯数据，供后台统计（人口/生产函数/价格）
             var kingdoms = World.world != null ? World.world.kingdoms : null;
             if (kingdoms != null)
             {
@@ -133,16 +133,12 @@ TopRich.Clear();
                 {
                     if (k == null || k.data == null) continue;
                     int pop = 0, cap = 0, cities = 0, boats = 0;
-                    long food = 0L;
-                    float cx = float.NaN, cy = float.NaN; // 首都坐标（反射读取失败保持 NaN 哨兵，后台据此跳过距离计算）
                     try { pop = k.getPopulationTotal(); } catch (System.Exception) { }
                     try { cap = k.getPopulationTotalPossible(); } catch (System.Exception) { }
-                    try { food = k.countTotalFood(); } catch (System.Exception) { }
                     try { foreach (var c in k.getCities()) cities++; } catch (System.Exception) { }
                     try { boats = k.countBoats(); } catch (System.Exception) { }
-                    try { BiomeEconomy.TryGetCapitalCoords(k.data.id, out cx, out cy); } catch (System.Exception) { }
                     TradeSimulationWorker.AddKingdom(k.data.id, GameHelpers.SafeKingdomName(k),
-                        pop, cap, food, cities, boats, (int)BiomeEconomy.GetSpecialty(k.data.id), cx, cy,
+                        pop, cap, cities, boats,
                         LawEngine.GetMods(k.data.id)); // 法典快照：主线程读一次，后台零并发访问
                 }
             }

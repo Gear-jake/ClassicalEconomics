@@ -43,9 +43,6 @@ namespace EconomyMod.Core
         /// <summary>收尾是否在途（还有阶段未完成）。</summary>
         public static bool IsSettling => _cursor != AnnualStage.Done;
 
-        /// <summary>当前阶段（供测试/日志断言）。</summary>
-        public static AnnualStage CurrentStage => _cursor;
-
         /// <summary>
         /// 启动年度收尾：后台统计已消费（TryConsume 成功），从富豪税阶段开始分帧推进。
         /// </summary>

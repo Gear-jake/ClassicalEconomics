@@ -241,7 +241,7 @@ namespace EconomyMod.Core
             return true;
         }
 
-        // ===== 双边贸易协定 =====
+        // ===== 双边经济协定 =====
 
         /// <summary>协定价档（-1 = 未签）。</summary>
         public static int PactTier(long kingdomId)
@@ -273,18 +273,7 @@ namespace EconomyMod.Core
         }
 
         /// <summary>取消协定（免费）。</summary>
-        public static bool CancelPact(Kingdom target, out string msgKey)
-        {
-            msgKey = "toast_dip_pact_cancel";
-            if (target == null || target.data == null) return false;
-            if (_pacts.Remove(target.data.id))
-            {
-                EventStreamService.Record(EventStreamService.TypeNationDiplomacy, target.data.name, 6);
-                return true;
-            }
-            msgKey = "toast_dip_failed";
-            return false;
-        }
+
 
         /// <summary>年度管线：双边经济协定年费（金库 → 消耗）+ 协约国纳贡收入（对方居民 → 本国金库）。</summary>
         public static void RunAnnual(int year)

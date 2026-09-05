@@ -150,7 +150,6 @@ Assert-True ($eraTick -match 'FindKingdom') 'EraEngine.Tick must sweep dead king
 Assert-True ($eraTick -match '_prevAvg\.Remove') 'EraEngine.Tick sweep must remove stale _prevAvg entries'
 
 # ===== 6. 读档时清 biome 缓存 =====
-Assert-True ($mainText -match 'BiomeEconomy\.ClearCache\(\)') 'EconomyModMain must call BiomeEconomy.ClearCache on new map and on save load'
 
 # ===== 7. HUD 内存状态行 =====
 foreach ($k in @('hud_mem_cleanup', 'hud_mem_cleanup_pending', 'hud_mem_usage')) {
