@@ -1,5 +1,5 @@
 [h1]Classical Economics[/h1]
-[b]A macroeconomics & nation-governance simulation mod for WorldBox ｜ Current version 1.4.0[/b]
+[b]A macroeconomics & nation-governance simulation mod for WorldBox ｜ Current version 1.4.1[/b]
 [b]Requires:[/b] WorldBox 0.51.2+ and NeoModLoader (NML)
 
 Adds a full macroeconomic and **national-governance** simulation to WorldBox. Every race that can found a kingdom (Fire/Ice Demons, aliens...) joins the economy; play one nation yourself or watch the AI kingdoms govern themselves.

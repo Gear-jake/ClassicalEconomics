@@ -1,6 +1,6 @@
 # Classical Economics
 
-> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.4.0* ｜ Requires NeoModLoader (NML)
+> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.4.1* ｜ Requires NeoModLoader (NML)
 
 ## Feature Overview
 

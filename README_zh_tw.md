@@ -1,6 +1,6 @@
 # 古典經濟學 Classical Economics
 
-> WorldBox 宏觀經濟 + 國家治理模擬模組 ｜ 目前版本 *1.4.0* ｜ 需要 NeoModLoader (NML)
+> WorldBox 宏觀經濟 + 國家治理模擬模組 ｜ 目前版本 *1.4.1* ｜ 需要 NeoModLoader (NML)
 
 ## 功能總覽
 
