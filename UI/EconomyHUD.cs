@@ -226,9 +226,9 @@ namespace EconomyMod.UI
         private void AddLine(string text, bool isHeader = false, Color? color = null)
         {
             var go = UIHelpers.CreateText(text, _content.transform,
-                isHeader ? HeaderSize : TextSize,
+                Fs(isHeader ? HeaderSize : TextSize),
                 color ?? (isHeader ? HeaderColor : TextColor),
-                _gameFont, isHeader ? LineHeight + 4 : LineHeight,
+                _gameFont, Fs(isHeader ? LineHeight + 4 : LineHeight),
                 "Text_" + _lines.Count);
             if (isHeader) go.GetComponent<Text>().fontStyle = FontStyle.Bold;
             _lines.Add(go);
@@ -355,7 +355,7 @@ namespace EconomyMod.UI
                 float frac = gi / 4f;
                 float val = maxVal * frac;
                 float yPos = chartBottom + uiMargin + plotH * frac;
-                var tGo = UIHelpers.CreateText(val.ToString("F0"), box.transform, 10f, scaleCol, _gameFont, 13f);
+                var tGo = UIHelpers.CreateText(val.ToString("F0"), box.transform, Fs(10f), scaleCol, _gameFont, Fs(13f));
                 var tRt = tGo.GetComponent<RectTransform>();
                 tRt.anchorMin = Vector2.zero; tRt.anchorMax = Vector2.zero;
                 tRt.pivot = new Vector2(1f, 0.5f);
@@ -376,7 +376,7 @@ namespace EconomyMod.UI
                 // mesh 内折线 x：x0 + plotW*frac（x0=yAxisW+margin, plotW=chartW-yAxisW-margin, margin=4）
                 float xPos = yAxisW + (chartW - yAxisW - uiMargin) * frac;
                 float pivotX = gi == 0 ? 0f : (gi == 4 ? 1f : 0.5f);
-                var xGo = UIHelpers.CreateText(UIHelpers.Lf("chart_year", snaps[idx].GameYear), box.transform, 9f, xCol, _gameFont, 14f);
+                var xGo = UIHelpers.CreateText(UIHelpers.Lf("chart_year", snaps[idx].GameYear), box.transform, Fs(9f), xCol, _gameFont, Fs(14f));
                 var xRt = xGo.GetComponent<RectTransform>();
                 xRt.anchorMin = Vector2.zero; xRt.anchorMax = Vector2.zero;
                 xRt.pivot = new Vector2(pivotX, 0f);
@@ -463,7 +463,7 @@ namespace EconomyMod.UI
                 float frac = gi / 4f;
                 float val = maxVal * frac;
                 float yPos = chartBottom + uiMargin + plotH * frac;
-                var tGo = UIHelpers.CreateText(val.ToString("F2"), box.transform, 10f, scaleCol, _gameFont, 13f);
+                var tGo = UIHelpers.CreateText(val.ToString("F2"), box.transform, Fs(10f), scaleCol, _gameFont, Fs(13f));
                 var tRt = tGo.GetComponent<RectTransform>();
                 tRt.anchorMin = Vector2.zero; tRt.anchorMax = Vector2.zero;
                 tRt.pivot = new Vector2(1f, 0.5f);
@@ -544,7 +544,7 @@ namespace EconomyMod.UI
             var tipFit = tipGo.GetComponent<ContentSizeFitter>();
             tipFit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             tipFit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            var tipText = UIHelpers.CreateText("", tipGo.transform, 11f, Color.white, _gameFont, 17f);
+            var tipText = UIHelpers.CreateText("", tipGo.transform, Fs(11f), Color.white, _gameFont, Fs(17f));
             var tipTextRt = tipText.GetComponent<RectTransform>();
             tipTextRt.anchorMin = Vector2.zero; tipTextRt.anchorMax = Vector2.one;
             tipTextRt.offsetMin = new Vector2(8, 5); tipTextRt.offsetMax = new Vector2(-8, -5);
@@ -774,7 +774,7 @@ namespace EconomyMod.UI
                 sw.GetComponent<LayoutElement>().preferredHeight = 6f;
 
                 // 名称（固定宽，超出省略号）
-                var nm = UIHelpers.CreateText(s.Name, row.transform, 10f, TextColor, _gameFont, 18f);
+                var nm = UIHelpers.CreateText(s.Name, row.transform, Fs(10f), TextColor, _gameFont, Fs(18f));
                 var nmT = nm.GetComponent<Text>();
                 nmT.alignment = TextAnchor.MiddleLeft;
                 nmT.horizontalOverflow = HorizontalWrapMode.Overflow;
@@ -792,7 +792,7 @@ namespace EconomyMod.UI
                 bool inRank = !float.IsNaN(last);
                 string valueStr = inRank ? last.ToString("F0")
                     : (s.Values.Count > 0 ? UIHelpers.L("chart_dropped") : "");
-                var vGo = UIHelpers.CreateText(valueStr, row.transform, 10f,
+                var vGo = UIHelpers.CreateText(valueStr, row.transform, Fs(10f),
                     inRank ? new Color(0.95f, 0.85f, 0.5f) : new Color(0.55f, 0.55f, 0.6f),
                     _gameFont, 18f);
                 var vT = vGo.GetComponent<Text>();
@@ -846,7 +846,7 @@ namespace EconomyMod.UI
                 (UIHelpers.L("col_gini"), EconomyEngine.GiniCoefficient.ToString("F3"), GiniColor(EconomyEngine.GiniCoefficient)),
                 (UIHelpers.L("stat_bubble"), EconomyCycleModulator.BubbleValue.ToString("F0"), UIStyles.Warning)
             };
-            _lines.Add(UIComponents.CreateStatGrid(_content.transform, stats, _gameFont, contentW));
+            _lines.Add(UIComponents.CreateStatGrid(_content.transform, stats, _gameFont, contentW, Fs(1f)));
 
             // 内存状态行（清理开启时显示）：把"模组+游戏共享的托管堆"与"游戏本体 Unity 原生内存"
             // 分项展示，用于判断内存增长来源；上次清理信息来自 MemoryCleanupEngine
@@ -887,7 +887,7 @@ namespace EconomyMod.UI
                 _lines.Add(UIComponents.CreateKingdomRow(_content.transform, rank, k.KingdomName,
                     k.GDP.ToString("F0"), k.AvgWealth.ToString("F1"), k.GiniCoefficient.ToString("F2"),
                     k.LocalPrice.ToString("F2"),
-                    _gameFont, contentW, rank == 1));
+                    _gameFont, contentW, rank == 1, Fs(1f)));
                 rank++;
             }
 

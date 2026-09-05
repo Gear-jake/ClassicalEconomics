@@ -1,123 +1,341 @@
 {
   "events": [
     {
-      "id": "treasury_gap", "family": "finance", "minYear": 3, "timeoutYears": 2, "fallback": 1, "cooldownYears": 12,
-      "conditions": { "treasuryRatioMax": 0.02 },
+      "id": "treasury_gap",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 12,
+      "conditions": {
+        "treasuryRatioMax": 0.02
+      },
       "options": [
-        { "key": "opt1", "residentsTaxRatio": 0.03 },
-        { "key": "opt2", "unrest": true }
+        {
+          "key": "opt1",
+          "residentsTaxRatio": 0.03
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
       ]
     },
     {
-      "id": "tax_corruption", "family": "finance", "minYear": 2, "timeoutYears": 2, "fallback": 1, "cooldownYears": 10,
-      "conditions": { "giniMax": 0.7 },
+      "id": "tax_corruption",
+      "family": "finance",
+      "minYear": 2,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 10,
+      "conditions": {
+        "giniMax": 0.7
+      },
       "options": [
-        { "key": "opt1", "treasuryGdpRatio": -0.005, "goodwillAll": 2 },
-        { "key": "opt2", "treasuryGdpRatio": 0.008, "unrest": true }
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005,
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": 0.008,
+          "unrest": true
+        }
       ]
     },
     {
-      "id": "rich_petition", "family": "finance", "minYear": 4, "timeoutYears": 3, "fallback": 1, "cooldownYears": 14,
-      "conditions": { "giniMin": 0.45 },
+      "id": "rich_petition",
+      "family": "finance",
+      "minYear": 4,
+      "timeoutYears": 3,
+      "fallback": 1,
+      "cooldownYears": 14,
+      "conditions": {
+        "giniMin": 0.45
+      },
       "options": [
-        { "key": "opt1", "treasuryGdpRatio": 0.015, "styleWeights": { "style_merchant": 2.0, "style_welfare": 0.3 } },
-        { "key": "opt2", "treasuryGdpRatio": 0.004, "goodwillAll": -3 }
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.015,
+          "styleWeights": {
+            "style_merchant": 2.0,
+            "style_welfare": 0.3
+          }
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": 0.004,
+          "goodwillAll": -3
+        }
       ]
     },
     {
-      "id": "drought", "family": "disaster", "minYear": 2, "timeoutYears": 1, "fallback": 1, "cooldownYears": 10,
+      "id": "drought",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 1,
+      "fallback": 1,
+      "cooldownYears": 10,
       "options": [
-        { "key": "opt1", "poorReliefRatio": 0.15 },
-        { "key": "opt2", "unrest": true }
+        {
+          "key": "opt1",
+          "poorReliefRatio": 0.15
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
       ]
     },
     {
-      "id": "locust", "family": "disaster", "minYear": 2, "timeoutYears": 1, "fallback": 1, "cooldownYears": 10,
+      "id": "locust",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 1,
+      "fallback": 1,
+      "cooldownYears": 10,
       "options": [
-        { "key": "opt1", "poorReliefRatio": 0.08 },
-        { "key": "opt2", "unrest": true }
+        {
+          "key": "opt1",
+          "poorReliefRatio": 0.08
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
       ]
     },
     {
-      "id": "quake_aftermath", "family": "disaster", "minYear": 3, "timeoutYears": 2, "fallback": 1, "cooldownYears": 12,
+      "id": "quake_aftermath",
+      "family": "disaster",
+      "minYear": 2,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 12,
       "options": [
-        { "key": "opt1", "treasuryGdpRatio": -0.01, "goodwillAll": 2 },
-        { "key": "opt2", "unrest": true }
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01,
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
       ]
     },
     {
-      "id": "royal_wedding", "family": "court", "minYear": 3, "timeoutYears": 3, "fallback": 1, "cooldownYears": 15,
+      "id": "royal_wedding",
+      "family": "court",
+      "minYear": 3,
+      "timeoutYears": 3,
+      "fallback": 1,
+      "cooldownYears": 15,
       "options": [
-        { "key": "opt1", "treasuryGdpRatio": -0.015, "goodwillAll": 4 },
-        { "key": "opt2", "treasuryGdpRatio": -0.003, "goodwillAll": 1 }
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.015,
+          "goodwillAll": 4
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.003,
+          "goodwillAll": 1
+        }
       ]
     },
     {
-      "id": "minister_power", "family": "court", "minYear": 4, "timeoutYears": 3, "fallback": 1, "cooldownYears": 14,
+      "id": "minister_power",
+      "family": "court",
+      "minYear": 4,
+      "timeoutYears": 3,
+      "fallback": 1,
+      "cooldownYears": 14,
       "options": [
-        { "key": "opt1", "treasuryGdpRatio": -0.004, "unrest": true, "styleWeights": { "style_legalist": 2.0, "style_isolationist": 1.5 } },
-        { "key": "opt2", "goodwillAll": -2 }
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004,
+          "unrest": true,
+          "styleWeights": {
+            "style_legalist": 2.0,
+            "style_isolationist": 1.5
+          }
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -2
+        }
       ]
     },
     {
-      "id": "succession_dispute", "family": "court", "minYear": 5, "timeoutYears": 2, "fallback": 0, "cooldownYears": 16,
+      "id": "succession_dispute",
+      "family": "court",
+      "minYear": 5,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 16,
       "options": [
-        { "key": "opt1", "unrest": true },
-        { "key": "opt2", "treasuryGdpRatio": -0.01 }
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.01
+        }
       ]
     },
     {
-      "id": "army_pay", "family": "military", "minYear": 3, "timeoutYears": 1, "fallback": 1, "cooldownYears": 10,
-      "conditions": { "atWar": 1 },
+      "id": "army_pay",
+      "family": "military",
+      "minYear": 2,
+      "timeoutYears": 1,
+      "fallback": 1,
+      "cooldownYears": 10,
+      "conditions": {
+        "atWar": 1
+      },
       "options": [
-        { "key": "opt1", "treasuryGdpRatio": -0.012, "goodwillAll": 2 },
-        { "key": "opt2", "unrest": true }
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.012,
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
       ]
     },
     {
-      "id": "mercenary_default", "family": "military", "minYear": 3, "timeoutYears": 2, "fallback": 1, "cooldownYears": 12,
+      "id": "mercenary_default",
+      "family": "military",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 12,
       "options": [
-        { "key": "opt1", "treasuryGdpRatio": -0.008 },
-        { "key": "opt2", "unrest": true }
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
       ]
     },
     {
-      "id": "prisoner_ransom", "family": "military", "minYear": 3, "timeoutYears": 2, "fallback": 1, "cooldownYears": 12,
-      "conditions": { "atWar": 1 },
+      "id": "prisoner_ransom",
+      "family": "military",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 12,
+      "conditions": {
+        "atWar": 1
+      },
       "options": [
-        { "key": "opt1", "treasuryGdpRatio": -0.01, "goodwillAll": 3 },
-        { "key": "opt2", "goodwillAll": -4 }
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01,
+          "goodwillAll": 3
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -4
+        }
       ]
     },
     {
-      "id": "bread_riot", "family": "civil", "minYear": 3, "timeoutYears": 1, "fallback": 1, "cooldownYears": 10,
-      "conditions": { "giniMin": 0.5 },
+      "id": "bread_riot",
+      "family": "civil",
+      "minYear": 2,
+      "timeoutYears": 1,
+      "fallback": 1,
+      "cooldownYears": 10,
+      "conditions": {
+        "giniMin": 0.5
+      },
       "options": [
-        { "key": "opt1", "poorReliefRatio": 0.12 },
-        { "key": "opt2", "unrest": true }
+        {
+          "key": "opt1",
+          "poorReliefRatio": 0.12
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
       ]
     },
     {
-      "id": "plague", "family": "civil", "minYear": 3, "timeoutYears": 2, "fallback": 1, "cooldownYears": 12,
+      "id": "plague",
+      "family": "civil",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 12,
       "options": [
-        { "key": "opt1", "treasuryGdpRatio": -0.008, "styleWeights": { "style_welfare": 2.0, "style_tech": 1.5 } },
-        { "key": "opt2", "unrest": true }
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008,
+          "styleWeights": {
+            "style_welfare": 2.0,
+            "style_tech": 1.5
+          }
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
       ]
     },
     {
-      "id": "neighbor_extort", "family": "diplomacy", "minYear": 4, "timeoutYears": 2, "fallback": 0, "cooldownYears": 14,
-      "conditions": { "atWar": 0 },
+      "id": "neighbor_extort",
+      "family": "diplomacy",
+      "minYear": 4,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 14,
+      "conditions": {
+        "atWar": 0
+      },
       "options": [
-        { "key": "opt1", "treasuryGdpRatio": -0.01, "goodwillAll": 3 },
-        { "key": "opt2", "unrest": true, "goodwillAll": -1 }
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01,
+          "goodwillAll": 3
+        },
+        {
+          "key": "opt2",
+          "unrest": true,
+          "goodwillAll": -1
+        }
       ]
     },
     {
-      "id": "marriage_alliance", "family": "diplomacy", "minYear": 4, "timeoutYears": 3, "fallback": 1, "cooldownYears": 16,
-      "conditions": { "atWar": 0 },
+      "id": "marriage_alliance",
+      "family": "diplomacy",
+      "minYear": 4,
+      "timeoutYears": 3,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "conditions": {
+        "atWar": 0
+      },
       "options": [
-        { "key": "opt1", "treasuryGdpRatio": -0.008, "goodwillAll": 6 },
-        { "key": "opt2", "styleWeights": { "style_isolationist": 2.0 } }
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008,
+          "goodwillAll": 6
+        },
+        {
+          "key": "opt2",
+          "styleWeights": {
+            "style_isolationist": 2.0
+          }
+        }
       ]
     }
   ]

@@ -58,7 +58,7 @@ namespace EconomyMod.UI
 
         /// <summary>创建单个指标卡（label 上 / value 下），固定宽高。</summary>
         public static GameObject CreateStatCard(Transform parent, string label, string value,
-            Color valueColor, Font font, float w, float h)
+            Color valueColor, Font font, float w, float h, float fontScale = 1f)
         {
             var card = new GameObject("StatCard", typeof(RectTransform), typeof(Image));
             card.transform.SetParent(parent, false);
@@ -74,34 +74,34 @@ namespace EconomyMod.UI
             el.preferredHeight = h;
 
             // 标签（顶部，弱色；BestFit 自动缩小字号，窄卡不溢出）
-            var lbl = UIHelpers.CreateText(label, card.transform, UIStyles.StatLabelSize,
-                UIStyles.TextMuted, font, 16f, "Label");
+            var lbl = UIHelpers.CreateText(label, card.transform, UIStyles.StatLabelSize * fontScale,
+                UIStyles.TextMuted, font, 16f * fontScale, "Label");
             var lrt = lbl.GetComponent<RectTransform>();
             lrt.anchorMin = new Vector2(0, 1); lrt.anchorMax = new Vector2(1, 1);
             lrt.pivot = new Vector2(0.5f, 1);
             lrt.anchoredPosition = new Vector2(0, -4);
-            lrt.sizeDelta = new Vector2(-8, 16f);
+            lrt.sizeDelta = new Vector2(-8, 16f * fontScale);
             var lText = lbl.GetComponent<Text>();
             lText.alignment = TextAnchor.UpperCenter;
             lText.resizeTextForBestFit = true;
             lText.resizeTextMinSize = 7;
-            lText.resizeTextMaxSize = Mathf.RoundToInt(UIStyles.StatLabelSize);
+            lText.resizeTextMaxSize = Mathf.RoundToInt(UIStyles.StatLabelSize * fontScale);
 
             // 数值（底部，强调色，粗体；BestFit 自动缩小字号）
-            var val = UIHelpers.CreateText(value, card.transform, UIStyles.StatValueSize,
-                valueColor, font, 22f, "Value");
+            var val = UIHelpers.CreateText(value, card.transform, UIStyles.StatValueSize * fontScale,
+                valueColor, font, 22f * fontScale, "Value");
             var vrt = val.GetComponent<RectTransform>();
             vrt.anchorMin = new Vector2(0, 0); vrt.anchorMax = new Vector2(1, 0);
             vrt.pivot = new Vector2(0.5f, 0);
             vrt.anchoredPosition = new Vector2(0, 3);
-            vrt.sizeDelta = new Vector2(-8, 22f);
+            vrt.sizeDelta = new Vector2(-8, 22f * fontScale);
             var vt = val.GetComponent<Text>();
             vt.alignment = TextAnchor.LowerCenter;
             vt.fontStyle = FontStyle.Bold;
             vt.horizontalOverflow = HorizontalWrapMode.Overflow;
             vt.resizeTextForBestFit = true;
             vt.resizeTextMinSize = 9;
-            vt.resizeTextMaxSize = Mathf.RoundToInt(UIStyles.StatValueSize);
+            vt.resizeTextMaxSize = Mathf.RoundToInt(UIStyles.StatValueSize * fontScale);
             return card;
         }
 
@@ -111,7 +111,7 @@ namespace EconomyMod.UI
         /// 不再采用 v0.9.0 的多行网格，恢复 v0.8.x 单行观感。
         /// </summary>
         public static GameObject CreateStatGrid(Transform parent,
-            (string label, string value, Color color)[] stats, Font font, float width)
+            (string label, string value, Color color)[] stats, Font font, float width, float fontScale = 1f)
         {
             var rowGo = new GameObject("StatRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             rowGo.transform.SetParent(parent, false);
@@ -122,12 +122,12 @@ namespace EconomyMod.UI
             hlg.childAlignment = TextAnchor.UpperLeft;
             var rowRt = rowGo.GetComponent<RectTransform>();
             rowRt.sizeDelta = new Vector2(width, 0);
-            float cardH = 52f;
+            float cardH = 52f * fontScale;
             int n = stats.Length;
             float gap = UIStyles.CardGap;
             float cardW = n > 1 ? (width - gap * (n - 1)) / n : width;
             foreach (var s in stats)
-                CreateStatCard(rowGo.transform, s.label, s.value, s.color, font, cardW, cardH);
+                CreateStatCard(rowGo.transform, s.label, s.value, s.color, font, cardW, cardH, fontScale);
             rowGo.AddComponent<LayoutElement>().preferredHeight = cardH;
             return rowGo;
         }
@@ -284,7 +284,7 @@ namespace EconomyMod.UI
 
         /// <summary>创建王国排行行：排名徽章 + 名称 + GDP/人均/基尼/本地价格，返回 GameObject。</summary>
         public static GameObject CreateKingdomRow(Transform parent, int rank, string name,
-            string gdp, string avg, string gini, string price, Font font, float width, bool highlight = false)
+            string gdp, string avg, string gini, string price, Font font, float width, bool highlight = false, float fontScale = 1f)
         {
             Color rankColor = rank == 1 ? UIStyles.Gold : rank == 2 ? UIStyles.Silver
                 : rank == 3 ? UIStyles.Bronze : UIStyles.TextMuted;
@@ -296,7 +296,7 @@ namespace EconomyMod.UI
             hlg.childControlWidth = false; hlg.childControlHeight = true;
             hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = false;
             hlg.childAlignment = TextAnchor.MiddleLeft;
-            float h = 24f;
+            float h = 24f * fontScale;
             row.GetComponent<RectTransform>().sizeDelta = new Vector2(width, h);
             row.AddComponent<LayoutElement>().preferredHeight = h;
 

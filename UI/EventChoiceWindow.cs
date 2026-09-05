@@ -120,12 +120,16 @@ namespace EconomyMod.UI
             var def = p.Def;
             float s = Scale();
 
-            // 事件卡头：事件名 + 国名（多件时附计数）
+            // 事件卡头：族别（族别色）+ 事件名 + 国名 + 当前年（多件时附计数）
+            var familyColor = FamilyColor(def.family);
+            AddLine(UIHelpers.L("event_family_" + def.family), familyColor, 12f);
             string header = pending.Count > 1
                 ? UIHelpers.Lf("event_choice_header", UIHelpers.L("ev_" + def.id), _index + 1, pending.Count)
                 : UIHelpers.L("ev_" + def.id);
             AddLine(header, UIStyles.Gold, 16f);
             AddLine(UIHelpers.Lf("event_choice_kingdom", p.KingdomName), Muted, 12f);
+            try { AddLine(UIHelpers.Lf("event_choice_year", EconomyModMain.GetCurrentGameYear()), Muted, 11f); }
+            catch (System.Exception) { }
 
             // 描述正文
             AddLine(UIHelpers.L("ev_" + def.id + "_desc"), UIStyles.TextPrimary, 13f);
@@ -168,6 +172,9 @@ namespace EconomyMod.UI
                 var btnLe = btn.gameObject.AddComponent<LayoutElement>();
                 btnLe.flexibleWidth = 1f;
 
+                string optDesc = UIHelpers.L("ev_" + def.id + "_" + opt.key + "_desc");
+                if (optDesc != "ev_" + def.id + "_" + opt.key + "_desc")
+                    UIHelpers.CreateText(optDesc, row.transform, 11f * s, UIStyles.TextSecondary, _gameFont, 16f * s);
                 string summary = OptionSummary(def, i, gdp);
                 if (!string.IsNullOrEmpty(summary))
                     UIHelpers.CreateText(summary, row.transform, 10f * s, Muted, _gameFont, 16f * s);
@@ -208,6 +215,21 @@ namespace EconomyMod.UI
             if (o.unrest)
                 parts.Add(UIHelpers.L("event_choice_unrest"));
             return parts.Count > 0 ? string.Join("  ", parts.ToArray()) : null;
+        }
+
+        /// <summary>族别色（事件卡头/事件流过滤同源语义）。</summary>
+        private static Color FamilyColor(string family)
+        {
+            switch (family)
+            {
+                case "finance": return UIStyles.Gold;
+                case "disaster": return UIStyles.EvDisaster;
+                case "court": return new Color(0.85f, 0.6f, 0.95f);
+                case "military": return UIStyles.EvPlunder;
+                case "civil": return UIStyles.Info;
+                case "diplomacy": return UIStyles.Positive;
+                default: return UIStyles.TextPrimary;
+            }
         }
 
         private static float Scale()

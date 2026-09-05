@@ -959,14 +959,6 @@ namespace EconomyMod.UI
             CurLines.Add(go);
         }
 
-        /// <summary>UI 整体缩放（设置页 ui_scale，0.8~1.6，默认 1.2）：字号/按钮宽高/行高统一乘此系数。</summary>
-        private static float Fs(float size)
-        {
-            var cfg = UnrestConfig.Instance;
-            float scale = cfg != null ? cfg.UiScale : 1.2f;
-            return size * Mathf.Clamp(scale, 0.8f, 1.6f);
-        }
-
         private void AddDivider(Color color)
         {
             CurLines.Add(UIHelpers.CreateDivider(CurPage.transform, color));

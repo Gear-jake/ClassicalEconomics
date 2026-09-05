@@ -87,16 +87,28 @@ namespace EconomyMod.Core
         public static bool PopupQueued => _popupQueued;
         public static void ClearPopupQueued() { _popupQueued = false; }
 
-        private static string ModDir()
+        /// <summary>解析 events.json 候选路径：模组根（FolderPath）优先，其次 Locales 目录本身与其上级。</summary>
+        private static string ResolveEventsPath()
         {
+            var candidates = new List<string>(3);
             try
             {
                 var main = EconomyModMain.Instance;
                 var decl = main?.GetDeclaration();
-                if (main == null || decl == null) return null;
-                return main.GetLocaleFilesDirectory(decl);
+                string folder = decl != null ? decl.FolderPath : null;
+                if (!string.IsNullOrEmpty(folder))
+                    candidates.Add(System.IO.Path.Combine(folder, "events.json"));
+                string locDir = main != null && decl != null ? main.GetLocaleFilesDirectory(decl) : null;
+                if (!string.IsNullOrEmpty(locDir))
+                {
+                    candidates.Add(System.IO.Path.Combine(locDir, "events.json"));
+                    candidates.Add(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(locDir), "events.json"));
+                }
             }
-            catch (System.Exception) { return null; }
+            catch (System.Exception) { }
+            for (int i = 0; i < candidates.Count; i++)
+                if (System.IO.File.Exists(candidates[i])) return candidates[i];
+            return null;
         }
 
         /// <summary>模组加载时解析 events.json（一次）；失败 fail-open。</summary>
@@ -105,14 +117,13 @@ namespace EconomyMod.Core
             if (_defs.Count > 0 || _loadWarned) return;
             try
             {
-                string dir = ModDir();
-                if (string.IsNullOrEmpty(dir)) return;
-                string path = System.IO.Path.Combine(dir, "events.json");
-                if (!System.IO.File.Exists(path))
+                string path = ResolveEventsPath();
+                if (path == null)
                 {
-                    WarnOnce("events.json 不存在，抉择事件系统以空池运行");
+                    WarnOnce("events.json 未找到（已尝试 模组根/Locales/上级），抉择事件系统以空池运行");
                     return;
                 }
+                Debug.Log("[ClassicalEconomics] 抉择事件：events.json 路径=" + path);
                 var file = JsonConvert.DeserializeObject<EventsFile>(System.IO.File.ReadAllText(path));
                 if (file == null || file.events == null)
                 {

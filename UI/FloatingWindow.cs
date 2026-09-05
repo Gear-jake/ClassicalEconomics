@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using EconomyMod.Models;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -67,6 +68,14 @@ namespace EconomyMod.UI
             _panelRoot.SetActive(false);
         }
 
+        /// <summary>UI 整体缩放（设置页 ui_scale，0.8~1.6，默认 1.2）：全部悬浮窗字体/行高统一乘此系数。</summary>
+        protected static float Fs(float size)
+        {
+            var cfg = UnrestConfig.Instance;
+            float scale = cfg != null ? cfg.UiScale : 1.2f;
+            return size * Mathf.Clamp(scale, 0.8f, 1.6f);
+        }
+
         protected virtual void BuildPanel()
         {
             var canvas = GetComponent<Canvas>();
@@ -76,7 +85,7 @@ namespace EconomyMod.UI
             _panelRoot = _panelRect.gameObject;
             UIHelpers.CreateDragArea(_panelRect, _panelRect, Padding + 36);
             _titleText = UIHelpers.CreateWindowTitle(_panelRect, UIHelpers.L(TitleKey), _gameFont,
-                UIStyles.Gold, TitleFontSize, Padding, TitleLineHeight);
+                UIStyles.Gold, Fs(TitleFontSize), Padding, Fs(TitleLineHeight));
             UIHelpers.CreateResizeHandles(_panelRect, OnPanelResized);
             UIHelpers.CreateCloseButton(_panelRect, _gameFont, Hide);
             _content = UIHelpers.CreateScrollContent(_panelRect, Padding, Padding + 32f).gameObject;
@@ -105,7 +114,7 @@ namespace EconomyMod.UI
 
         protected void AddLine(string text, Color color, float size)
         {
-            var go = UIHelpers.CreateText(text, _content.transform, size, color, _gameFont, 22f);
+            var go = UIHelpers.CreateText(text, _content.transform, Fs(size), color, _gameFont, Fs(22f));
             _lines.Add(go);
         }
 
