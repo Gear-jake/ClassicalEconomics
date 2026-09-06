@@ -47,6 +47,7 @@ namespace EconomyMod.Core
         {
             public long CityId;
             public long Reserves;
+            public long DepositsThisYear; // 本年新增存款（储备超额回流用）
             public readonly List<LoanRecord> Loans = new List<LoanRecord>(16);
         }
 
@@ -59,6 +60,7 @@ namespace EconomyMod.Core
             public long Outstanding;
             public int RatePermille;
             public int DueYear;
+            public long DepositsThisYear; // 本年新增存款（储备超额回流用）
         }
 
         private static readonly Dictionary<long, AiBank> _aiBanks = new Dictionary<long, AiBank>(32);
@@ -309,6 +311,35 @@ namespace EconomyMod.Core
                     issued++;
                     netGrowth += principal;
                 }
+
+                // 超额回流：储备超过本年 intake 的部分分红给城中低收入市民
+                // （银行是蓄水池不是黑洞——防玩家国市民被存款年年净抽血）
+                if (ledger.Reserves > ledger.DepositsThisYear)
+                {
+                    long excess = ledger.Reserves - ledger.DepositsThisYear;
+                    long refunded = 0;
+                    _givePool.Clear();
+                    foreach (var a in city.units)
+                    {
+                        if (a == null || !a.isAlive() || !GameHelpers.IsCivilizedActor(a)) continue;
+                        float w;
+                        if (!GameHelpers.TryGetWealth(a, out w) || w > 60f) continue;
+                        _givePool.Add(a);
+                        if (_givePool.Count >= 200) break;
+                    }
+                    if (_givePool.Count > 0)
+                    {
+                        long per = excess / _givePool.Count;
+                        if (per <= 0) per = 1;
+                        for (int i = 0; i < _givePool.Count && refunded < excess; i++)
+                        {
+                            long give = System.Math.Min(per, excess - refunded);
+                            if (give <= 0) break;
+                            if (AddMoneySafe(_givePool[i], give)) refunded += give;
+                        }
+                    }
+                    ledger.Reserves -= refunded;
+                }
             }
             return netGrowth;
         }
@@ -390,7 +421,8 @@ namespace EconomyMod.Core
             }
 
             long netGrowth = 0;
-            // 存款（聚合）
+            // 存款（聚合；记 intake 供"超额回流"约束，防银行变成无底黑洞）
+            long depositsThisYear = 0;
             if (k.units != null && depositRatio > 0f)
             {
                 foreach (var a in k.units)
@@ -400,22 +432,26 @@ namespace EconomyMod.Core
                     if (!GameHelpers.TryGetWealth(a, out w) || w < 20f) continue;
                     long dep = (long)(w * depositRatio);
                     if (dep <= 0) continue;
-                    if (AddMoneySafe(a, -dep)) bank.Reserves += dep;
+                    if (AddMoneySafe(a, -dep)) { bank.Reserves += dep; depositsThisYear += dep; }
                 }
             }
+            bank.DepositsThisYear = depositsThisYear;
 
-            // 放贷（按利率档：低利率放出更多真实金币给国民）
+            // 放贷（按利率档：低利率放出更多真实金币给国民）——
+            // v1.5.1 修复：原实现误用 DeductCoinsFromWealth（从国民扣钱），
+            // 叠加存款+到期回收等于对 AI 国民年年三重抽血，导致王国批量崩溃（见错误日志）。
+            // 现改为把储备分发给低收入国民（真实转移，金币守恒）。
             float lendFrac = bank.RatePermille <= RateLow ? 0.6f : bank.RatePermille >= RateHigh ? 0.25f : 0.4f;
             long lend = (long)(bank.Reserves * lendFrac);
             if (lend > 0 && k.units != null)
             {
-                lend = GameHelpers.DeductCoinsFromWealth(k.units, lend, 0.4f);
-                if (lend > 0)
+                long given = GiveToLowWealth(k, lend);
+                if (given > 0)
                 {
-                    bank.Reserves -= lend;
-                    bank.Outstanding += lend;
+                    bank.Reserves -= given;
+                    bank.Outstanding += given;
                     bank.DueYear = year + 2;
-                    netGrowth += lend;
+                    netGrowth += given;
                 }
             }
 
@@ -442,9 +478,45 @@ namespace EconomyMod.Core
                     BankingEngine.NoteExternalDefault(kid, defaulted);
                 }
             }
+
+            // 超额回流：储备超过本年存款 intake 的部分作为"分红"还给低收入国民
+            // （银行是蓄水池不是黑洞——修掉 v1.5.0 的无界囤积/抽血）
+            if (bank.Reserves > bank.DepositsThisYear)
+            {
+                long excess = bank.Reserves - bank.DepositsThisYear;
+                long refunded = GiveToLowWealth(k, excess);
+                bank.Reserves -= refunded;
+            }
             return netGrowth;
         }
 
+        /// <summary>把 amount 金币分发给低收入国民（真实转移；有界循环，钱分完即止）。返回实际分发额。</summary>
+        private static long GiveToLowWealth(Kingdom k, long amount)
+        {
+            if (k == null || k.units == null || amount <= 0) return 0L;
+            _givePool.Clear();
+            foreach (var a in k.units)
+            {
+                if (a == null || !a.isAlive() || !GameHelpers.IsCivilizedActor(a)) continue;
+                float w;
+                if (!GameHelpers.TryGetWealth(a, out w) || w > 60f) continue; // 只济低收入者
+                _givePool.Add(a);
+                if (_givePool.Count >= 200) break; // 有界
+            }
+            if (_givePool.Count == 0) return 0L;
+            long per = amount / _givePool.Count;
+            if (per <= 0) per = 1;
+            long given = 0;
+            for (int i = 0; i < _givePool.Count && given < amount; i++)
+            {
+                long give = System.Math.Min(per, amount - given);
+                if (give <= 0) break;
+                if (AddMoneySafe(_givePool[i], give)) given += give;
+            }
+            return given;
+        }
+
+        private static readonly List<Actor> _givePool = new List<Actor>(200);
         private static readonly List<Actor> _borrowerPool = new List<Actor>(64);
 
         /// <summary>actor.addMoney 只收 int：long 金额钳制后入账（防溢出为负）。</summary>
