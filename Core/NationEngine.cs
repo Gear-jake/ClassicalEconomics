@@ -519,24 +519,14 @@ namespace EconomyMod.Core
             return null;
         }
 
-        private static System.Reflection.MethodInfo _addBuildingMethod;
-
-        /// <summary>反射调用 internal BuildingManager.addBuilding(BuildingAsset, WorldTile, bool) 放置建筑（与 SpendingEngine 同模式）。</summary>
+        /// <summary>在城市地块放置建筑：统一走 GameHelpers.PlaceNativeBuilding（真实 5 参签名）。</summary>
         private static Building PlaceBuilding(City city, BuildingAsset asset, Kingdom kingdom)
         {
             try
             {
                 WorldTile tile = city.getTile(false);
                 if (tile == null) return null;
-                if (_addBuildingMethod == null)
-                {
-                    _addBuildingMethod = typeof(BuildingManager).GetMethod("addBuilding",
-                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                }
-                if (_addBuildingMethod == null) return null;
-                var b = _addBuildingMethod.Invoke(null, new object[] { asset, tile, true }) as Building;
-                if (b != null && kingdom != null) b.setKingdom(kingdom);
-                return b;
+                return GameHelpers.PlaceNativeBuilding(asset, tile, kingdom);
             }
             catch (System.Exception) { return null; }
         }
@@ -913,94 +903,11 @@ namespace EconomyMod.Core
             catch (System.Exception) { CancelNativePlacement(); }
         }
 
-        // ===== 原版建筑放置（多候选反射，结果校验）=====
-        // 候选顺序：
-        //   1) 静态 addBuilding(BuildingAsset, WorldTile, bool)——SpendingEngine 瞭望塔同款已验证路径；
-        //   2) 实例 addBuilding(string, WorldTile)——旧路径，此版本若不存在自动跳过；
-        //   3) 实例 addBuilding(BuildingAsset, WorldTile)。
-        // 任一返回非 null Building 即成功（并 setKingdom 归属本国）；全部失败返回 false（调用方退款）。
-        // 每次失败以 Debug.Log 写入 player.log 便于诊断（用户点击触发，频率极低）。
-        private static System.Reflection.MethodInfo _placeStatic;
-        private static System.Reflection.MethodInfo _placeInstanceId;
-        private static System.Reflection.MethodInfo _placeInstanceAsset;
-        private static BuildingManager _buildingManagerInstance;
-
+        /// <summary>原版建筑放置：统一走 GameHelpers.PlaceNativeBuilding（真实 5 参签名，结果校验）。</summary>
         private static bool NativeAddBuildingTried(BuildingAsset asset, WorldTile tile)
         {
-            var bm = _buildingManagerInstance;
-            if (bm == null) bm = World.world != null ? World.world.buildings : null;
-            if (bm == null) return false;
-            _buildingManagerInstance = bm;
-
-            const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.Public
-                | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
-                | System.Reflection.BindingFlags.Static;
-
-            try
-            {
-                // 候选 1：静态 (BuildingAsset, WorldTile, bool)——瞭望塔已验证路径
-                if (_placeStatic == null)
-                {
-                    _placeStatic = typeof(BuildingManager).GetMethod("addBuilding", F,
-                        null, new System.Type[] { typeof(BuildingAsset), typeof(WorldTile), typeof(bool) }, null);
-                }
-                if (_placeStatic != null)
-                {
-                    var b = _placeStatic.Invoke(null, new object[] { asset, tile, true }) as Building;
-                    if (b != null)
-                    {
-                        if (_nationKingdomId != 0) b.setKingdom(GameHelpers.FindKingdom(_nationKingdomId));
-                        return true;
-                    }
-                }
-
-                // 候选 2：实例 (string, WorldTile)
-                if (_placeInstanceId == null)
-                {
-                    _placeInstanceId = typeof(BuildingManager).GetMethod("addBuilding", F,
-                        null, new System.Type[] { typeof(string), typeof(WorldTile) }, null);
-                }
-                if (_placeInstanceId != null)
-                {
-                    var b = _placeInstanceId.Invoke(bm, new object[] { asset.id, tile }) as Building;
-                    if (b != null)
-                    {
-                        if (_nationKingdomId != 0) b.setKingdom(GameHelpers.FindKingdom(_nationKingdomId));
-                        return true;
-                    }
-                }
-
-                // 候选 3：实例 (BuildingAsset, WorldTile)
-                if (_placeInstanceAsset == null)
-                {
-                    _placeInstanceAsset = typeof(BuildingManager).GetMethod("addBuilding", F,
-                        null, new System.Type[] { typeof(BuildingAsset), typeof(WorldTile) }, null);
-                }
-                if (_placeInstanceAsset != null)
-                {
-                    var b = _placeInstanceAsset.Invoke(bm, new object[] { asset, tile }) as Building;
-                    if (b != null)
-                    {
-                        if (_nationKingdomId != 0) b.setKingdom(GameHelpers.FindKingdom(_nationKingdomId));
-                        return true;
-                    }
-                }
-
-                // 全部候选不可用或静默失败：写诊断（方法是否找到 + 原版返回 null 的可能原因）
-                string diag = "[ClassicalEconomics] 建筑放置失败：候选1(static asset,tile,bool)=" + (_placeStatic != null)
-                    + " 候选2(instance string,tile)=" + (_placeInstanceId != null)
-                    + " 候选3(instance asset,tile)=" + (_placeInstanceAsset != null)
-                    + " tile.zone=" + (tile != null && tile.zone != null ? "有" : "无")
-                    + " city=" + (tile != null && tile.zone != null && tile.zone.city != null ? GameHelpers.SafeCityName(tile.zone.city) : "无")
-                    + "（原版 addBuilding 对该位置返回了空——多半是位置不合法：需在本国城市范围内/地基无遮挡）";
-                UnityEngine.Debug.LogWarning(diag);
-                return false;
-            }
-            catch (System.Exception e)
-            {
-                UnityEngine.Debug.LogWarning("[ClassicalEconomics] 建筑放置异常: " + e.Message);
-                return false;
-            }
+            var kingdom = GameHelpers.FindKingdom(_nationKingdomId);
+            return GameHelpers.PlaceNativeBuilding(asset, tile, kingdom) != null;
         }
 
         private static int SafeYearNow()

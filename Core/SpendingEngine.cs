@@ -659,24 +659,13 @@ bool log = UnrestConfig.Instance.LogToWorldLog;
             for (int i = 0; i < _expiredCityIds.Count; i++) cooldowns.Remove(_expiredCityIds[i]);
         }
 
-        private static MethodInfo _addBuildingMethod;
 
-        /// <summary>反射调用 internal BuildingManager.addBuilding(BuildingAsset, WorldTile, bool) 放置建筑。</summary>
+        /// <summary>放置建筑：统一走 GameHelpers.PlaceNativeBuilding（真实 5 参签名，结果校验）。</summary>
         private static Building AddBuildingViaReflection(BuildingAsset asset, WorldTile tile)
         {
-            try
-            {
-                if (_addBuildingMethod == null)
-                {
-                    _addBuildingMethod = typeof(BuildingManager).GetMethod("addBuilding",
-                        BindingFlags.Instance | BindingFlags.NonPublic);
-                }
-                if (_addBuildingMethod == null) return null;
-                return _addBuildingMethod.Invoke(World.world.buildings,
-                    new object[] { asset, tile, false }) as Building;
-            }
-            catch (System.Exception) { return null; }
+            return GameHelpers.PlaceNativeBuilding(asset, tile, null);
         }
+
 
         private static long SafeId(Actor a)
         {

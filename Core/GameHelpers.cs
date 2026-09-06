@@ -169,6 +169,71 @@ namespace EconomyMod.Core
         // ===== 日志（仅在配置开启时输出，多引擎均有重复实现）=====
 
         /// <summary>当 UnrestConfig.LogToWorldLog 开启时输出一条 Debug.Log。</summary>
+        // ===== 原版建筑放置（v1.4.2 修正：真实签名 5 参，经 IL 元数据核实）=====
+        // addBuilding(string|BuildingAsset, WorldTile, bool pCheckForBuild, bool pSfx, BuildPlacingType) -> Building
+        // （后三参在原版有默认值，故 RulerBox 等公开化编译可直调两参；反射必须传全 5 个）
+        private static System.Reflection.MethodInfo _placeAsset5;
+        private static System.Reflection.MethodInfo _placeId5;
+
+        /// <summary>在 tile 放置原版建筑：先严格检查（pCheckForBuild=true），失败再宽松重试一次。
+        /// 成功返回 Building（已归属 pKingdom），失败返回 null。诊断写入 player.log。</summary>
+        public static Building PlaceNativeBuilding(BuildingAsset asset, WorldTile tile, Kingdom pKingdom)
+        {
+            if (asset == null || tile == null) return null;
+            try
+            {
+                var bm = World.world != null ? World.world.buildings : null;
+                if (bm == null) return null;
+                var bmType = typeof(BuildingManager);
+                if (_placeAsset5 == null)
+                {
+                    var enumType = typeof(WorldTile).Assembly.GetType("BuildPlacingType");
+                    var F = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+                    _placeAsset5 = bmType.GetMethod("addBuilding", F, null,
+                        new System.Type[] { typeof(BuildingAsset), typeof(WorldTile), typeof(bool), typeof(bool), enumType }, null);
+                    _placeId5 = bmType.GetMethod("addBuilding", F, null,
+                        new System.Type[] { typeof(string), typeof(WorldTile), typeof(bool), typeof(bool), enumType }, null);
+                }
+                if (_placeAsset5 == null && _placeId5 == null)
+                {
+                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 放置诊断：addBuilding 5 参签名未找到");
+                    return null;
+                }
+
+                // 两轮：先原版合法性检查（true），被拒后宽松重试（false，信任模组侧的位置校验）
+                for (int round = 0; round < 2; round++)
+                {
+                    bool check = round == 0;
+                    if (_placeAsset5 != null)
+                    {
+                        var b = _placeAsset5.Invoke(bm, new object[] { asset, tile, check, true, 0 }) as Building;
+                        if (b != null)
+                        {
+                            if (pKingdom != null) b.setKingdom(pKingdom);
+                            return b;
+                        }
+                    }
+                    if (_placeId5 != null)
+                    {
+                        var b = _placeId5.Invoke(bm, new object[] { asset.id, tile, check, true, 0 }) as Building;
+                        if (b != null)
+                        {
+                            if (pKingdom != null) b.setKingdom(pKingdom);
+                            return b;
+                        }
+                    }
+                }
+                UnityEngine.Debug.LogWarning("[ClassicalEconomics] 建筑放置：原版对 " + asset.id
+                    + " @(" + tile.x + "," + tile.y + ") 两轮均返回空（位置不合法或为原版限制）");
+                return null;
+            }
+            catch (System.Exception e)
+            {
+                UnityEngine.Debug.LogWarning("[ClassicalEconomics] 建筑放置异常: " + e.Message);
+                return null;
+            }
+        }
+
         public static void Log(string msg)
         {
             if (UnrestConfig.Instance.LogToWorldLog)
