@@ -208,8 +208,30 @@ namespace EconomyMod.UI
                 ? EventDesc(e)
                 : UIHelpers.L(e.Detail); // 抉择事件：Detail=结果键（含选项后果文案）
             string kingdomPart = string.IsNullOrEmpty(e.KingdomName) ? "" : " · " + e.KingdomName;
-            AddLine(UIHelpers.Lf("events_row", e.GameYear, kingdomPart, desc),
-                EventColor(e.TypeKey), 12f);
+            // 事件行：带族别色带的容器行（左侧 2px 竖条 + 正文）
+            var row = new GameObject("EventRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            row.transform.SetParent(_content.transform, false);
+            var rowLe = row.AddComponent<LayoutElement>();
+            rowLe.flexibleWidth = 1;
+            rowLe.minHeight = Fs(18f);
+            var rowHlg = row.GetComponent<HorizontalLayoutGroup>();
+            rowHlg.spacing = 4; rowHlg.childControlWidth = false; rowHlg.childControlHeight = true;
+            rowHlg.childForceExpandWidth = false; rowHlg.childForceExpandHeight = true;
+            _lines.Add(row);
+            // 族别色带
+            var strip = new GameObject("Strip", typeof(RectTransform), typeof(Image));
+            strip.transform.SetParent(row.transform, false);
+            var srt = strip.GetComponent<RectTransform>();
+            srt.sizeDelta = new Vector2(2, 0);
+            strip.GetComponent<Image>().color = EventColor(e.TypeKey);
+            strip.GetComponent<Image>().raycastTarget = false;
+            var sle = strip.AddComponent<LayoutElement>();
+            sle.preferredWidth = 2; sle.flexibleHeight = 1;
+            // 正文
+            var txt = UIHelpers.CreateText(UIHelpers.Lf("events_row", e.GameYear, kingdomPart, desc),
+                row.transform, Fs(12f), EventColor(e.TypeKey), _gameFont, Fs(18f));
+            var tle = txt.AddComponent<LayoutElement>();
+            tle.flexibleWidth = 1;
         }
 
         /// <summary>渲染关键类型统计行（仅发生过才显示，每行最多 3 项）。返回渲染行数。</summary>

@@ -21,6 +21,18 @@ namespace EconomyMod.UI
         // ===== 品牌/强调（金色系）=====
         public static readonly Color Gold        = new Color(1f, 0.85f, 0.40f);
         public static readonly Color GoldDeep    = new Color(0.79f, 0.63f, 0.29f);
+        // ===== 视觉丰富化（v1.6.0 UI 精致化）=====
+        public static readonly Color AccentGold   = new Color(1f, 0.85f, 0.45f, 1f);   // 明金强调
+        public static readonly Color CardBorder   = new Color(1f, 0.82f, 0.4f, 0.18f); // 卡片暗金描边
+        public static readonly Color CardStrip    = new Color(1f, 0.8f, 0.35f, 0.7f);  // 卡片左侧色条
+        public static readonly Color SectionBar   = new Color(1f, 0.78f, 0.3f, 0.85f); // 段落标题金色装饰条
+        public static readonly Color RowRank1     = new Color(1f, 0.84f, 0.2f, 0.15f); // 排行第1底色
+        public static readonly Color RowRank2     = new Color(0.75f, 0.78f, 0.85f, 0.1f); // 排行第2底色
+        public static readonly Color RowRank3     = new Color(0.85f, 0.6f, 0.3f, 0.1f);  // 排行第3底色
+        public static readonly Color InnerBorder  = new Color(1f, 0.82f, 0.4f, 0.1f);  // 面板内边框
+        public static readonly Color DividerGold  = new Color(1f, 0.8f, 0.35f, 0.35f);  // 金色分隔线
+        public static readonly Color EventStripW  = new Color(0.9f, 0.7f, 0.2f, 0.7f);  // 事件行装饰条(战争/财政)
+        public static readonly Color EventStripE  = new Color(0.3f, 0.7f, 0.6f, 0.7f);  // 事件行装饰条(经济/民生)
         public static readonly Color Bronze      = new Color(0.69f, 0.55f, 0.34f);
         public static readonly Color Silver      = new Color(0.75f, 0.78f, 0.83f);
 

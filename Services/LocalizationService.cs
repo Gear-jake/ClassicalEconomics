@@ -5,11 +5,11 @@ using EconomyMod.Models;
 namespace EconomyMod.Services
 {
     /// <summary>
-    /// Mod 自建本地化服务：界面语言由 Mod 配置页切换（auto / zh / zh_tw / en / ru）。
-    /// 默认 auto —— 自动跟随游戏本体语言：简中（本体旧缩写 cz、规范化缩写 zh-Hans）→ zh，
-    /// 繁中（ch / zh-Hant）→ zh_tw，en → en，ru → ru，其余语言回退 en；
-    /// 手动指定 zh/zh_tw/en/ru 时覆盖 auto。运行时从 Locales/ch.json（简中）、
-    /// zh_tw.json（繁中）、en.json（英文）、ru.json（俄文）动态加载。
+    /// Mod 自建本地化服务（v1.6.0：六语言 zh / zh_tw / en / ru / ja / de）。
+    /// 界面语言永远跟随游戏本体语言：简中（cz / zh-Hans 等）→ zh，繁中（ch / zh-Hant）→ zh_tw，
+    /// en → en，ru → ru，日语（ja / 日本語）→ ja，德语（de / Deutsch）→ de，
+    /// 其余语言回退 en（Get() 内部还有 en→zh 二级兜底）。运行时从 Locales/ 下
+    /// ch.json / zh_tw.json / en.json / ru.json / ja.json / de.json 动态加载。
     /// </summary>
     public static class LocalizationService
     {
@@ -17,6 +17,8 @@ namespace EconomyMod.Services
         private static Dictionary<string, string> _zhTw = new Dictionary<string, string>();
         private static Dictionary<string, string> _en = new Dictionary<string, string>();
         private static Dictionary<string, string> _ru = new Dictionary<string, string>();
+        private static Dictionary<string, string> _ja = new Dictionary<string, string>();
+        private static Dictionary<string, string> _de = new Dictionary<string, string>();
         private static bool _loaded;
         private static string _lastGameLanguage; // auto 模式的游戏语言变化检测基线
 
@@ -95,6 +97,14 @@ namespace EconomyMod.Services
                     return "en";
                 case "ru":
                     return "ru";
+                case "ja":          // 本体：日本語
+                case "ja-jp":
+                case "ja_jp":
+                    return "ja";
+                case "de":          // 本体：Deutsch
+                case "de-de":
+                case "de_de":
+                    return "de";
                 default:
                     return "en";
             }
@@ -115,6 +125,8 @@ namespace EconomyMod.Services
                 _zhTw = LoadFile(System.IO.Path.Combine(dir, "zh_tw.json"), _zhTw);
                 _en = LoadFile(System.IO.Path.Combine(dir, "en.json"), _en);
                 _ru = LoadFile(System.IO.Path.Combine(dir, "ru.json"), _ru);
+                _ja = LoadFile(System.IO.Path.Combine(dir, "ja.json"), _ja);
+                _de = LoadFile(System.IO.Path.Combine(dir, "de.json"), _de);
             }
             catch (System.Exception) { }
         }
@@ -151,7 +163,8 @@ namespace EconomyMod.Services
         private static bool TryGet(string lang, string key, out string value)
         {
             value = null;
-            var dict = lang == "zh_tw" ? _zhTw : lang == "ru" ? _ru : lang == "en" ? _en : _zh;
+            var dict = lang == "zh_tw" ? _zhTw : lang == "ru" ? _ru
+                : lang == "ja" ? _ja : lang == "de" ? _de : lang == "en" ? _en : _zh;
             return dict.TryGetValue(key, out value) && !string.IsNullOrEmpty(value);
         }
     }

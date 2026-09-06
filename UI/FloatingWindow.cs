@@ -86,6 +86,18 @@ namespace EconomyMod.UI
             UIHelpers.CreateDragArea(_panelRect, _panelRect, Padding + 36);
             _titleText = UIHelpers.CreateWindowTitle(_panelRect, UIHelpers.L(TitleKey), _gameFont,
                 UIStyles.Gold, Fs(TitleFontSize), Padding, Fs(TitleLineHeight));
+            // 标题栏金色下划线（装饰）
+            var titleLine = new GameObject("TitleUnderline", typeof(RectTransform), typeof(Image));
+            titleLine.transform.SetParent(_panelRect, false);
+            var tlRt = titleLine.GetComponent<RectTransform>();
+            tlRt.anchorMin = new Vector2(0, 1); tlRt.anchorMax = new Vector2(1, 1);
+            tlRt.pivot = new Vector2(0.5f, 1);
+            tlRt.anchoredPosition = new Vector2(0, -(Padding + Fs(TitleLineHeight)));
+            tlRt.sizeDelta = new Vector2(-Padding * 2, 1.5f);
+            titleLine.GetComponent<Image>().color = UIStyles.AccentGold;
+            titleLine.GetComponent<Image>().raycastTarget = false;
+            // 面板内边框（细金描边）
+            UIHelpers.CreateInnerBorder(_panelRect, UIStyles.InnerBorder, 1.5f);
             UIHelpers.CreateResizeHandles(_panelRect, OnPanelResized);
             UIHelpers.CreateCloseButton(_panelRect, _gameFont, Hide);
             _content = UIHelpers.CreateScrollContent(_panelRect, Padding, Padding + 32f).gameObject;

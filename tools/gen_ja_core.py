@@ -1,0 +1,301 @@
+# -*- coding: utf-8 -*-
+"""v1.6.0 批次 A：日语核心翻译（非事件键：UI/法典/风格/档位/配置标签/银行/性格/杂项）。"""
+import io, json, collections
+
+JA = collections.OrderedDict()
+def t(**kw):
+    JA.update(kw)
+
+# ===== タブ / HUD / コア UI =====
+t(**{
+ 'tab_economy_name': '古典経済学',
+ 'tab_economy_desc': '古典経済学タブ',
+ 'economy_toggle': '経済パネル',
+ 'economy_toggle_description': '経済概要パネルの表示を切り替え',
+ 'economy_intervene': '介入',
+ 'economy_intervene_description': '国選択リストを開き、扇動・鎮圧を行う',
+ 'economy_collect': '今すぐ収集',
+ 'economy_collect_description': 'データの収集と再計算を手動で実行',
+ 'economy_clear': '履歴消去',
+ 'economy_clear_description': '履歴スナップショットを消去',
+ 'economy_rich': '富豪榜',
+ 'economy_rich_description': '資産上位10名を表示',
+ 'economy_events': 'イベント',
+ 'economy_events_description': 'イベントフィードの表示を切り替え',
+ 'economy_cycle_phase': '経済段階切替',
+ 'economy_cycle_phase_description': '好況→後退→恐慌→回復を手動切替',
+ 'col_avg': '平均',
+ 'col_gini': 'ジニ',
+ 'stat_bubble': 'バブル',
+ 'overview_cycle': 'サイクル #{0}',
+ 'overview_kingdoms': '王国ランキング',
+ 'overview_no_kingdom': '王国なし',
+ 'overview_cycle_detail': '第{0}期・成長率{1}・バブル{2}',
+ 'unrest_state_title': '社会不安状況',
+ 'overview_no_unrest': '安定',
+ 'chart_title_dyn': 'GDPトレンド Top{0}（第{1}期・{2}期分）',
+ 'chart_no_data': 'データなし',
+ 'chart_legend_hint': '凡例：王国別',
+ 'chart_summary': '最大 {0} → 最新 {1}',
+ 'gini_chart_title': 'ジニ係数トレンド（第{0}期・{1}期分）',
+ 'gini_legend_phase': '色帯＝経済段階',
+ 'gini_legend_danger': '危険域',
+ 'gini_legend_health': '健康域',
+ 'settling_marker': '精算中…',
+ 'settling_hint': '年次精算の進行中：収集と段階切替は無効',
+ 'event_title': 'イベント',
+ 'event_subtitle': '第{0}年・計{1}件',
+ 'events_none': 'まだイベントなし',
+ 'events_major': '── 大事件 ──',
+ 'events_recent': '── 最近のイベント ──',
+ 'events_filter_all': '全て',
+ 'events_filter_decision': '決断',
+ 'events_filter_politics': '国家・戦争',
+ 'events_filter_economy': '経済・民生',
+ 'events_fold_year': '第 {0} 年（{1} 件）▸',
+ 'events_year_hdr': '── 第 {0} 年 ──',
+ 'events_row': '第{0}年{1} {2}',
+ 'events_row_none': '',
+ 'rich_title': '富豪榜',
+ 'rich_subtitle': '第{0}年・文明化{1}体',
+ 'rich_none': '該当者なし',
+ 'rich_row': '{0}. {1}：{2}G',
+})
+
+# ===== 内閣 =====
+t(**{
+ 'cabinet_title': '内閣',
+ 'cabinet_tab_finance': '財政',
+ 'cabinet_tab_policy': '政策',
+ 'cabinet_tab_decree': '法令・建設',
+ 'cabinet_tab_diplomacy': '外交',
+ 'cabinet_tab_codex': '法典',
+ 'cabinet_tab_bank': '銀行・商業',
+ 'cabinet_disabled': '中央銀行家プレイが無効です（設定で有効化）',
+ 'cabinet_no_nation': '国未選択：下のリストから国を選択して内閣を開く',
+ 'cabinet_claim_hint': '選択すると宝物庫資金として都市倉庫の20%が搬入される',
+ 'cabinet_claim_row': '{0}（GDP {1}）を選択',
+ 'picker_empty': '候補なし',
+ 'cabinet_nation': '《{0}》王室財政',
+ 'cabinet_ruler': '在位：{0}',
+ 'cabinet_treasury': '宝物庫：{0}',
+ 'cabinet_flow': '前年収入 {0}｜支出 {1}',
+ 'cabinet_switch_cooldown': '国替えクールダウン：あと {0} 年',
+ 'cabinet_policy_cost': '年費 少 {0}｜中 {1}｜大 {2}',
+ 'cabinet_policy_active': '{0}・第{1}档',
+ 'cabinet_enable': '有効化',
+ 'cabinet_upgrade': '昇格',
+ 'cabinet_disable': '停止',
+ 'cabinet_decree_cooling': '{0}（クールダウン中）',
+ 'cabinet_execute': '執行',
+ 'cabinet_build_title': '建設（地図上でクリック設置）',
+ 'cabinet_build_market': '市場',
+ 'cabinet_build_granary': '穀倉',
+ 'cabinet_law_nation': '《{0}》法典',
+ 'cabinet_law_style': '国民性：{0}',
+ 'cabinet_law_effect_title': '現在の集計効果',
+ 'cabinet_law_policy_hdr': '国策',
+ 'law_cat_economy': '経済法',
+ 'law_cat_welfare': '民生法',
+ 'law_cat_military': '軍事法',
+ 'law_cat_judicial': '司法・行政',
+ 'law_cat_culture': '文化・宗教',
+ 'law_lv0': 'なし', 'law_lv1': '軽', 'law_lv2': '中', 'law_lv3': '重', 'law_lv4': '極',
+ 'law_pol_lv0': 'なし', 'law_pol_lv1': '少', 'law_pol_lv2': '大',
+ 'law_eff_production': '生産', 'law_eff_tax': '税', 'law_eff_price': '物価',
+ 'law_eff_consume': '消費', 'law_eff_disaster': '災害', 'law_eff_build': '建設費',
+ 'law_eff_wage': '賃金', 'law_eff_unrest': '不安', 'law_eff_happiness': '幸福',
+ 'law_eff_military': '軍事', 'law_eff_birth': '出生',
+ 'cabinet_dip_back': '戻る',
+ 'cabinet_dip_actions': '外交アクション',
+ 'cabinet_dip_war': '宣戦',
+ 'cabinet_dip_peace': '講和',
+ 'cabinet_dip_alliance': '同盟',
+ 'cabinet_dip_gift': '贈物（500G）',
+ 'cabinet_dip_pact': '経済協定',
+ 'cabinet_dip_pact_on': '経済協定·第{0}档',
+ 'cabinet_dip_list_row': '{0}（GDP {1}）関係 {2} 好感 {3}',
+ 'cabinet_dip_stat_relation': '関係 {0}｜好感 {1}',
+ 'cabinet_dip_stat_style': '国民性：{0}',
+ 'cabinet_dip_stat_gdp': 'GDP {0}',
+ 'cabinet_dip_stat_pop': '人口 {0}・平均 {1}',
+ 'cabinet_dip_stat_laws': '法律 {0} 条・国策 {1} 条',
+ 'cabinet_dip_stat_war': '交戦中',
+ 'cabinet_dip_stat_peace': '平和',
+ 'cabinet_dip_war_confirm': '宣戦する',
+ 'toast_dip_war': '[外交] <{0}> に宣戦布告',
+ 'toast_dip_already_war': 'すでに交戦中です',
+ 'toast_dip_peace': '[外交] <{0}> と講和（賠償金 +{1}G）',
+ 'toast_dip_peace_fail': '講和できない（戦優勢ではない/戦争なし）',
+ 'toast_dip_alliance': '[外交] <{0}> と同盟締結',
+ 'toast_dip_alliance_refused': '同盟を拒否された（関係不足）',
+ 'toast_dip_gift': '[外交] <{0}> に贈物（好感 +{1}）',
+ 'toast_dip_gift_poor': '宝物庫が不足し、贈物を送れません',
+ 'toast_dip_pact_ok': '[外交] <{0}> と経済協定を締結',
+ 'toast_dip_pact_cancel': '[外交] <{0}> の経済協定を解除',
+ 'toast_dip_pact_full': '協定枠が満杯です（最大2件）',
+ 'toast_dip_pact_war': '交戦国とは協定を結べません',
+ 'toast_dip_pact_same': 'すでに同档の協定があります',
+ 'toast_dip_failed': '外交アクション失敗',
+})
+
+# ===== 法典・国策名 =====
+laws = {
+ 'law_trade_freedom': '商業政策', 'law_property_rights': '財産権保護', 'law_tax_system': '税制',
+ 'law_antimonopoly': '独占禁止', 'law_land_reform': '土地改革', 'law_education': '義務教育',
+ 'law_healthcare': '公衆医療', 'law_migrant': '移民政策', 'law_religion': '宗教政策',
+ 'law_press': '報道規制', 'law_gun_control': '武器規制', 'law_conscription': '徴兵制',
+ 'law_standing_army': '常備軍', 'law_militarism': '軍国主義', 'law_pacifism': '平和主義',
+ 'law_judicial': '司法独立', 'law_capital_pun': '死刑', 'law_ant_corrupt': '腐敗取締',
+ 'law_prison': '受刑者更生', 'law_forest': '森林保護', 'law_animal': '動物保護',
+ 'law_pollution': '公害対策', 'law_monarchy': '君主制', 'law_parliament': '議会民主主義',
+ 'law_planned_economy': '計画経済', 'law_free_market': '自由市場',
+ 'law_state_religion': '国教', 'law_secularism': '政教分離',
+}
+for k, v in laws.items():
+    t(**{k: v})
+tiers_law = {
+ 'law_trade_freedom_lv0': '放任', 'law_trade_freedom_lv1': '市場自由', 'law_trade_freedom_lv2': '規制市場',
+ 'law_trade_freedom_lv3': '厳格統制', 'law_trade_freedom_lv4': '統制経済',
+ 'law_property_rights_lv0': '無保障', 'law_property_rights_lv1': '部分的', 'law_property_rights_lv2': '標準',
+ 'law_property_rights_lv3': '強固', 'law_property_rights_lv4': '絶対',
+ 'law_tax_system_lv0': '無税', 'law_tax_system_lv1': '軽税', 'law_tax_system_lv2': '中税',
+ 'law_tax_system_lv3': '重税', 'law_tax_system_lv4': '極端重税',
+ 'law_antimonopoly_lv0': '放置', 'law_antimonopoly_lv1': '監視', 'law_antimonopoly_lv2': '規制',
+ 'law_antimonopoly_lv3': '解体', 'law_antimonopoly_lv4': '国有化',
+ 'law_land_reform_lv0': '無改革', 'law_land_reform_lv1': '漸進', 'law_land_reform_lv2': '本格改革',
+ 'law_land_reform_lv3': '強制収用', 'law_land_reform_lv4': '全面再分配',
+}
+for k, v in tiers_law.items():
+    t(**{k: v})
+policies = {
+ 'policy_low_tax': '減税', 'policy_austerity': '緊縮', 'policy_subsidy': '産業補助金',
+ 'policy_trade_deal': '重商主義', 'policy_poor_relief': '貧民救済', 'policy_public_work': '公共事業',
+ 'policy_family': '出産奨励', 'policy_festival': '祝祭', 'policy_war_fund': '戦争基金',
+ 'policy_recruit': '募兵', 'policy_fortify': '要塞化', 'policy_border_guard': '国境警備',
+ 'policy_diplomacy': '外交重視', 'policy_isolation': '鎖国', 'policy_expansion': '拡張主義',
+ 'policy_reparations': '賠償外交',
+}
+for k, v in policies.items():
+    t(**{k: v})
+styles = {
+ 'style_bellicose': '尚武', 'style_merchant': '重商', 'style_welfare': '仁政',
+ 'style_legalist': '法理', 'style_isolationist': '鎖国', 'style_tech': '科技',
+}
+for k, v in styles.items():
+    t(**{k: v})
+
+# ===== 銀行・商業 =====
+t(**{
+ 'cabinet_tab_bank': '銀行・商業',
+ 'bank_stats_reserves': '銀行準備金：{0}', 'bank_stats_loans': '貸出残高：{0}',
+ 'bank_stats_default': '前年デフォルト率：{0}%',
+ 'bank_risk_label': '取り付け騒ぎリスク：{0}',
+ 'bank_risk_0': '安全', 'bank_risk_1': '警戒', 'bank_risk_2': '危険',
+ 'bank_rate_label': '基準金利', 'bank_rate_high': '高(安全)', 'bank_rate_mid': '中', 'bank_rate_low': '低(高危険)',
+ 'bank_quota_label': '貸出枠', 'bank_quota_tight': '緊', 'bank_quota_mid': '中', 'bank_quota_loose': '緩',
+ 'bank_reserve_label': '準備金率', 'bank_reserve_high': '高', 'bank_reserve_mid': '中', 'bank_reserve_low': '低',
+ 'bank_preset_stimulus': '刺激通道', 'bank_preset_neutral': '中性', 'bank_preset_suppress': '抑制',
+ 'bank_preset_applied': '銀行通道を変更しました',
+ 'bank_commerce_title': '商業', 'bank_commerce_tax': '本年商業税：{0}',
+ 'bank_policy_franchise': '特許権【{0}】', 'bank_policy_fairprice': '低価格法【{0}】',
+ 'bank_policy_on': '開', 'bank_policy_off': '閉',
+ 'bank_disabled_note': '（銀行システムは設定で無効化中・表示のみ）',
+ 'toast_event_chain': '前の選択が新しい結果を生んだ——{kingdom}に新たな決断イベントが発生',
+})
+
+# ===== 統治者性格 =====
+t(**{
+ 'cabinet_ruler': '在位：{0}',
+ 'ruler_trait_greedy': '強欲', 'ruler_trait_deceitful': '狡猾', 'ruler_trait_honest': '誠実',
+ 'ruler_trait_content': '無欲', 'ruler_trait_ambitious': '野心家', 'ruler_trait_wise': '賢明',
+ 'ruler_trait_none': '凡庸',
+})
+
+# ===== イベント共通 =====
+t(**{
+ 'ev_desc_decision': '王国は選択を下した（選択肢 {0}）。',
+ 'toast_event_pending': '王国に未決のイベントが発生しました。内閣を開いて処理してください。',
+ 'toast_event_chain': '前の選択が新しい結果を生んだ——{kingdom}に新たな決断イベントが発生',
+ 'event_choice_title': '決断イベント',
+ 'event_choice_header': '〈{0}〉イベント {1}/{2}',
+ 'event_choice_kingdom': '〈{0}〉の選択',
+ 'event_choice_year': '現在 第 {0} 年',
+ 'event_choice_countdown': '残り {0} 年・期限切れで穏当な選択肢を自動執行',
+ 'event_choice_none': '未決のイベントなし',
+ 'event_choice_next': '他 {0} 件未決 →',
+ 'event_choice_cost': '費用 {0}', 'event_choice_gain': '収入 {0}',
+ 'event_choice_tax': '住民に課税', 'event_choice_relief': '貧民に分配',
+ 'event_choice_goodwill': '各国好感 {0}{1}', 'event_choice_unrest': '不満が募る',
+ 'cabinet_pending_row': '未決イベント ×{0}（最短あと {1} 年）',
+ 'cabinet_pending_open': '処理する',
+ 'toast_nation_place_mode': '設置モード：{0}｜左クリック設置・右クリック取消',
+ 'toast_nation_place_cancelled': '設置モード終了',
+ 'toast_nation_place_land': '海上には設置できません',
+ 'toast_nation_place_territory': '本国領土内にのみ設置できます',
+ 'toast_nation_build_failed': '設置失敗（位置が不適）',
+ 'toast_nation_built': '<{0}> 建設完成（-{1}G）',
+ 'toast_nation_built_already': 'この都市にはすでに建設済みです',
+ 'toast_nation_poor_treasury': '宝物庫が不足しています',
+ 'toast_nation_cooldown': 'クールダウン中です',
+ 'toast_nation_no_slot': '政策枠が満杯です（最大{0}件）',
+ 'toast_nation_policy_on': '[政策] {0} 有効化（第{1}档）',
+ 'toast_nation_policy_off': '[政策] {0} 停止',
+ 'toast_nation_policy_suspended': '宝物庫不足で {0} が一時停止中',
+ 'toast_nation_relief': '[法令] 緊急救济：貧民 {0} に配給',
+ 'toast_nation_festival': '[法令] 国慶祭執行（不安解消）',
+ 'toast_nation_unbind': '国が滅びたため統治を解除',
+ 'toast_nation_claim': '[認領] <{0}> を統治開始（宝物庫 {1}）',
+ 'toast_event_pending': '王国に未決のイベントが発生しました。内閣を開いて処理してください。',
+})
+
+# ===== イベント凡例 =====
+misc = {
+ 'ev_desc_unrest': '貧富差が閾を超え、不満が爆発（{0}）',
+ 'ev_desc_incite': '扇動により暴動が発生（{0}）',
+ 'ev_desc_suppress': '鎮圧执行',
+ 'ev_desc_plunder': '戦争略奪 +{0}G',
+ 'ev_desc_revolution': '革命勃発（{0}）',
+ 'ev_desc_uprising': '街头起义（{0}）',
+ 'ev_desc_build_inv': '{0} が建設投資',
+ 'ev_desc_craft_arsenal': '{0} が軍械を {1} 点鍛造',
+ 'ev_desc_wholesale': '{0} が武器を {1} 点卸売',
+ 'ev_desc_era_golden': '{0} に盛世到来',
+ 'ev_desc_era_revival': '{0} が復興を迎える',
+ 'ev_desc_era_flourish': '{0} が強盛期に入る',
+ 'ev_desc_collapse': '{0} 経済崩壊',
+ 'ev_desc_policy': '国家政策调整',
+ 'ev_desc_unrest_peace': '暴動が和平で解決',
+ 'ev_desc_unrest_resolved': '暴動が鎮圧され、都市回復',
+ 'ev_desc_policy_fail_abdicate': '改革失敗で国王退位',
+ 'ev_desc_policy_fail_death': '改革失敗で国王崩御',
+ 'ev_desc_policy_fail_civilwar': '改革失敗で内戦爆发',
+ 'ev_desc_policy_fail_fiscal': '財政改革失敗',
+ 'ev_desc_king_inherit': '新王即位',
+ 'ev_desc_disaster': '災害経済衝撃（損失 {0}）',
+ 'ev_desc_banking': '銀行貸付・デフォルト（規模 {0}）',
+ 'ev_desc_bubble_burst': '経済バブル破裂（{0}）',
+ 'ev_desc_nation_claim': '{0} を統治開始',
+ 'ev_desc_nation_policy': '{0} が政策を调整',
+ 'ev_desc_nation_relief': '{0} が緊急救济執行（{1}G）',
+ 'ev_desc_nation_festival': '{0} が国慶祭を開催',
+ 'ev_desc_nation_build': '{0} が建設',
+ 'ev_desc_nation_diplomacy': '{0} の外交アクション（{1}）',
+ 'ev_desc_law_reform': '{0} が变法',
+ 'ev_desc_law_reform_major': '{0} が重大な变法（法体系再構築）',
+ 'ev_desc_decision': '王国が選択を下した（選択肢 {0}）。',
+ 'ev_era_combined': '時代イベント',
+ 'ev_wholesale': '武器の卸売',
+ 'ruler_skim': '王室経費',
+ 'nation_commerce_tax': '商業税',
+}
+
+path = 'Locales/ja.json'
+existing = json.load(io.open(path, encoding='utf-8'), object_pairs_hook=collections.OrderedDict)
+merged = 0
+for k, v in JA.items():
+    if k not in existing:
+        existing[k] = v; merged += 1
+json.dump(existing, io.open(path, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+io.open(path, 'a', encoding='utf-8').write('\n')
+print('ja merged:', merged, 'total:', len(existing))

@@ -32,6 +32,15 @@ namespace EconomyMod.UI
             float totalH = UIStyles.BodyLineHeight * fontScale + 2f + 2f;
             container.AddComponent<LayoutElement>().preferredHeight = totalH;
 
+            // 金色装饰条（标题左侧短竖条）
+            var accentBar = new GameObject("AccentBar", typeof(RectTransform), typeof(Image));
+            accentBar.transform.SetParent(container.transform, false);
+            var abRt = accentBar.GetComponent<RectTransform>();
+            abRt.sizeDelta = new Vector2(3, UIStyles.BodyLineHeight * fontScale);
+            accentBar.GetComponent<Image>().color = UIStyles.SectionBar;
+            accentBar.GetComponent<Image>().raycastTarget = false;
+            var abLe = accentBar.AddComponent<LayoutElement>();
+            abLe.preferredWidth = 3; abLe.preferredHeight = UIStyles.BodyLineHeight * fontScale;
             // 标题文本
             var go = UIHelpers.CreateText(text, container.transform, UIStyles.SectionHeaderSize * fontScale, UIStyles.Gold,
                 font, UIStyles.BodyLineHeight, "Title");
@@ -72,6 +81,16 @@ namespace EconomyMod.UI
             var el = card.AddComponent<LayoutElement>();
             el.preferredWidth = w;
             el.preferredHeight = h;
+            // 左侧色条（价值色 = valueColor，视觉锚定）
+            var strip = new GameObject("Strip", typeof(RectTransform), typeof(Image));
+            strip.transform.SetParent(card.transform, false);
+            var srt = strip.GetComponent<RectTransform>();
+            srt.anchorMin = new Vector2(0, 0); srt.anchorMax = new Vector2(0, 1);
+            srt.pivot = new Vector2(0, 0.5f);
+            srt.anchoredPosition = Vector2.zero;
+            srt.sizeDelta = new Vector2(3, 0);
+            strip.GetComponent<Image>().color = valueColor;
+            strip.GetComponent<Image>().raycastTarget = false;
 
             // 标签（顶部，弱色；BestFit 自动缩小字号，窄卡不溢出）
             var lbl = UIHelpers.CreateText(label, card.transform, UIStyles.StatLabelSize * fontScale,
@@ -299,14 +318,32 @@ namespace EconomyMod.UI
             float h = 24f * fontScale;
             row.GetComponent<RectTransform>().sizeDelta = new Vector2(width, h);
             row.AddComponent<LayoutElement>().preferredHeight = h;
+            // 前三名底色（金/银/铜淡染）
+            if (rank == 1) { var bg = row.AddComponent<Image>(); bg.color = UIStyles.RowRank1; bg.raycastTarget = false; }
+            else if (rank == 2) { var bg = row.AddComponent<Image>(); bg.color = UIStyles.RowRank2; bg.raycastTarget = false; }
+            else if (rank == 3) { var bg = row.AddComponent<Image>(); bg.color = UIStyles.RowRank3; bg.raycastTarget = false; }
 
-            // 排名徽章（圆形数字）
+            // 排名徽章（圆形底 + 数字）
             var rankGo = UIHelpers.CreateText(rank.ToString(), row.transform, 11f * fontScale, rankColor,
                 font, 20f * fontScale, "Rank");
             rankGo.GetComponent<Text>().alignment = TextAnchor.MiddleCenter;
             rankGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
             var rrt = rankGo.GetComponent<RectTransform>();
             rrt.sizeDelta = new Vector2(22f * fontScale, 20f * fontScale);
+            // 圆形底（前三名有，其余透明）
+            var rankBg = new GameObject("RankBg", typeof(RectTransform), typeof(Image));
+            rankBg.transform.SetParent(rankGo.transform, false);
+            var rbRt = rankBg.GetComponent<RectTransform>();
+            rbRt.anchorMin = Vector2.zero; rbRt.anchorMax = Vector2.one;
+            rbRt.offsetMin = Vector2.zero; rbRt.offsetMax = Vector2.zero;
+            var rbImg = rankBg.GetComponent<Image>();
+            rbImg.sprite = UIHelpers.RoundedSprite();
+            rbImg.type = Image.Type.Sliced;
+            rbImg.raycastTarget = false;
+            rbImg.color = rank <= 3
+                ? new Color(rankColor.r, rankColor.g, rankColor.b, 0.18f)
+                : new Color(0, 0, 0, 0);
+            rankBg.transform.SetAsFirstSibling();
             var rel = rankGo.AddComponent<LayoutElement>();
             rel.preferredWidth = 22f * fontScale; rel.preferredHeight = 20f * fontScale;
 

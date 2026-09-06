@@ -146,6 +146,96 @@ namespace EconomyMod.UI
             return go;
         }
 
+        /// <summary>金色装饰分隔线：细金线 + 下方细灰线（双层立体感）。</summary>
+        public static GameObject CreateGoldDivider(Transform parent)
+        {
+            var container = new GameObject("GoldDivider", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            container.transform.SetParent(parent, false);
+            var crt = container.GetComponent<RectTransform>();
+            crt.sizeDelta = new Vector2(0, 3);
+            var cle = container.AddComponent<LayoutElement>();
+            cle.preferredHeight = 3;
+            cle.flexibleWidth = 1;
+            var vlg = container.GetComponent<VerticalLayoutGroup>();
+            vlg.spacing = 1;
+            vlg.childControlWidth = true; vlg.childControlHeight = false;
+            vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+
+            var gold = new GameObject("GoldLine", typeof(RectTransform), typeof(Image));
+            gold.transform.SetParent(container.transform, false);
+            gold.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 1);
+            gold.GetComponent<Image>().color = UIStyles.DividerGold;
+            var gle = gold.AddComponent<LayoutElement>();
+            gle.preferredHeight = 1; gle.flexibleWidth = 1;
+
+            var gray = new GameObject("GrayLine", typeof(RectTransform), typeof(Image));
+            gray.transform.SetParent(container.transform, false);
+            gray.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 1);
+            gray.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.45f, 0.3f);
+            var gle2 = gray.AddComponent<LayoutElement>();
+            gle2.preferredHeight = 1; gle2.flexibleWidth = 1;
+            return container;
+        }
+
+        /// <summary>竖向装饰条（左侧色带，用于卡片/行高亮）。</summary>
+        public static GameObject CreateAccentStrip(Transform parent, float height, Color color)
+        {
+            var go = new GameObject("AccentStrip", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(3, height);
+            var img = go.GetComponent<Image>();
+            img.color = color;
+            img.raycastTarget = false;
+            var le = go.AddComponent<LayoutElement>();
+            le.preferredWidth = 3;
+            le.preferredHeight = height;
+            le.flexibleHeight = 1;
+            return go;
+        }
+
+        /// <summary>面板内边框：一圈细金色描边（贴 panelRect 四边，不拦截点击）。</summary>
+        public static void CreateInnerBorder(RectTransform panelRect, Color color, float thickness = 1.5f)
+        {
+            string[] names = { "BorderTop", "BorderBottom", "BorderLeft", "BorderRight" };
+            for (int i = 0; i < 4; i++)
+            {
+                var bar = new GameObject(names[i], typeof(RectTransform), typeof(Image));
+                bar.transform.SetParent(panelRect, false);
+                var rt = bar.GetComponent<RectTransform>();
+                var img = bar.GetComponent<Image>();
+                img.color = color;
+                img.raycastTarget = false;
+                switch (i)
+                {
+                    case 0: // top
+                        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(1, 1);
+                        rt.pivot = new Vector2(0.5f, 1);
+                        rt.anchoredPosition = Vector2.zero;
+                        rt.sizeDelta = new Vector2(0, thickness);
+                        break;
+                    case 1: // bottom
+                        rt.anchorMin = new Vector2(0, 0); rt.anchorMax = new Vector2(1, 0);
+                        rt.pivot = new Vector2(0.5f, 0);
+                        rt.anchoredPosition = Vector2.zero;
+                        rt.sizeDelta = new Vector2(0, thickness);
+                        break;
+                    case 2: // left
+                        rt.anchorMin = new Vector2(0, 0); rt.anchorMax = new Vector2(0, 1);
+                        rt.pivot = new Vector2(0, 0.5f);
+                        rt.anchoredPosition = Vector2.zero;
+                        rt.sizeDelta = new Vector2(thickness, 0);
+                        break;
+                    case 3: // right
+                        rt.anchorMin = new Vector2(1, 0); rt.anchorMax = new Vector2(1, 1);
+                        rt.pivot = new Vector2(1, 0.5f);
+                        rt.anchoredPosition = Vector2.zero;
+                        rt.sizeDelta = new Vector2(thickness, 0);
+                        break;
+                }
+            }
+        }
+
         // ===== 浮动窗口骨架（EconomyHUD / RichListWindow / EventWindow 共用，消除 BuildPanel 重复）=====
 
         /// <summary>配置 Canvas：Overlay 渲染 + 排序层级 + 参考分辨率缩放。</summary>
