@@ -436,6 +436,17 @@ namespace EconomyMod
                 if (_yearCheckTimer < 0.5f) return;
                 _yearCheckTimer = 0f;
 
+                // auto 语言模式：游戏本体语言变化 → 全 UI 刷新（0.5s 轮询，开销可忽略）
+                try
+                {
+                    if (Services.LocalizationService.CheckGameLanguageChanged())
+                    {
+                        Services.EconomyConfigCallbacks.OnLanguageChanged(
+                            Services.LocalizationService.CurrentLanguage);
+                    }
+                }
+                catch (System.Exception) { }
+
                 // 无世界（主菜单/加载中）：不检测年份也不重置状态，
                 // 保证"回主菜单再读档"时历史与周期状态不被误清
 if (World.world == null)

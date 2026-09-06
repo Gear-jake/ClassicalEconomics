@@ -26,7 +26,7 @@ namespace EconomyMod.Models
         public int MinUnrestStartYear = 5;
 
         /// <summary>Mod 界面语言："zh" 简中 / "zh_tw" 繁中 / "en" English / "ru" Русский（由模组设置切换，与游戏语言解耦）。</summary>
-        public string Language = "zh";
+        public string Language = "auto"; // auto=跟随游戏本体语言（v1.5.3 起为默认）
 
         /// <summary>是否启用国家政策（高基尼王国自动尝试贫富调节，失败则统治者退位/驾崩或陷入内战）。</summary>
         public bool PolicyEnabled = true;

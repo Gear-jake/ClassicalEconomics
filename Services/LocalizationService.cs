@@ -42,6 +42,17 @@ namespace EconomyMod.Services
         }
 
         /// <summary>读取游戏本体当前语言 id（cz / ch / zh-Hans / zh-Hant / en / ru / ...）；读不到返回 null。</summary>
+        /// <summary>auto 模式下检测游戏语言变化：变化时返回 true（调用方触发全 UI 刷新）。首调用仅记基线。</summary>
+        public static bool CheckGameLanguageChanged()
+        {
+            if (!IsAuto(UnrestConfig.Instance.Language)) return false;
+            string cur = GetGameLanguage() ?? string.Empty;
+            if (cur == _lastGameLanguage) return false;
+            bool firstProbe = _lastGameLanguage == null;
+            _lastGameLanguage = cur;
+            return !firstProbe;
+        }
+
         public static string GetGameLanguage()
         {
             try

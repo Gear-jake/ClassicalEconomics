@@ -271,10 +271,11 @@ namespace EconomyMod.Services
         /// <summary>语言规范化：zh/zh_tw/en/ru，非法值回退 zh。</summary>
         public static string NormalizeLanguage(string lang)
         {
+            if (lang != null && lang.Trim().Equals("auto", System.StringComparison.OrdinalIgnoreCase)) return "auto";
             switch (lang)
             {
-                case "zh_tw": case "en": case "ru": return lang;
-                default: return "zh"; // 空/未知统一回退简中
+                case "zh": case "zh_tw": case "en": case "ru": return lang;
+                default: return "auto"; // 空/未知 → 跟随游戏语言
             }
         }
 

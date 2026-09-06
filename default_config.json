@@ -3,7 +3,7 @@
     {
       "Id": "ui_language",
       "Type": "TEXT",
-      "TextVal": "zh",
+      "TextVal": "auto",
       "Callback": "EconomyConfigCallbacks:OnLanguageChanged"
     },
     {
