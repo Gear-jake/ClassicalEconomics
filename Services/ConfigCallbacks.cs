@@ -63,7 +63,7 @@ namespace EconomyMod.Services
         /// <summary>default_config.json 全部配置项 Id（用于注入设置窗口本地化）。</summary>
         private static readonly string[] AllConfigIds =
         {
-            "ui_language", "unrest_enabled", "log_worldlog", "gini_threshold",
+            "unrest_enabled", "log_worldlog", "gini_threshold",
             "unrest_grace_years", "unrest_max_cities", "policy_enabled", "cycle_enabled",
             "cycle_gini_high", "cycle_gini_low", "cycle_gini_periods", "boom_stimulus_ratio",
             "boom_bubble_factor", "bubble_threshold", "boom_max_duration", "recession_max_duration",
@@ -131,7 +131,7 @@ namespace EconomyMod.Services
                 if (group == null) return;
 
                 var u = UnrestConfig.Instance;
-                if (group.TryGetValue("ui_language", out var lang)) u.Language = NormalizeLanguage(lang.TextVal);
+
                 if (group.TryGetValue("unrest_enabled", out var on))   u.Enabled = on.BoolVal;
                 if (group.TryGetValue("log_worldlog", out var log))    u.LogToWorldLog = log.BoolVal;
                 if (group.TryGetValue("gini_threshold", out var g))    u.GiniThreshold = ParseFloat(g.TextVal, u.GiniThreshold, 0.1f, 1.0f);
@@ -279,22 +279,16 @@ namespace EconomyMod.Services
             }
         }
 
-        public static void OnLanguageChanged(string pValue)
+        /// <summary>游戏本体语言变化后（模组界面永远跟随游戏语言）：刷新设置窗口标签 +
+        /// 悬浮窗/内阁标题与静态文本 + 重新注入按钮 tooltip（4 语言）。</summary>
+        public static void OnGameLanguageChanged()
         {
-            UnrestConfig.Instance.Language = NormalizeLanguage(pValue);
-            // 语言切换后：刷新设置窗口标签 + 悬浮窗/内阁标题与静态文本 + 重新注入按钮 tooltip（4 语言）
             try { RegisterConfigLocale(); } catch (System.Exception) { }
             try { EconomyHUD.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { EventWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { RichListWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { CabinetWindow.Instance?.RefreshAllTexts(); } catch (System.Exception) { }
             try { EconomyUI.ReapplyTooltips(); } catch (System.Exception) { }
-        }
-
-        /// <summary>兼容旧配置（旧版 SWITCH 开关回调，保留以防旧 config.json 残留）。</summary>
-        public static void OnLanguageChanged(bool pValue)
-        {
-            OnLanguageChanged(pValue ? "zh" : "en");
         }
 
         public static void OnEnabledChanged(bool pValue)

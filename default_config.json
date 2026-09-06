@@ -1,12 +1,6 @@
 {
   "economy_general": [
-    {
-      "Id": "ui_language",
-      "Type": "TEXT",
-      "TextVal": "auto",
-      "Callback": "EconomyConfigCallbacks:OnLanguageChanged"
-    },
-    {
+{
       "Id": "unrest_enabled",
       "Type": "SWITCH",
       "BoolVal": true,

@@ -440,10 +440,7 @@ namespace EconomyMod
                 try
                 {
                     if (Services.LocalizationService.CheckGameLanguageChanged())
-                    {
-                        Services.EconomyConfigCallbacks.OnLanguageChanged(
-                            Services.LocalizationService.CurrentLanguage);
-                    }
+                        Services.EconomyConfigCallbacks.OnGameLanguageChanged();
                 }
                 catch (System.Exception) { }
 

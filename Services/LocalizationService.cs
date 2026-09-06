@@ -20,32 +20,16 @@ namespace EconomyMod.Services
         private static bool _loaded;
         private static string _lastGameLanguage; // auto 模式的游戏语言变化检测基线
 
-        /// <summary>Mod 界面语言（解析后的最终值）："zh" / "zh_tw" / "en" / "ru"。设置为 auto 时随游戏语言实时解析。</summary>
-        public static string CurrentLanguage
-        {
-            get
-            {
-                string setting = UnrestConfig.Instance.Language;
-                if (IsAuto(setting)) return ResolveModLanguage(GetGameLanguage());
-                return setting;
-            }
-        }
+        /// <summary>Mod 界面语言（v1.5.4：永远跟随游戏本体语言，不再有独立设置项）。"zh" / "zh_tw" / "en" / "ru"。</summary>
+        public static string CurrentLanguage => ResolveModLanguage(GetGameLanguage());
 
         /// <summary>是否为中文系界面（简/繁）。</summary>
         public static bool IsChinese => CurrentLanguage == "zh" || CurrentLanguage == "zh_tw";
-
-        /// <summary>配置值是否为"跟随游戏语言"模式（auto/空值）。</summary>
-        private static bool IsAuto(string setting)
-        {
-            return string.IsNullOrWhiteSpace(setting)
-                || string.Equals(setting.Trim(), "auto", System.StringComparison.OrdinalIgnoreCase);
-        }
 
         /// <summary>读取游戏本体当前语言 id（cz / ch / zh-Hans / zh-Hant / en / ru / ...）；读不到返回 null。</summary>
         /// <summary>auto 模式下检测游戏语言变化：变化时返回 true（调用方触发全 UI 刷新）。首调用仅记基线。</summary>
         public static bool CheckGameLanguageChanged()
         {
-            if (!IsAuto(UnrestConfig.Instance.Language)) return false;
             string cur = GetGameLanguage() ?? string.Empty;
             if (cur == _lastGameLanguage) return false;
             bool firstProbe = _lastGameLanguage == null;
@@ -98,6 +82,7 @@ namespace EconomyMod.Services
                 case "zh-hans":
                 case "zh-cn":
                 case "zh_hans":
+                case "zh_cn":
                 case "zh":
                     return "zh";
                 case "ch":          // 本体旧缩写：繁体中文
