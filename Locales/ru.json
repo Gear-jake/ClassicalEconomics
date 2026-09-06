@@ -1221,5 +1221,16 @@
   "bank_max_loans_per_city": "Кредитов на город",
   "bank_max_loans_per_city Description": "Предел активных кредитов на город (ограничивает книгу)",
   "bank_deposit_ratio_default": "Норма вкладов",
-  "bank_deposit_ratio_default Description": "Доля богатства жителей в банках ежегодно (0-30)"
+  "bank_deposit_ratio_default Description": "Доля богатства жителей в банках ежегодно (0-30)",
+  "cabinet_ruler": "На троне: {0}",
+  "ruler_trait_greedy": "Жадный",
+  "ruler_trait_deceitful": "Лживый",
+  "ruler_trait_honest": "Честный",
+  "ruler_trait_content": "Довольный",
+  "ruler_trait_ambitious": "Амбициозный",
+  "ruler_trait_wise": "Мудрый",
+  "ruler_trait_none": "Обычный",
+  "ruler_personality_enabled": "Характер правителя",
+  "ruler_personality_enabled Description": "Включить характер правителя: читает ванильные черты короля и статистику личности, влияя на эволюцию законов AI, успех политики, казнокрадство и выбор событий (парламент сдерживает)",
+  "ruler_skim": "Расходы двора"
 }

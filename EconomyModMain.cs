@@ -66,6 +66,7 @@ namespace EconomyMod
             NationEngine.Reset(); // 中央银行家：清空国家绑定/金库/政策（新地图从零开始）
             LawEngine.ResetAll(); // 法典：清空各国法律/国策/个性（新地图重新演化）
             BankEngine.Reset(); // 银行：清空账本/利率档/商业政策
+            RulerEngine.Reset(); // 统治者性格：清画像缓存（原版数据自持久化）
             NationPowerEngine.Reset(); // 富国强兵：清空档位与国民特质
             HistoryService.ClearHistory();
             EventStreamService.Clear();
@@ -457,6 +458,7 @@ if (World.world == null)
                         BankingEngine.ClearWorldReferences();
                         NationPowerEngine.ClearWorldReferences();
                         BankEngine.ClearWorldReferences();
+                        RulerEngine.Reset();
                         EventStreamService.Clear();
                         EconomyUI.OnWorldUnavailable();
                     }

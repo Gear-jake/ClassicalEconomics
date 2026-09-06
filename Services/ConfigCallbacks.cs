@@ -86,6 +86,7 @@ namespace EconomyMod.Services
             "nation_claim_hotkey", "ui_scale",
             "event_chance_player", "event_chance_ai", "event_cooldown_years",
             "bank_enabled", "bank_money_supply_factor", "bank_max_loans_per_city", "bank_deposit_ratio_default",
+            "ruler_personality_enabled",
         };
 
         /// <summary>
@@ -234,6 +235,8 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("bank_money_supply_factor", out var bmf)) u.BankMoneySupplyFactor = ParseFloat(bmf.TextVal, u.BankMoneySupplyFactor, 0f, 0.5f);
                 if (group.TryGetValue("bank_max_loans_per_city", out var bml)) u.BankMaxLoansPerCity = ParseInt(bml.TextVal, u.BankMaxLoansPerCity, 1, 100);
                 if (group.TryGetValue("bank_deposit_ratio_default", out var bdr)) u.BankDepositRatioDefault = ParseInt(bdr.TextVal, u.BankDepositRatioDefault, 0, 30);
+                // 统治者性格
+                if (group.TryGetValue("ruler_personality_enabled", out var rpe)) u.RulerPersonalityEnabled = rpe.BoolVal;
             }
             catch (System.Exception e)
             {
@@ -721,6 +724,11 @@ namespace EconomyMod.Services
         public static void OnBankDepositRatioDefaultChanged(string pValue)
         {
             UnrestConfig.Instance.BankDepositRatioDefault = ParseInt(pValue, UnrestConfig.Instance.BankDepositRatioDefault, 0, 30);
+        }
+
+        public static void OnRulerPersonalityEnabledChanged(bool pValue)
+        {
+            UnrestConfig.Instance.RulerPersonalityEnabled = pValue;
         }
 
         /// <summary>UI 缩放：改后即时重建可见的内阁面板与原版窗口法典摘要卡。</summary>

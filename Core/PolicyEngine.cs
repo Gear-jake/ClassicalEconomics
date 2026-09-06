@@ -73,8 +73,12 @@ namespace EconomyMod.Core
 
                 // M3：按经济情境选择政策类型
                 PolicyKind kind = PickPolicyKind(stats);
+                // 统治者性格：贪婪王不主动搞贫富调节（诚实王高基尼更倾向）
+                if (kind == PolicyKind.Redistribution
+                    && RulerEngine.BlocksRedistribution(kingdom.data.id, stats.GiniCoefficient))
+                    kind = PolicyKind.Fiscal;
 
-                if (RollSuccess(stats.GiniCoefficient, kind))
+                if (RollSuccess(kingdom.data.id, stats.GiniCoefficient, kind))
                 {
                     ApplyPolicy(kingdom, stats, kind);
                 }
@@ -115,13 +119,15 @@ namespace EconomyMod.Core
             return PolicyKind.Redistribution;
         }
 
-        /// <summary>成功概率：基尼越高成功率越低（改革越激进越易失败）；财政政策基础成功率更高。</summary>
-        private static bool RollSuccess(float gini, PolicyKind kind)
+        /// <summary>成功概率：基尼越高成功率越低（改革越激进越易失败）；财政政策基础成功率更高。
+        /// v1.5.1：乘统治者性格成功率乘数（理性/行政/英明 +，欺诈 −，clamp 0.7~1.35）。</summary>
+        private static bool RollSuccess(long kingdomId, float gini, PolicyKind kind)
         {
             float baseChance = kind == PolicyKind.Fiscal ? 0.75f : BaseSuccessChance;
             // gini=阈值 → base；gini=1.0 → 0.35
             float success = Mathf.Lerp(baseChance, 0.35f,
                 Mathf.Clamp01((gini - PolicyGiniThreshold) / (1f - PolicyGiniThreshold)));
+            success = Mathf.Clamp01(success * RulerEngine.PolicySuccessMult(kingdomId));
             return Random.value < success;
         }
 

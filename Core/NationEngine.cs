@@ -638,6 +638,26 @@ namespace EconomyMod.Core
                 r.Closed = true;
             }
 
+            // 统治者性格：贪婪/欺诈王侵蚀国库收入进国王私囊（议会制衡；诚实王分文不取）
+            long skim = RulerEngine.TreasurySkim(_nationKingdomId, income);
+            if (skim > 0 && TryPay(skim))
+            {
+                var king = kingdom.king;
+                if (king != null && king.isAlive())
+                {
+                    // king.addMoney 只收 int：long 钳制（与其他长金额路径同模式）
+                    int skimInt = skim > int.MaxValue ? int.MaxValue : (int)skim;
+                    bool added = false;
+                    try { king.addMoney(skimInt); added = true; } catch (System.Exception) { }
+                    if (added) AddRecord(year, "ruler_skim", skim);
+                    else _treasury += skim;
+                }
+                else
+                {
+                    _treasury += skim; // 国王不在位，退回金库
+                }
+            }
+
             _lastIncome = income;
             _lastExpense = expense;
             long commerceTax = BankEngine.LastCommerceTax;

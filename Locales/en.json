@@ -1221,5 +1221,16 @@
   "bank_max_loans_per_city": "Loans per City",
   "bank_max_loans_per_city Description": "Cap on active loans per city (keeps the ledger bounded)",
   "bank_deposit_ratio_default": "Default Deposit Ratio",
-  "bank_deposit_ratio_default Description": "Share of resident wealth deposited into city banks yearly (0-30)"
+  "bank_deposit_ratio_default Description": "Share of resident wealth deposited into city banks yearly (0-30)",
+  "cabinet_ruler": "Reigning: {0}",
+  "ruler_trait_greedy": "Greedy",
+  "ruler_trait_deceitful": "Deceitful",
+  "ruler_trait_honest": "Honest",
+  "ruler_trait_content": "Content",
+  "ruler_trait_ambitious": "Ambitious",
+  "ruler_trait_wise": "Wise",
+  "ruler_trait_none": "Ordinary",
+  "ruler_personality_enabled": "Ruler Personality",
+  "ruler_personality_enabled Description": "Enable ruler personality: reads vanilla king traits and personality stats to sway AI law evolution, policy success, treasury skimming and event choices (parliament dampens)",
+  "ruler_skim": "Royal Expenses"
 }

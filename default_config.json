@@ -457,6 +457,12 @@
       "Callback": "EconomyConfigCallbacks:OnBankDepositRatioDefaultChanged"
     },
     {
+      "Id": "ruler_personality_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnRulerPersonalityEnabledChanged"
+    },
+    {
       "Id": "ui_scale",
       "Type": "TEXT",
       "TextVal": "1.2",

@@ -1221,5 +1221,16 @@
   "bank_max_loans_per_city": "每城貸款上限",
   "bank_max_loans_per_city Description": "每座城市在賬貸款筆數上限（賬本有界保證）",
   "bank_deposit_ratio_default": "預設存款比例",
-  "bank_deposit_ratio_default Description": "居民財富每年轉入城市銀行儲備的比例（0~30）"
+  "bank_deposit_ratio_default Description": "居民財富每年轉入城市銀行儲備的比例（0~30）",
+  "cabinet_ruler": "在位：{0}",
+  "ruler_trait_greedy": "貪婪",
+  "ruler_trait_deceitful": "欺詐",
+  "ruler_trait_honest": "誠實",
+  "ruler_trait_content": "知足",
+  "ruler_trait_ambitious": "野心勃勃",
+  "ruler_trait_wise": "英明",
+  "ruler_trait_none": "平凡",
+  "ruler_personality_enabled": "統治者性格",
+  "ruler_personality_enabled Description": "啟用統治者性格：讀原版國王性格特質與性格統計，影響 AI 法典演化、政策成功率、國庫侵蝕與事件選擇（議會制衡）",
+  "ruler_skim": "王室用度"
 }

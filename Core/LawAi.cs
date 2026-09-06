@@ -31,6 +31,9 @@ namespace EconomyMod.Core
                 int suggest = LawEngine.SuggestLawLevel(kingdom, key, state, atWar);
                 if (suggest < 0) continue;
                 suggest = StyleAdjust(style, key, suggest);
+                // 统治者性格第三层偏差（读原版国王特质/personality_*；议会制衡；知足减幅）
+                int curPre = state.LawLevels[i];
+                suggest = RulerEngine.AdjustLaw(kingdom.data.id, key, curPre, suggest);
 
                 int cur = state.LawLevels[i];
                 if (suggest == cur) continue;

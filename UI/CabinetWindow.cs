@@ -465,6 +465,9 @@ namespace EconomyMod.UI
             // 待决事件区（S3-2）：有挂起抉择事件时置顶显示，无则零占位
             if (DecisionEvents.PendingCount > 0) BuildPendingEventsRow();
             AddLine(UIHelpers.Lf("cabinet_nation", NationEngine.NationName), UIStyles.Gold, 14f);
+            string rulerDesc = RulerEngine.DescribeRuler(NationEngine.NationKingdomId);
+            if (rulerDesc != null)
+                AddLine(UIHelpers.Lf("cabinet_ruler", rulerDesc), Muted, 11f);
             AddLine(UIHelpers.Lf("cabinet_treasury", NationEngine.FormatGold(NationEngine.Treasury)),
                 UIStyles.Gold, 14f);
             AddLine(UIHelpers.Lf("cabinet_flow", NationEngine.FormatGold(NationEngine.LastIncome),

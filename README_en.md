@@ -1,6 +1,6 @@
 # Classical Economics
 
-> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.5.0* ｜ Requires NeoModLoader (NML)
+> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.5.1* ｜ Requires NeoModLoader (NML)
 
 ## Feature Overview
 
@@ -22,6 +22,11 @@
 - Mutex law pairs, paid upgrades / free downgrades; effects genuinely wired into 9 engines (production/price/Gini/unrest/consumption/disaster/build cost/wages/military)
 - Law bonuses visible on **citizen traits** (Scholar State, Militarized, etc.); codex persisted in saves
 - Live aggregate-effect summary + semantic tier names (e.g. Commercial Policy: Laissez-faire → Command economy)
+
+**Ruler Personality**
+- Reads the **vanilla mechanic**: the reigning king's traits (greedy/deceitful/honest/content/ambitious/wise) and personality stats
+- Greedy kings raise taxes, neglect schooling & healthcare, **skim the treasury into their pockets**, and avoid costly options; honest kings push anti-corruption, justice and fair taxes, and never skim
+- Policy success swings ±25% by personality; **parliament law ≥2 halves every bias** (institutional check); the finance page shows the reigning king and traits
 
 **Banking & Commerce**
 - Real per-city ledgers: residents deposit, banks lend by rate/quota to low-income citizens, loans repay with interest, defaults write off — gold conserved end to end
@@ -73,6 +78,7 @@ The NML settings window adds a **Performance** group. Every key below is synchro
 | `treasury_income_ratio` | 5 | 1-20 | Royal treasury income ratio: percent of city warehouse gold levied each cycle |
 | `policy_slots` | 3 | 1-5 | Ongoing policy slot cap: maximum simultaneous ongoing policies |
 | `nation_claim_hotkey` | G | text | Hover a kingdom on the map and press this key to claim/open the cabinet (Unity KeyCode name; blank disables) |
+| `ruler_personality_enabled` | true | switch | Ruler personality: reads vanilla king traits/personality stats to sway AI laws, policy success, treasury skim, event choices (parliament dampens) |
 | `bank_enabled` | true | switch | Master switch for banking & commerce (ledgers, central-bank panel, commerce tax) |
 | `bank_money_supply_factor` | 0.15 | 0-0.5 | Share of net loan growth added to money supply (drives inflation/bubbles) |
 | `bank_max_loans_per_city` | 20 | 1-100 | Cap on active loans per city |

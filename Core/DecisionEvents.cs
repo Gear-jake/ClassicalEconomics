@@ -358,6 +358,7 @@ namespace EconomyMod.Core
                 float w = 1f;
                 var sw = d.options[i].styleWeights;
                 if (sw != null && style != null && sw.TryGetValue(style, out float v) && v > 0f) w = v;
+                w = System.Math.Max(0.05f, w + RulerEngine.OptionBias(kingdomId, d.options[i]));
                 weights[i] = w;
                 total += w;
             }

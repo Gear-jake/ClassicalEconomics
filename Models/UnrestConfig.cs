@@ -192,6 +192,11 @@ namespace EconomyMod.Models
         /// <summary>默认存款比例：居民财富每年转入城市银行储备的比例（0~30，默认 10）。</summary>
         public int BankDepositRatioDefault = 10;
 
+        // ===== 统治者性格（RulerEngine，读原版性格机制）=====
+
+        /// <summary>启用统治者性格（读原版国王性格特质与 personality_* 统计，影响列国决策）。</summary>
+        public bool RulerPersonalityEnabled = true;
+
         // ===== 货币供给与价格指数（CPI）=====
 
         /// <summary>货币流通速度（默认0.5）：CPI = 货币供给 / (总产出 × 流通速度)。</summary>

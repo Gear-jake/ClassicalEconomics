@@ -57,6 +57,7 @@ $keys = @(
     @{ Id = 'nation_play_enabled';              Field = 'NationPlayEnabled';            Type = 'SWITCH'; Default = 'true';  Callback = 'OnNationPlayEnabledChanged';          Min = $null; Max = $null },
     @{ Id = 'treasury_income_ratio';            Field = 'TreasuryIncomeRatio';          Type = 'TEXT';   Default = '5';     Callback = 'OnTreasuryIncomeRatioChanged';        Min = 1;     Max = 20 },
     @{ Id = 'policy_slots';                     Field = 'PolicySlots';                  Type = 'TEXT';   Default = '3';     Callback = 'OnPolicySlotsChanged';                Min = 1;     Max = 5 },
+    @{ Id = 'ruler_personality_enabled';     Field = 'RulerPersonalityEnabled';     Type = 'SWITCH'; Default = 'true';  Callback = 'OnRulerPersonalityEnabledChanged';   Min = $null; Max = $null },
     @{ Id = 'bank_enabled';                  Field = 'BankEnabled';                 Type = 'SWITCH'; Default = 'true';  Callback = 'OnBankEnabledChanged';               Min = $null; Max = $null },
     @{ Id = 'bank_money_supply_factor';      Field = 'BankMoneySupplyFactor';       Type = 'FLOAT';  Default = '0.15';  Callback = 'OnBankMoneySupplyFactorChanged';     Min = 0; Max = 0.5 },
     @{ Id = 'bank_max_loans_per_city';       Field = 'BankMaxLoansPerCity';         Type = 'TEXT';   Default = '20';    Callback = 'OnBankMaxLoansPerCityChanged';       Min = 1; Max = 100 },

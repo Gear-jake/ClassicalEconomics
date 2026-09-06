@@ -1221,5 +1221,16 @@
   "bank_max_loans_per_city": "每城贷款上限",
   "bank_max_loans_per_city Description": "每座城市在账贷款笔数上限（账本有界保证）",
   "bank_deposit_ratio_default": "默认存款比例",
-  "bank_deposit_ratio_default Description": "居民财富每年转入城市银行储备的比例（0~30）"
+  "bank_deposit_ratio_default Description": "居民财富每年转入城市银行储备的比例（0~30）",
+  "cabinet_ruler": "在位：{0}",
+  "ruler_trait_greedy": "贪婪",
+  "ruler_trait_deceitful": "欺诈",
+  "ruler_trait_honest": "诚实",
+  "ruler_trait_content": "知足",
+  "ruler_trait_ambitious": "野心勃勃",
+  "ruler_trait_wise": "英明",
+  "ruler_trait_none": "平凡",
+  "ruler_personality_enabled": "统治者性格",
+  "ruler_personality_enabled Description": "启用统治者性格：读原版国王性格特质与性格统计，影响 AI 法典演化、政策成功率、国库侵蚀与事件选择（议会制衡）",
+  "ruler_skim": "王室用度"
 }
