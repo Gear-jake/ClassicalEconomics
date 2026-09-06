@@ -178,6 +178,20 @@ namespace EconomyMod.Models
         /// <summary>全局冷却年数：两次王国事件之间至少相隔的年数（1~10，默认 3）。</summary>
         public int EventCooldownYears = 3;
 
+        // ===== 银行与商业（BankEngine）=====
+
+        /// <summary>是否启用银行与商业系统（城市账本/央行操作台/商业税）。</summary>
+        public bool BankEnabled = true;
+
+        /// <summary>货币供给联动系数：放贷净增量计入 MoneySupply 的比例（0~0.5，默认 0.15）。</summary>
+        public float BankMoneySupplyFactor = 0.15f;
+
+        /// <summary>每城在账贷款上限（1~100，默认 20；账本有界保证）。</summary>
+        public int BankMaxLoansPerCity = 20;
+
+        /// <summary>默认存款比例：居民财富每年转入城市银行储备的比例（0~30，默认 10）。</summary>
+        public int BankDepositRatioDefault = 10;
+
         // ===== 货币供给与价格指数（CPI）=====
 
         /// <summary>货币流通速度（默认0.5）：CPI = 货币供给 / (总产出 × 流通速度)。</summary>

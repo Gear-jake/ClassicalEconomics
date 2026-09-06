@@ -1174,6 +1174,114 @@
           "goodwillAll": 2
         }
       ]
+    },
+    {
+      "id": "caravan_ambush",
+      "family": "finance",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 14,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004,
+          "commercePenaltyYears": 0
+        },
+        {
+          "key": "opt2",
+          "commercePenaltyYears": 2,
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "trade_route_cut",
+      "family": "finance",
+      "minYear": 0,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 0,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006,
+          "commercePenaltyYears": 0
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "guild_petition2",
+      "family": "finance",
+      "minYear": 4,
+      "timeoutYears": 3,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.008,
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2,
+          "styleWeights": {
+            "style_merchant": 2.0
+          }
+        }
+      ],
+      "conditions": {
+        "giniMin": 0.4
+      }
+    },
+    {
+      "id": "bank_run",
+      "family": "finance",
+      "minYear": 3,
+      "timeoutYears": 1,
+      "fallback": 0,
+      "cooldownYears": 10,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.02
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ],
+      "conditions": {
+        "bankRiskMin": 2
+      },
+      "chainNext": "bank_run_aftermath",
+      "chainDelay": 1
+    },
+    {
+      "id": "bank_run_aftermath",
+      "family": "finance",
+      "minYear": 0,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "poorReliefRatio": 0.08
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
     }
   ]
 }

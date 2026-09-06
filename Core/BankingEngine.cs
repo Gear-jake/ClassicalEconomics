@@ -17,10 +17,20 @@ namespace EconomyMod.Core
     {
         // 复用缓冲（避免每年 GC 分配）
         private static readonly List<Actor> _richPool = new List<Actor>(16);
-        private static readonly Dictionary<long, long> _contagionLossByKingdom = new Dictionary<long, long>();
+        internal static readonly Dictionary<long, long> _contagionLossByKingdom = new Dictionary<long, long>();
 
         /// <summary>本期违约导致的财富损失总量。</summary>
         public static long LastDefaultLoss { get; private set; }
+
+        /// <summary>外部违约登记（BankEngine 城市银行违约挂入既有危机传染账本）。</summary>
+        internal static void NoteExternalDefault(long kingdomId, long defaulted)
+        {
+            if (defaulted <= 0) return;
+            long acc;
+            bool first = !_contagionLossByKingdom.TryGetValue(kingdomId, out acc);
+            _contagionLossByKingdom[kingdomId] = SaturatingAdd(acc, defaulted);
+            if (first) LastContagions++;
+        }
 
         /// <summary>本期危机传染波及的王国数。</summary>
         public static int LastContagions { get; private set; }

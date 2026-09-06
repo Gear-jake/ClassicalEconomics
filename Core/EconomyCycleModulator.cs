@@ -45,7 +45,7 @@ namespace EconomyMod.Core
         public static float CurrentCPI { get; private set; } = 1f;
 
         /// <summary>当前货币供给 M（繁荣注金+/泡沫蒸发- 追踪，仅供本类内部计算 CPI）。</summary>
-        private static float MoneySupply { get; set; }
+        internal static float MoneySupply;
 
         /// <summary>玩家手动设置经济阶段（立即生效，重置持续期与泡沫值，并应用对应政策）。</summary>
         public static void SetPhaseManual(EconomyPhase phase)

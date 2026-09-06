@@ -24,6 +24,7 @@ namespace EconomyMod.Core
         EraTick,
         Disaster,
         Banking,
+        Bank,
         Nation,
         Events,
         Snapshot,
@@ -150,6 +151,11 @@ namespace EconomyMod.Core
                     break;
                 case AnnualStage.Banking:
                     if (!_reduced) BankingEngine.Evaluate(); // 超预算兜底削减：再砍银行
+                    break;
+                case AnnualStage.Bank:
+                    // 银行引擎：存款→放贷→回收→风险档→货币联动→商业税（真实金币流）
+                    NationEngine.AddTreasury(BankEngine.CollectCommerceTax(_year));
+                    BankEngine.Evaluate(_year);
                     break;
                 case AnnualStage.Nation:
                     // 中央银行家：金库税负 + 持续政策 + 政绩记录回填（财政路径，不参与削减）

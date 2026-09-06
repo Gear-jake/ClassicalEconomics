@@ -433,6 +433,30 @@
       "Callback": "EconomyConfigCallbacks:OnEventCooldownYearsChanged"
     },
     {
+      "Id": "bank_enabled",
+      "Type": "SWITCH",
+      "BoolVal": true,
+      "Callback": "EconomyConfigCallbacks:OnBankEnabledChanged"
+    },
+    {
+      "Id": "bank_money_supply_factor",
+      "Type": "TEXT",
+      "TextVal": "0.15",
+      "Callback": "EconomyConfigCallbacks:OnBankMoneySupplyFactorChanged"
+    },
+    {
+      "Id": "bank_max_loans_per_city",
+      "Type": "TEXT",
+      "TextVal": "20",
+      "Callback": "EconomyConfigCallbacks:OnBankMaxLoansPerCityChanged"
+    },
+    {
+      "Id": "bank_deposit_ratio_default",
+      "Type": "TEXT",
+      "TextVal": "10",
+      "Callback": "EconomyConfigCallbacks:OnBankDepositRatioDefaultChanged"
+    },
+    {
       "Id": "ui_scale",
       "Type": "TEXT",
       "TextVal": "1.2",

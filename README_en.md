@@ -1,6 +1,6 @@
 # Classical Economics
 
-> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.4.2* ｜ Requires NeoModLoader (NML)
+> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.5.0* ｜ Requires NeoModLoader (NML)
 
 ## Feature Overview
 
@@ -22,6 +22,12 @@
 - Mutex law pairs, paid upgrades / free downgrades; effects genuinely wired into 9 engines (production/price/Gini/unrest/consumption/disaster/build cost/wages/military)
 - Law bonuses visible on **citizen traits** (Scholar State, Militarized, etc.); codex persisted in saves
 - Live aggregate-effect summary + semantic tier names (e.g. Commercial Policy: Laissez-faire → Command economy)
+
+**Banking & Commerce**
+- Real per-city ledgers: residents deposit, banks lend by rate/quota to low-income citizens, loans repay with interest, defaults write off — gold conserved end to end
+- **Central-bank panel**: a new "Bank & Trade" cabinet tab with base rate / lending quota / reserve ratio tiers, Stimulus-Neutral-Restrain presets, and a three-light bank-run risk lamp
+- **Real monetary policy**: net loan growth feeds the money supply (tunable factor), driving inflation and bubbles
+- Commerce: markets yield yearly commerce tax; franchise / fair-price mutually exclusive policies; 5 new events incl. caravan ambush and bank run (**61 events** total)
 
 **Decision Events**
 - **56 events** across 6 families (finance/disaster/court/military/civil/diplomacy); condition-filtered yearly draw, max one per kingdom per year
@@ -67,6 +73,10 @@ The NML settings window adds a **Performance** group. Every key below is synchro
 | `treasury_income_ratio` | 5 | 1-20 | Royal treasury income ratio: percent of city warehouse gold levied each cycle |
 | `policy_slots` | 3 | 1-5 | Ongoing policy slot cap: maximum simultaneous ongoing policies |
 | `nation_claim_hotkey` | G | text | Hover a kingdom on the map and press this key to claim/open the cabinet (Unity KeyCode name; blank disables) |
+| `bank_enabled` | true | switch | Master switch for banking & commerce (ledgers, central-bank panel, commerce tax) |
+| `bank_money_supply_factor` | 0.15 | 0-0.5 | Share of net loan growth added to money supply (drives inflation/bubbles) |
+| `bank_max_loans_per_city` | 20 | 1-100 | Cap on active loans per city |
+| `bank_deposit_ratio_default` | 10 | 0-30 | Default yearly deposit share of resident wealth |
 | `event_chance_player` | 0.35 | 0-1 | Yearly chance of a decision event for your claimed kingdom (0 disables) |
 | `event_chance_ai` | 0.15 | 0-1 | Yearly chance for AI kingdoms (they decide by national character) |
 | `event_cooldown_years` | 3 | 1-10 | Minimum years between any two kingdom events |

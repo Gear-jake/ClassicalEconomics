@@ -85,6 +85,7 @@ namespace EconomyMod.Services
             "nation_play_enabled", "treasury_income_ratio", "policy_slots",
             "nation_claim_hotkey", "ui_scale",
             "event_chance_player", "event_chance_ai", "event_cooldown_years",
+            "bank_enabled", "bank_money_supply_factor", "bank_max_loans_per_city", "bank_deposit_ratio_default",
         };
 
         /// <summary>
@@ -228,6 +229,11 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("event_chance_player", out var ecp)) u.EventChancePlayer = ParseFloat(ecp.TextVal, u.EventChancePlayer, 0f, 1f);
                 if (group.TryGetValue("event_chance_ai", out var eca)) u.EventChanceAi = ParseFloat(eca.TextVal, u.EventChanceAi, 0f, 1f);
                 if (group.TryGetValue("event_cooldown_years", out var ecx)) u.EventCooldownYears = ParseInt(ecx.TextVal, u.EventCooldownYears, 1, 10);
+                // 银行与商业
+                if (group.TryGetValue("bank_enabled", out var bn)) u.BankEnabled = bn.BoolVal;
+                if (group.TryGetValue("bank_money_supply_factor", out var bmf)) u.BankMoneySupplyFactor = ParseFloat(bmf.TextVal, u.BankMoneySupplyFactor, 0f, 0.5f);
+                if (group.TryGetValue("bank_max_loans_per_city", out var bml)) u.BankMaxLoansPerCity = ParseInt(bml.TextVal, u.BankMaxLoansPerCity, 1, 100);
+                if (group.TryGetValue("bank_deposit_ratio_default", out var bdr)) u.BankDepositRatioDefault = ParseInt(bdr.TextVal, u.BankDepositRatioDefault, 0, 30);
             }
             catch (System.Exception e)
             {
@@ -695,6 +701,26 @@ namespace EconomyMod.Services
         public static void OnEventCooldownYearsChanged(string pValue)
         {
             UnrestConfig.Instance.EventCooldownYears = ParseInt(pValue, UnrestConfig.Instance.EventCooldownYears, 1, 10);
+        }
+
+        public static void OnBankEnabledChanged(bool pValue)
+        {
+            UnrestConfig.Instance.BankEnabled = pValue;
+        }
+
+        public static void OnBankMoneySupplyFactorChanged(string pValue)
+        {
+            UnrestConfig.Instance.BankMoneySupplyFactor = ParseFloat(pValue, UnrestConfig.Instance.BankMoneySupplyFactor, 0f, 0.5f);
+        }
+
+        public static void OnBankMaxLoansPerCityChanged(string pValue)
+        {
+            UnrestConfig.Instance.BankMaxLoansPerCity = ParseInt(pValue, UnrestConfig.Instance.BankMaxLoansPerCity, 1, 100);
+        }
+
+        public static void OnBankDepositRatioDefaultChanged(string pValue)
+        {
+            UnrestConfig.Instance.BankDepositRatioDefault = ParseInt(pValue, UnrestConfig.Instance.BankDepositRatioDefault, 0, 30);
         }
 
         /// <summary>UI 缩放：改后即时重建可见的内阁面板与原版窗口法典摘要卡。</summary>

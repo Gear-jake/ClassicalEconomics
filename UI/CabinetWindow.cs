@@ -34,9 +34,9 @@ namespace EconomyMod.UI
         protected override Vector2 Size => new Vector2(600f, 760f);
         protected override Color BgColor => new Color(0.12f, 0.13f, 0.16f, 0.97f);
 
-        private enum CabinetPage { Finance = 0, Policy, Decree, Diplomacy, Law }
-        private const int PageCount = 5;
-        private static readonly string[] PageKeys = { "cabinet_tab_finance", "cabinet_tab_policy", "cabinet_tab_decree", "cabinet_tab_diplomacy", "cabinet_tab_codex" };
+        private enum CabinetPage { Finance = 0, Policy, Decree, Diplomacy, Law, Bank }
+        private const int PageCount = 6;
+        private static readonly string[] PageKeys = { "cabinet_tab_finance", "cabinet_tab_policy", "cabinet_tab_decree", "cabinet_tab_diplomacy", "cabinet_tab_codex", "cabinet_tab_bank" };
 
         private static readonly Color Muted = new Color(0.7f, 0.7f, 0.7f);
         private static readonly Color DividerColor = new Color(0.35f, 0.35f, 0.4f, 0.6f);
@@ -186,6 +186,7 @@ namespace EconomyMod.UI
                 case CabinetPage.Decree: BuildDecreePage(); break;
                 default: BuildDiplomacyPage(); break;
                 case CabinetPage.Law: BuildLawPage(null); break;
+                case CabinetPage.Bank: BuildBankPage(); break;
             }
         }
 
@@ -374,6 +375,89 @@ namespace EconomyMod.UI
         }
 
         // ===== 已认领页面 =====
+
+        /// <summary>银行·商务页（v1.5.0）：三要素档位 + 预设通道 + 风险灯 + 商业政策/税收。</summary>
+        private void BuildBankPage()
+        {
+            var cfg = UnrestConfig.Instance;
+            AddLine(UIHelpers.Lf("cabinet_nation", NationEngine.NationName), UIStyles.Gold, 14f);
+            AddDivider(DividerColor);
+
+            // 统计与风险灯
+            AddLine(UIHelpers.Lf("bank_stats_reserves", NationEngine.FormatGold(BankEngine.PlayerReservesTotal)), UIStyles.Info, 12f);
+            AddLine(UIHelpers.Lf("bank_stats_loans", NationEngine.FormatGold(BankEngine.PlayerOutstandingTotal)), UIStyles.Info, 12f);
+            AddLine(UIHelpers.Lf("bank_stats_default", (BankEngine.LastDefaultRate * 100f).ToString("F1")), UIStyles.TextPrimary, 12f);
+            int risk = BankEngine.RiskTier;
+            var riskColor = risk == 2 ? UIStyles.Danger : risk == 1 ? UIStyles.Warning : UIStyles.Positive;
+            AddLine(UIHelpers.Lf("bank_risk_label", UIHelpers.L("bank_risk_" + risk)), riskColor, 13f);
+            AddDivider(DividerColor);
+
+            // 三要素：利率 / 额度 / 准备金率
+            BuildTierRow("bank_rate_label", BankEngine.RateTier,
+                new[] { "bank_rate_high", "bank_rate_mid", "bank_rate_low" },
+                i => { BankEngine.RateTier = i; RefreshNow(); });
+            BuildTierRow("bank_quota_label", BankEngine.QuotaTier,
+                new[] { "bank_quota_tight", "bank_quota_mid", "bank_quota_loose" },
+                i => { BankEngine.QuotaTier = i; RefreshNow(); });
+            BuildTierRow("bank_reserve_label", BankEngine.ReserveTier,
+                new[] { "bank_reserve_high", "bank_reserve_mid", "bank_reserve_low" },
+                i => { BankEngine.ReserveTier = i; RefreshNow(); });
+
+            // 预设通道
+            var presetRow = NewRow(3, 30f, fill: true);
+            AddRowButton(presetRow, UIHelpers.L("bank_preset_stimulus"), BtnGood, () =>
+            {
+                BankEngine.ApplyChannel(0); GameHelpers.NotifyLocalized("bank_preset_applied"); RefreshNow();
+            });
+            AddRowButton(presetRow, UIHelpers.L("bank_preset_neutral"), BtnColor, () =>
+            {
+                BankEngine.ApplyChannel(1); GameHelpers.NotifyLocalized("bank_preset_applied"); RefreshNow();
+            });
+            AddRowButton(presetRow, UIHelpers.L("bank_preset_suppress"), BtnBad, () =>
+            {
+                BankEngine.ApplyChannel(2); GameHelpers.NotifyLocalized("bank_preset_applied"); RefreshNow();
+            });
+            AddDivider(DividerColor);
+
+            // 商业区：税收 + 两政策（互斥开关）
+            AddLine(UIHelpers.L("bank_commerce_title"), UIStyles.Gold, 12f);
+            AddLine(UIHelpers.Lf("bank_commerce_tax", NationEngine.FormatGold(BankEngine.LastCommerceTax)), UIStyles.TextPrimary, 12f);
+            var policyRow = NewRow(2, 30f, fill: true);
+            AddRowButton(policyRow, UIHelpers.Lf("bank_policy_franchise",
+                    BankEngine.FranchiseOn ? UIHelpers.L("bank_policy_on") : UIHelpers.L("bank_policy_off")),
+                BankEngine.FranchiseOn ? BtnGood : BtnColor, () =>
+            {
+                BankEngine.SetFranchise(!BankEngine.FranchiseOn); RefreshNow();
+            });
+            AddRowButton(policyRow, UIHelpers.Lf("bank_policy_fairprice",
+                    BankEngine.FairPriceOn ? UIHelpers.L("bank_policy_on") : UIHelpers.L("bank_policy_off")),
+                BankEngine.FairPriceOn ? BtnGood : BtnColor, () =>
+            {
+                BankEngine.SetFairPrice(!BankEngine.FairPriceOn); RefreshNow();
+            });
+            if (cfg != null && !cfg.BankEnabled)
+            {
+                AddLine(UIHelpers.L("bank_disabled_note"), Muted, 11f);
+            }
+        }
+
+        /// <summary>三要素档位行：标签 + 3 个档位按钮（当前档高亮）。</summary>
+        private void BuildTierRow(string labelKey, int current, string[] tierKeys, System.Action<int> onPick)
+        {
+            var row = NewRow(4, 30f);
+            var lbl = UIHelpers.CreateText(UIHelpers.L(labelKey), row.transform, Fs(12f),
+                UIStyles.TextPrimary, _gameFont, Fs(26f));
+            var lle = lbl.GetComponent<LayoutElement>();
+            if (lle == null) lle = lbl.AddComponent<LayoutElement>();
+            lle.flexibleWidth = 1f;
+            for (int i = 0; i < tierKeys.Length; i++)
+            {
+                int tier = i;
+                AddRowButton(row, UIHelpers.L(tierKeys[i]),
+                    i == current ? BtnGood : BtnColor,
+                    () => { onPick(tier); }, 86f);
+            }
+        }
 
         private void BuildFinancePage()
         {

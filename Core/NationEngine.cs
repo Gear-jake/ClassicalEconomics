@@ -640,6 +640,8 @@ namespace EconomyMod.Core
 
             _lastIncome = income;
             _lastExpense = expense;
+            long commerceTax = BankEngine.LastCommerceTax;
+            if (commerceTax > 0) AddRecord(year, "nation_commerce_tax", commerceTax);
             NationDiplomacy.RunAnnual(year); // 双边经济协定年费（金库不足自动解除）
         }
 
@@ -778,7 +780,7 @@ namespace EconomyMod.Core
             return pool;
         }
 
-        private static List<City> SnapshotCities(Kingdom kingdom, List<City> pool)
+        internal static List<City> SnapshotCities(Kingdom kingdom, List<City> pool)
         {
             pool.Clear();
             try

@@ -42,6 +42,7 @@ namespace EconomyMod.Core
             public float giniMax = -1f;          // 条件：基尼 ≤
             public int atWar = -1;               // 条件：1=仅交战国 0=仅和平国 -1=不限
             public bool onlyPlayer;              // 条件：仅玩家认领国可触发（宫廷/权谋类）
+            public int bankRiskMin = -1;         // 条件：挤兑风险档 ≥（0安全/1警戒/2危险；仅玩家国有意义）
             public int minPop = -1;              // 条件：人口 ≥
             public int maxPop = -1;              // 条件：人口 ≤
             public int phase = -1;               // 条件：经济阶段 0繁荣 1衰退 2萧条 3复苏（-1 不限）
@@ -60,6 +61,7 @@ namespace EconomyMod.Core
             public float poorReliefRatio;        // 金库 → 贫民分发（占金库比例）
             public int goodwillAll;              // 对所有其他王国外交好感增量
             public bool unrest;                  // 触发动荡（UnrestEngine.Incite）
+            public int commercePenaltyYears;     // 商路断绝：商业税减半持续年数（0=无）
             public Dictionary<string, float> styleWeights; // AI 国性 → 权重（缺省 1）
         }
 
@@ -222,6 +224,10 @@ namespace EconomyMod.Core
             if (d.minPop >= 0 && (stats == null || stats.Population < d.minPop)) return false;
             if (d.maxPop >= 0 && (stats != null && stats.Population > d.maxPop)) return false;
             if (d.phase >= 0 && (int)EconomyCycleModulator.CurrentPhase != d.phase) return false;
+            if (d.bankRiskMin >= 0)
+            {
+                if (!isPlayer || BankEngine.RiskTier < d.bankRiskMin) return false;
+            }
             if (d.atWar >= 0)
             {
                 bool war = IsAtWar(k);
@@ -443,6 +449,10 @@ namespace EconomyMod.Core
             }
 
             _readyYear[d.id] = year + System.Math.Max(0, d.cooldownYears);
+
+            // 5.4 商路断绝：商业税减半至指定年（BankEngine 消费）
+            if (o.commercePenaltyYears > 0)
+                BankEngine.SetCommercePenalty(year + o.commercePenaltyYears);
 
             // 5.5 连锁：按选项把后续事件排入队列（跨年生成，绕过概率/冷却）
             if (!string.IsNullOrEmpty(d.chainNext) && FindDef(d.chainNext) != null

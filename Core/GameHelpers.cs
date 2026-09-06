@@ -234,6 +234,25 @@ namespace EconomyMod.Core
             }
         }
 
+        /// <summary>按财富比例从单位集合扣款：总额目标 target，单单位最多扣其财富 × maxFraction。
+        /// 返回实际扣得的金币（真实转移，金币守恒）。</summary>
+        public static long DeductCoinsFromWealth(List<Actor> units, long target, float maxFraction)
+        {
+            if (units == null || target <= 0) return 0L;
+            long collected = 0L;
+            foreach (var a in units)
+            {
+                if (a == null || !a.isAlive() || collected >= target) continue;
+                float w;
+                if (!TryGetWealth(a, out w) || w <= 1f) continue;
+                long payable = (long)System.Math.Min(target - collected, System.Math.Max(1f, w * maxFraction));
+                if (payable <= 0) continue;
+                int charged = (int)System.Math.Min(payable, (long)int.MaxValue);
+                try { a.addMoney(-charged); collected += charged; } catch (System.Exception) { }
+            }
+            return collected;
+        }
+
         public static void Log(string msg)
         {
             if (UnrestConfig.Instance.LogToWorldLog)

@@ -150,6 +150,13 @@ namespace EconomyMod.Core
                     try { nation.data.set(key, value ?? ""); }
                     catch (System.Exception) { }
                 });
+
+                // 银行：三要素/商业政策/城市账本/AI 池（rb_bank_*）
+                BankEngine.Serialize((key, value) =>
+                {
+                    try { nation.data.set(key, value ?? ""); }
+                    catch (System.Exception) { }
+                });
             }
             catch (System.Exception) { }
         }
@@ -172,6 +179,13 @@ namespace EconomyMod.Core
                 string evChains = ReadAnyKingdomKey("rb_ev_chains");
                 if (evPending != null || evCooldown != null || evChains != null)
                     DecisionEvents.Restore(evPending, evCooldown, evLastGlobal, evChains);
+
+                // 银行状态（与写盘同键位）
+                string bankSet = ReadAnyKingdomKey("rb_bank_set");
+                string bankLedger = ReadAnyKingdomKey("rb_bank_ledger");
+                string bankAi = ReadAnyKingdomKey("rb_bank_ai");
+                if (bankSet != null || bankLedger != null || bankAi != null)
+                    BankEngine.Restore(bankSet, bankLedger, bankAi);
 
                 // 认领国状态：遍历王国找到写有 rb_nat_kingdom 键的数据
                 var snapshot = GameHelpers.KingdomSnapshot();
