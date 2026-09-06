@@ -250,7 +250,6 @@ namespace EconomyMod.Core
             return _pacts.TryGetValue(kingdomId, out t) ? t : -1;
         }
 
-        public static int PactCount => _pacts.Count;
 
         /// <summary>签署/升档协定：无战争 + 好感 ≥ 0；槽位上限 2（同国升档不占新槽）。</summary>
         public static bool SignPact(Kingdom target, int tier, out string msgKey)

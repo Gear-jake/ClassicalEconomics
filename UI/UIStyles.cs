@@ -56,29 +56,20 @@ namespace EconomyMod.UI
         public static readonly Color EvBubble    = new Color(0.96f, 0.62f, 0.04f); // 泡沫破裂
 
         // ===== 字号 =====
-        public const float TitleSize        = 15f;
         public const float SectionHeaderSize = 13f;
         public const float StatLabelSize    = 10f;
         public const float StatValueSize    = 16f;
         public const float BodySize         = 12f;
-        public const float CaptionSize      = 10f;
         public const float BadgeSize        = 10f;
 
         // ===== 行高 =====
         public const float BodyLineHeight    = 22f;
-        public const float CardLineHeight    = 26f;
         public const float TitleLineHeight   = 28f;
 
         // ===== 间距（4px 基准）=====
-        public const float PanelPadding   = 14f;
         public const float CardGap        = 8f;
-        public const float RowGap         = 4f;
-        public const float SectionGap     = 10f;
 
         // ===== 圆角 =====
-        public const int PanelRadius  = 10;
-        public const int CardRadius   = 8;
-        public const int BadgeRadius  = 12; // 胶囊
 
         // ===== 面板尺寸 =====
         public const float HudWidth   = 380f;

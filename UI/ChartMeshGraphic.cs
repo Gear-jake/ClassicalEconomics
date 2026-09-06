@@ -108,16 +108,6 @@ namespace EconomyMod.UI
             SetVerticesDirty();
         }
 
-        /// <summary>重置为仅带空数据的可用状态（保留绘制参数，清空系列）。</summary>
-        public void ClearChart()
-        {
-            _vals = null;
-            _count = 0;
-            _seriesCount = 1;
-            _lastSig = int.MinValue;
-            SetVerticesDirty();
-        }
-
         private static int ComputeSig(float[][] vals, Color[] colors, int[] phases,
             int seriesCount, float vmin, float vmax, bool drawArea, bool drawRefs,
             float refHigh, float refLow)

@@ -269,12 +269,15 @@ namespace EconomyMod.Core
                 SpawnFor(def, chainKingdom, chainIsPlayer, year, true);
             }
 
-            // 2. 全局冷却：冷却期内不产生新事件（到期结算不受影响）
-            if (_lastGlobalYear != int.MinValue && year - _lastGlobalYear < System.Math.Max(1, cfg.EventCooldownYears)) return;
+            // 2. 全局冷却只约束"玩家国弹窗事件"（AI 事件不弹窗，仅进事件流，另设年度上限）
+            bool playerBlocked = _lastGlobalYear != int.MinValue
+                && year - _lastGlobalYear < System.Math.Max(1, cfg.EventCooldownYears);
 
             var kingdomList = GameHelpers.KingdomSnapshot();
             if (kingdomList == null) return;
             long playerId = NationEngine.NationKingdomId;
+            int aiSpawnedThisYear = 0;
+            const int MaxAiEventsPerYear = 2; // 列国故事每年限量，防事件流刷屏
 
             // 3. 每国抽签：概率 → 候选（条件+冷却）→ 均匀取一
             for (int ki = 0; ki < kingdomList.Count; ki++)
@@ -284,6 +287,8 @@ namespace EconomyMod.Core
                 long kid = k.data.id;
                 if (kid == 0) continue;
                 bool isPlayer = kid == playerId;
+                if (isPlayer && playerBlocked) continue;
+                if (!isPlayer && aiSpawnedThisYear >= MaxAiEventsPerYear) continue;
 
                 // 玩家国已有挂起未决 → 不再压入新事件
                 if (isPlayer && _pending.Count > 0) continue;
@@ -307,7 +312,8 @@ namespace EconomyMod.Core
                 }
                 if (picked == null) continue;
                 SpawnFor(picked, k, isPlayer, year, false);
-                _lastGlobalYear = year;
+                if (isPlayer) _lastGlobalYear = year; // 只有玩家事件推进全局冷却
+                else aiSpawnedThisYear++;
                 _readyYear[picked.id] = year + System.Math.Max(0, picked.cooldownYears);
             }
         }

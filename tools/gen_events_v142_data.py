@@ -6,6 +6,8 @@ data = json.load(io.open(p, encoding='utf-8'), object_pairs_hook=collections.Ord
 existing = {e['id'] for e in data['events']}
 
 def ev(**kw):
+    if kw['id'] in existing:
+        return  # 幂等：已存在的事件跳过，防重复追加
     e = collections.OrderedDict()
     e['id'] = kw['id']; e['family'] = kw['family']
     e['minYear'] = kw.get('minYear', 2)

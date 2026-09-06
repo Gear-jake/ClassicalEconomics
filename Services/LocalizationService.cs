@@ -104,41 +104,6 @@ namespace EconomyMod.Services
             }
         }
 
-        /// <summary>
-        /// 游戏语言是否中文系（简/繁）。读不到游戏语言时默认 true——
-        /// 保持旧 IsChinese 行为：模组加载早期 LocalizedTextManager 可能尚未初始化（作者原默认）。
-        /// </summary>
-        public static bool IsGameLanguageChinese
-        {
-            get
-            {
-                string lang = GetGameLanguage();
-                if (string.IsNullOrEmpty(lang)) return true;
-                string id = lang.ToLowerInvariant();
-                return id.StartsWith("zh") || id == "cz" || id == "ch" || id.Contains("cn");
-            }
-        }
-
-        /// <summary>
-        /// auto 模式下检测游戏语言变化（供主循环每 0.5 秒轮询）：变化时走
-        /// EconomyConfigCallbacks.OnLanguageChanged 的完整刷新路径（设置窗口标签 + 全窗口文本 + tooltip）。
-        /// 首次调用只记录基线，不触发刷新。
-        /// </summary>
-        public static void CheckGameLanguageChanged()
-        {
-            try
-            {
-                if (!IsAuto(UnrestConfig.Instance.Language)) return;
-                string cur = GetGameLanguage() ?? string.Empty;
-                if (cur == _lastGameLanguage) return;
-                bool firstProbe = _lastGameLanguage == null;
-                _lastGameLanguage = cur;
-                if (firstProbe) return;
-                EconomyConfigCallbacks.OnLanguageChanged("auto");
-            }
-            catch (System.Exception) { }
-        }
-
         private static void EnsureLoaded()
         {
             if (_loaded) return;
