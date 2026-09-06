@@ -169,8 +169,9 @@ namespace EconomyMod.Core
                 string evPending = ReadAnyKingdomKey("rb_ev_pending");
                 string evCooldown = ReadAnyKingdomKey("rb_ev_cooldown");
                 string evLastGlobal = ReadAnyKingdomKey("rb_ev_lastGlobal");
-                if (evPending != null || evCooldown != null)
-                    DecisionEvents.Restore(evPending, evCooldown, evLastGlobal);
+                string evChains = ReadAnyKingdomKey("rb_ev_chains");
+                if (evPending != null || evCooldown != null || evChains != null)
+                    DecisionEvents.Restore(evPending, evCooldown, evLastGlobal, evChains);
 
                 // 认领国状态：遍历王国找到写有 rb_nat_kingdom 键的数据
                 var snapshot = GameHelpers.KingdomSnapshot();

@@ -120,19 +120,22 @@ namespace EconomyMod.UI
             var def = p.Def;
             float s = Scale();
 
-            // 事件卡头：族别（族别色）+ 事件名 + 国名 + 当前年（多件时附计数）
+            // 事件卡头：族别（族别色）+ 事件名 + 国名 + 当前年（多件时附计数）；{king}/{kingdom} 名字代入
             var familyColor = FamilyColor(def.family);
             AddLine(UIHelpers.L("event_family_" + def.family), familyColor, 12f);
             string header = pending.Count > 1
                 ? UIHelpers.Lf("event_choice_header", UIHelpers.L("ev_" + def.id), _index + 1, pending.Count)
                 : UIHelpers.L("ev_" + def.id);
+            header = Core.DecisionEvents.Contextualize(header, p.KingdomId);
             AddLine(header, UIStyles.Gold, 16f);
-            AddLine(UIHelpers.Lf("event_choice_kingdom", p.KingdomName), Muted, 12f);
+            AddLine(Core.DecisionEvents.Contextualize(
+                UIHelpers.Lf("event_choice_kingdom", p.KingdomName), p.KingdomId), Muted, 12f);
             try { AddLine(UIHelpers.Lf("event_choice_year", EconomyModMain.GetCurrentGameYear()), Muted, 11f); }
             catch (System.Exception) { }
 
             // 描述正文
-            AddLine(UIHelpers.L("ev_" + def.id + "_desc"), UIStyles.TextPrimary, 13f);
+            AddLine(Core.DecisionEvents.Contextualize(UIHelpers.L("ev_" + def.id + "_desc"), p.KingdomId),
+                UIStyles.TextPrimary, 13f);
 
             // 剩余年
             int left = System.Math.Max(0, def.timeoutYears - p.ElapsedYears);
@@ -146,7 +149,8 @@ namespace EconomyMod.UI
             {
                 var opt = def.options[i];
                 bool canAfford = Core.DecisionEvents.CanAfford(def, i);
-                string optName = UIHelpers.L("ev_" + def.id + "_" + opt.key);
+                string optName = Core.DecisionEvents.Contextualize(
+                    UIHelpers.L("ev_" + def.id + "_" + opt.key), p.KingdomId);
                 var row = new GameObject("OptCard" + i, typeof(RectTransform), typeof(VerticalLayoutGroup));
                 row.transform.SetParent(_content.transform, false);
                 var le = row.AddComponent<LayoutElement>();
@@ -172,7 +176,8 @@ namespace EconomyMod.UI
                 var btnLe = btn.gameObject.AddComponent<LayoutElement>();
                 btnLe.flexibleWidth = 1f;
 
-                string optDesc = UIHelpers.L("ev_" + def.id + "_" + opt.key + "_desc");
+                string optDesc = Core.DecisionEvents.Contextualize(
+                    UIHelpers.L("ev_" + def.id + "_" + opt.key + "_desc"), p.KingdomId);
                 if (optDesc != "ev_" + def.id + "_" + opt.key + "_desc")
                     UIHelpers.CreateText(optDesc, row.transform, 11f * s, UIStyles.TextSecondary, _gameFont, 16f * s);
                 string summary = OptionSummary(def, i, gdp);

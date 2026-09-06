@@ -41,6 +41,14 @@ namespace EconomyMod.Core
             public float giniMin = -1f;          // 条件：基尼 ≥
             public float giniMax = -1f;          // 条件：基尼 ≤
             public int atWar = -1;               // 条件：1=仅交战国 0=仅和平国 -1=不限
+            public bool onlyPlayer;              // 条件：仅玩家认领国可触发（宫廷/权谋类）
+            public int minPop = -1;              // 条件：人口 ≥
+            public int maxPop = -1;              // 条件：人口 ≤
+            public int phase = -1;               // 条件：经济阶段 0繁荣 1衰退 2萧条 3复苏（-1 不限）
+            public float treasuryRatioMin = -1f; // 条件：金库/GDP ≥（仅玩家国可判）
+            public string chainNext;             // 连锁：结算后触发的后续事件 id（null=无）
+            public int chainDelay = 1;           // 连锁：后续事件延迟年数
+            public int chainAfterOption = -1;    // 连锁：仅该选项序号触发（-1=任意选项）
             public List<EventOption> options;
         }
 
@@ -73,6 +81,15 @@ namespace EconomyMod.Core
         private static readonly Dictionary<string, int> _readyYear = new Dictionary<string, int>(16);
         private static int _lastGlobalYear = int.MinValue;
         private static bool _popupQueued;
+
+        /// <summary>连锁队列：到年限期直接生成（绕过概率/冷却），跨存档持久化。</summary>
+        private class ChainSpawn
+        {
+            public string DefId;
+            public long KingdomId;
+            public int DueYear;
+        }
+        private static readonly List<ChainSpawn> _chains = new List<ChainSpawn>(8);
 
         /// <summary>挂起事件数（内阁待办区显示）。</summary>
         public static int PendingCount => _pending.Count;
@@ -161,6 +178,7 @@ namespace EconomyMod.Core
         {
             _pending.Clear();
             _readyYear.Clear();
+            _chains.Clear();
             _lastGlobalYear = int.MinValue;
             _popupQueued = false;
         }
@@ -195,6 +213,15 @@ namespace EconomyMod.Core
                 float gdp = stats?.GDP ?? 0f;
                 if (gdp <= 0f || (float)NationEngine.Treasury / gdp > d.treasuryRatioMax) return false;
             }
+            if (d.treasuryRatioMin >= 0f)
+            {
+                if (!isPlayer) return false;
+                float gdp = stats?.GDP ?? 0f;
+                if (gdp <= 0f || (float)NationEngine.Treasury / gdp < d.treasuryRatioMin) return false;
+            }
+            if (d.minPop >= 0 && (stats == null || stats.Population < d.minPop)) return false;
+            if (d.maxPop >= 0 && (stats != null && stats.Population > d.maxPop)) return false;
+            if (d.phase >= 0 && (int)EconomyCycleModulator.CurrentPhase != d.phase) return false;
             if (d.atWar >= 0)
             {
                 bool war = IsAtWar(k);
@@ -227,6 +254,21 @@ namespace EconomyMod.Core
                 Execute(p.Def, GameHelpers.FindKingdom(p.KingdomId), p.Def.fallback, year, true);
             }
 
+            // 1.5 连锁结算：到期的后续事件直接生成（绕过概率/冷却/条件——剧情既定）
+            for (int i = _chains.Count - 1; i >= 0; i--)
+            {
+                var c = _chains[i];
+                if (year < c.DueYear) continue;
+                var def = FindDef(c.DefId);
+                if (def == null) { _chains.RemoveAt(i); continue; }
+                var chainKingdom = GameHelpers.FindKingdom(c.KingdomId);
+                if (chainKingdom == null || chainKingdom.data == null) { _chains.RemoveAt(i); continue; }
+                bool chainIsPlayer = c.KingdomId == NationEngine.NationKingdomId;
+                if (chainIsPlayer && _pending.Count >= MaxPending) { c.DueYear = year + 1; continue; } // 满则顺延
+                _chains.RemoveAt(i);
+                SpawnFor(def, chainKingdom, chainIsPlayer, year, true);
+            }
+
             // 2. 全局冷却：冷却期内不产生新事件（到期结算不受影响）
             if (_lastGlobalYear != int.MinValue && year - _lastGlobalYear < System.Math.Max(1, cfg.EventCooldownYears)) return;
 
@@ -257,34 +299,39 @@ namespace EconomyMod.Core
                 for (int di = 0; di < _defs.Count; di++)
                 {
                     var d = _defs[di];
+                    if (d.onlyPlayer && !isPlayer) continue; // 宫廷/权谋剧情专属玩家国
                     if (year < ReadyYearOf(d)) continue;
                     if (!ConditionsOk(d, k, stats, year, isPlayer)) continue;
                     candidates++;
                     if (Random.Range(0, candidates) == 0) picked = d; // 蓄水池抽样（等权取一）
                 }
                 if (picked == null) continue;
-
-                if (isPlayer)
-                {
-                    if (_pending.Count >= MaxPending) continue;
-                    _pending.Add(new PendingEvent
-                    {
-                        Def = picked,
-                        KingdomId = kid,
-                        KingdomName = GameHelpers.SafeKingdomName(k),
-                        ElapsedYears = 0
-                    });
-                    _popupQueued = true;
-                    GameHelpers.NotifyLocalized("toast_event_pending");
-                }
-                else
-                {
-                    // AI 国：按国性加权立即决策（无弹窗，结果进事件流）
-                    int opt = AiChoose(picked, kid);
-                    Execute(picked, k, opt, year, false);
-                }
+                SpawnFor(picked, k, isPlayer, year, false);
                 _lastGlobalYear = year;
                 _readyYear[picked.id] = year + System.Math.Max(0, picked.cooldownYears);
+            }
+        }
+
+        /// <summary>把事件送达目标国：玩家国入挂起池+弹窗排队，AI 国按国性立即决策。</summary>
+        private static void SpawnFor(EventDef def, Kingdom k, bool isPlayer, int year, bool fromChain)
+        {
+            if (isPlayer)
+            {
+                if (_pending.Count >= MaxPending) return;
+                _pending.Add(new PendingEvent
+                {
+                    Def = def,
+                    KingdomId = k.data.id,
+                    KingdomName = GameHelpers.SafeKingdomName(k),
+                    ElapsedYears = 0
+                });
+                _popupQueued = true;
+                GameHelpers.NotifyLocalized(fromChain ? "toast_event_chain" : "toast_event_pending");
+            }
+            else
+            {
+                int opt = AiChoose(def, k.data.id);
+                Execute(def, k, opt, year, false);
             }
         }
 
@@ -391,6 +438,19 @@ namespace EconomyMod.Core
 
             _readyYear[d.id] = year + System.Math.Max(0, d.cooldownYears);
 
+            // 5.5 连锁：按选项把后续事件排入队列（跨年生成，绕过概率/冷却）
+            if (!string.IsNullOrEmpty(d.chainNext) && FindDef(d.chainNext) != null
+                && (d.chainAfterOption < 0 || d.chainAfterOption == optIndex)
+                && k.data != null)
+            {
+                _chains.Add(new ChainSpawn
+                {
+                    DefId = d.chainNext,
+                    KingdomId = k.data.id,
+                    DueYear = year + System.Math.Max(1, d.chainDelay)
+                });
+            }
+
             // 6. 结果横幅（进史书级事件流，Detail=结果键供事件窗渲染）+ 玩家屏上通知
             EventStreamService.Record(TypeDecision, GameHelpers.SafeKingdomName(k), optIndex + 1,
                 "ev_" + d.id + "_res" + (optIndex + 1));
@@ -423,10 +483,18 @@ namespace EconomyMod.Core
             write("rb_ev_lastGlobal", _lastGlobalYear == int.MinValue
                 ? ""
                 : _lastGlobalYear.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+            var csb = new System.Text.StringBuilder(64);
+            for (int i = 0; i < _chains.Count; i++)
+            {
+                var c = _chains[i];
+                csb.Append(c.DefId).Append('|').Append(c.KingdomId).Append('|').Append(c.DueYear).Append(';');
+            }
+            write("rb_ev_chains", csb.ToString());
         }
 
         /// <summary>读档恢复（缺失/解析失败回退本局记忆）。</summary>
-        public static void Restore(string pending, string cooldown, string lastGlobal)
+        public static void Restore(string pending, string cooldown, string lastGlobal, string chains)
         {
             _pending.Clear();
             try
@@ -479,6 +547,38 @@ namespace EconomyMod.Core
                 if (!string.IsNullOrEmpty(lastGlobal) && int.TryParse(lastGlobal, out int y)) _lastGlobalYear = y;
             }
             catch (System.Exception) { }
+
+            _chains.Clear();
+            try
+            {
+                if (!string.IsNullOrEmpty(chains))
+                {
+                    foreach (var item in chains.Split(';'))
+                    {
+                        if (string.IsNullOrEmpty(item)) continue;
+                        var f = item.Split('|');
+                        if (f.Length < 3) continue;
+                        if (FindDef(f[0]) == null) continue;
+                        if (!long.TryParse(f[1], out long kid)) continue;
+                        if (!int.TryParse(f[2], out int due)) continue;
+                        _chains.Add(new ChainSpawn { DefId = f[0], KingdomId = kid, DueYear = due });
+                    }
+                }
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>名字代入：{king}=在位国王名（无王则国名），{kingdom}=国名。抉择弹窗渲染用。</summary>
+        public static string Contextualize(string text, long kingdomId)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            var k = GameHelpers.FindKingdom(kingdomId);
+            if (k == null || k.data == null) return text;
+            string kName = GameHelpers.SafeKingdomName(k);
+            string king = null;
+            try { if (k.king != null) king = GameHelpers.SafeName(k.king); } catch (System.Exception) { }
+            if (string.IsNullOrEmpty(king)) king = kName;
+            return text.Replace("{king}", king).Replace("{kingdom}", kName);
         }
 
         private static EventDef FindDef(string id)

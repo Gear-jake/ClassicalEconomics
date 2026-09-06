@@ -7,7 +7,7 @@ function Fail($msg) { Write-Host "DECISION_EVENTS_RED: $msg"; exit 1 }
 $jsonPath = Join-Path $Root 'events.json'
 if (-not (Test-Path -LiteralPath $jsonPath -PathType Leaf)) { Fail 'events.json missing from mod root' }
 try { $json = Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail "events.json is not valid JSON: $_" }
-if (-not $json.events -or $json.events.Count -lt 16) { Fail "events.json must define at least 16 events (found $($json.events.Count))" }
+if (-not $json.events -or $json.events.Count -lt 50) { Fail "events.json must define at least 50 events (found $($json.events.Count))" }
 
 # ===== 1. 每事件结构完整性 =====
 $validFamilies = @('finance','disaster','court','military','civil','diplomacy')
@@ -24,6 +24,12 @@ foreach ($e in $json.events) {
 }
 $ids = @($json.events | ForEach-Object { $_.id })
 if ($ids.Count -ne ($ids | Sort-Object -Unique).Count) { Fail 'duplicate event ids in events.json' }
+foreach ($e in $json.events) {
+    if ($e.onlyPlayer -ne $null -and $e.onlyPlayer -ne $true -and $e.onlyPlayer -ne $false) { Fail "event $($e.id): onlyPlayer must be boolean" }
+    if ($null -ne $e.phase -and $e.phase -ge 0 -and $e.phase -gt 3) { Fail "event $($e.id): phase must be -1 or 0..3" }
+    if ($e.chainNext -and ($ids -notcontains $e.chainNext)) { Fail "event $($e.id): chainNext '$($e.chainNext)' does not exist" }
+    if ($null -ne $e.chainAfterOption -and $e.chainAfterOption -ge 0 -and (-not $e.options -or $e.chainAfterOption -ge $e.options.Count)) { Fail "event $($e.id): chainAfterOption out of range" }
+}
 
 # ===== 2. 产品代码接线 =====
 $src = [System.IO.File]::ReadAllText((Join-Path $Root 'Core\DecisionEvents.cs'))
@@ -57,7 +63,10 @@ if ($majorBlock -notmatch 'TypeDecision') { Fail 'TypeDecision must be a major (
 $localeDir = Join-Path $Root 'Locales'
 $required = @()
 foreach ($e in $json.events) {
-    $required += @("ev_$($e.id)", "ev_$($e.id)_desc", "ev_$($e.id)_opt1", "ev_$($e.id)_opt2", "ev_$($e.id)_res1", "ev_$($e.id)_res2")
+    $required += @("ev_$($e.id)", "ev_$($e.id)_desc")
+    for ($i = 1; $i -le $e.options.Count; $i++) {
+        $required += @("ev_$($e.id)_opt$i", "ev_$($e.id)_res$i")
+    }
 }
 $required += @('event_choice_title','event_choice_header','event_choice_countdown','event_choice_none',
     'event_choice_next','event_choice_cost','event_choice_gain','event_choice_tax','event_choice_relief',
