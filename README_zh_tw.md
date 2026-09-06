@@ -1,6 +1,6 @@
 # 古典經濟學 Classical Economics
 
-> WorldBox 宏觀經濟 + 國家治理模擬模組 ｜ 目前版本 *1.5.4* ｜ 需要 NeoModLoader (NML)
+> WorldBox 宏觀經濟 + 國家治理模擬模組 ｜ 目前版本 *1.6.0* ｜ 需要 NeoModLoader (NML)
 
 ## 功能總覽
 
@@ -25,7 +25,7 @@
 **效能與品質**
 - 年度結算分幀（4ms/幀，稅收永不削減）、自動記憶體清理
 - 46 項自動化門禁 + 效能稽核；金幣轉移守恆
-- 四語言介面（简体 / 繁體 / English / Русский）；石板金邊 9-slice UI
+- 六語言介面（简体 / 繁體 / English / Русский / 日本語 / Deutsch）；石板金邊 9-slice UI
 
 ## 安裝
 

@@ -1,5 +1,5 @@
 [h1]Classical Economics[/h1]
-[b]A macroeconomics & nation-governance simulation mod for WorldBox ｜ Current version 1.5.4[/b]
+[b]A macroeconomics & nation-governance simulation mod for WorldBox ｜ Current version 1.6.0[/b]
 [b]Requires:[/b] WorldBox 0.51.2+ and NeoModLoader (NML)
 
 Adds a full macroeconomic and **national-governance** simulation to WorldBox. Every race that can found a kingdom (Fire/Ice Demons, aliens...) joins the economy; play one nation yourself or watch the AI kingdoms govern themselves.
@@ -18,7 +18,7 @@ Adds a full macroeconomic and **national-governance** simulation to WorldBox. Ev
 
 [b]Performance:[/b] frame-budgeted yearly settlement (4 ms/frame, 2 s window; only spending/banking are reduced when over budget - taxes are never reduced), automatic memory cleanup, background-thread statistics (no pathfinding on the main thread), 42 automated gates, fully conserved gold.
 
-[b]Localization:[/b] **follows the game's own language setting by default** (or force a language in the mod settings); four languages (简体 / 繁體 / English / Русский), the whole UI switches instantly; citizens carry visible codex traits.
+[b]Localization:[/b] **follows the game's own language setting by default** (or force a language in the mod settings); six languages (简体 / 繁體 / English / Русский / 日本語 / Deutsch), the whole UI switches instantly; citizens carry visible codex traits.
 
 [b]Installation:[/b] Install NML first, put the EconomyMod folder into WorldBox/Mods/, enable in-game.
 [b]Controls:[/b] hover a kingdom and press G to claim / open the Cabinet (rebindable in settings); a ledger button sits in the top-right of nation/city windows.

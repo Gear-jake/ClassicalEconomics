@@ -1,6 +1,6 @@
 # Classical Economics
 
-> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.5.4* ｜ Requires NeoModLoader (NML)
+> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.6.0* ｜ Requires NeoModLoader (NML)
 
 ## Feature Overview
 
@@ -44,7 +44,7 @@
 - The Cabinet **auto-refreshes after each yearly settlement**; **adjustable UI scale for fonts and buttons (0.8-1.6x, applies instantly from settings)**
 - Frame-budgeted yearly settlement (4 ms/frame; taxes never reduced); automatic memory cleanup; background-thread statistics with no main-thread pathfinding
 - 42 automated gates + performance audit; every gold transfer conserved
-- Four-language UI (简体 / 繁體 / English / Русский), **always following the game's own language setting** (no separate option); slate-and-gold 9-slice UI
+- Six-language UI (简体 / 繁體 / English / Русский), **always following the game's own language setting** (no separate option); slate-and-gold 9-slice UI
 
 ## Installation
 

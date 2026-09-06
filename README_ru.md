@@ -1,6 +1,6 @@
 # Классическая экономика
 
-> Мод макроэкономики и государственного управления для WorldBox ｜ Версия *1.5.4* ｜ Требуется NeoModLoader (NML)
+> Мод макроэкономики и государственного управления для WorldBox ｜ Версия *1.6.0* ｜ Требуется NeoModLoader (NML)
 
 ## Обзор функций
 
@@ -43,5 +43,7 @@
 - [GitHub Releases](https://github.com/Gear-jake/ClassicalEconomics/releases)
 
 ---
+
+- Шесть языков интерфейса (简体 / 繁體 / English / Русский / 日本語 / Deutsch)
 
 Автор: Jake ｜ Репозиторий: github.com/Gear-jake/ClassicalEconomics
