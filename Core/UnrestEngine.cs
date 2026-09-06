@@ -271,11 +271,14 @@ namespace EconomyMod.Core
         /// </summary>
         private static void ResolveUnrest(Kingdom kingdom, bool viaPeace)
         {
+            if (kingdom == null) return;
             try
             {
                 if (kingdom.hasTrait(UnrestTraitId)) kingdom.removeTrait(UnrestTraitId);
             }
             catch (System.Exception) { }
+            // 世界切换/王国销毁瞬间 data 可能为 null（此前每帧 NRE 刷屏的根因）
+            if (kingdom.data == null) { _states.Remove(0L); return; }
             _states.Remove(kingdom.data.id);
             string kName = GameHelpers.SafeKingdomName(kingdom);
             if (viaPeace)

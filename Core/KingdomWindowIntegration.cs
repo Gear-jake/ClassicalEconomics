@@ -51,9 +51,9 @@ namespace EconomyMod.Core
             }
         }
 
-        private static void Postfix(StatsWindow __instance, StatsWindow __result)
+        private static void Postfix(StatsWindow __instance)
         {
-            var window = __instance != null ? __instance : __result;
+            var window = __instance;
             if (window == null) return;
             try
             {

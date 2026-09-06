@@ -461,15 +461,45 @@ bool log = UnrestConfig.Instance.LogToWorldLog;
         private static List<EquipmentAsset> _midPool;
         private static List<EquipmentAsset> _strongPool;
 
-        /// <summary>按 equipment_value 在全部装备内分三档（弱 0-40% / 中 40-80% / 强 80-100% 分位），加载一次缓存。</summary>
+        /// <summary>按 equipment_value 分三档（弱 0-40% / 中 40-80% / 强 80-100% 分位），加载一次缓存。
+        /// 数据源只用原版可锻造子类型池 equipment_by_subtypes（经原版 ItemCrafting 检验的干净资产）——
+        /// v1.4.1 修复：全量 items.list 里混有带空投射物 ID 的模组/占位资产，装备后一开战即
+        /// Projectile.start ArgumentNullException 刷屏崩溃。回退路径保留 items.list 但加 base_stats 过滤。</summary>
         private static void EnsureItemPools()
         {
             if (_weakPool != null) return;
             _weakPool = new List<EquipmentAsset>(64);
             _midPool = new List<EquipmentAsset>(48);
             _strongPool = new List<EquipmentAsset>(24);
-            var all = new List<EquipmentAsset>(AssetManager.items.list);
-            all.RemoveAll(a => a == null || a.equipment_value <= 0);
+            var all = new List<EquipmentAsset>(128);
+            try
+            {
+                var bySub = AssetManager.items.equipment_by_subtypes;
+                var seen = new HashSet<string>();
+                foreach (var kv in bySub)
+                {
+                    if (kv.Value == null) continue;
+                    foreach (var a in kv.Value)
+                    {
+                        if (a == null || string.IsNullOrEmpty(a.id) || !seen.Add(a.id)) continue;
+                        all.Add(a);
+                    }
+                }
+            }
+            catch (System.Exception)
+            {
+                all.Clear();
+            }
+            if (all.Count == 0)
+            {
+                try
+                {
+                    foreach (var a in AssetManager.items.list)
+                        if (a != null && !string.IsNullOrEmpty(a.id) && a.base_stats != null) all.Add(a);
+                }
+                catch (System.Exception) { }
+            }
+            all.RemoveAll(a => a == null || a.equipment_value <= 0 || a.base_stats == null);
             all.Sort((x, y) => x.equipment_value.CompareTo(y.equipment_value));
             int n = all.Count;
             if (n == 0) return;
