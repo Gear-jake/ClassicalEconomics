@@ -294,8 +294,7 @@ path = 'Locales/ja.json'
 existing = json.load(io.open(path, encoding='utf-8'), object_pairs_hook=collections.OrderedDict)
 merged = 0
 for k, v in JA.items():
-    if k not in existing:
-        existing[k] = v; merged += 1
+    existing[k] = v; merged += 1
 json.dump(existing, io.open(path, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 io.open(path, 'a', encoding='utf-8').write('\n')
 print('ja merged:', merged, 'total:', len(existing))
