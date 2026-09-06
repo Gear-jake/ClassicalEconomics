@@ -18,7 +18,7 @@ namespace EconomyMod.UI
         /// 创建区块标题：返回容器 GameObject（内含标题文本 + 分隔线），
         /// 调用方将容器加入 _lines，销毁时标题与分隔线一并销毁（修复分隔线泄漏）。
         /// </summary>
-        public static GameObject CreateSectionHeader(Transform parent, string text, Font font, float width)
+        public static GameObject CreateSectionHeader(Transform parent, string text, Font font, float width, float fontScale = 1f)
         {
             var container = new GameObject("SectionHeader", typeof(RectTransform), typeof(VerticalLayoutGroup));
             container.transform.SetParent(parent, false);
@@ -33,7 +33,7 @@ namespace EconomyMod.UI
             container.AddComponent<LayoutElement>().preferredHeight = totalH;
 
             // 标题文本
-            var go = UIHelpers.CreateText(text, container.transform, UIStyles.SectionHeaderSize, UIStyles.Gold,
+            var go = UIHelpers.CreateText(text, container.transform, UIStyles.SectionHeaderSize * fontScale, UIStyles.Gold,
                 font, UIStyles.BodyLineHeight, "Title");
             var t = go.GetComponent<Text>();
             t.fontStyle = FontStyle.Bold;
@@ -136,7 +136,7 @@ namespace EconomyMod.UI
 
         /// <summary>创建胶囊徽章：深色底 + 彩色描边 + 彩色文本。</summary>
         public static GameObject CreateBadge(Transform parent, string text, Color accent,
-            Font font, float w, float h)
+            Font font, float w, float h, float fontScale = 1f)
         {
             var badge = new GameObject("Badge", typeof(RectTransform), typeof(Image));
             badge.transform.SetParent(parent, false);
@@ -151,7 +151,7 @@ namespace EconomyMod.UI
             el.preferredWidth = w;
             el.preferredHeight = h;
 
-            var lbl = UIHelpers.CreateText(text, badge.transform, UIStyles.BadgeSize,
+            var lbl = UIHelpers.CreateText(text, badge.transform, UIStyles.BadgeSize * fontScale,
                 accent, font, h, "Label");
             var lrt = lbl.GetComponent<RectTransform>();
             lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
@@ -163,16 +163,16 @@ namespace EconomyMod.UI
 
         /// <summary>创建经济阶段徽章（色彩编码）。</summary>
         public static GameObject CreatePhaseBadge(Transform parent, EconomyPhase phase,
-            string text, Font font, float w)
+            string text, Font font, float w, float fontScale = 1f)
         {
-            return CreateBadge(parent, text, UIStyles.PhaseColor(phase), font, w, 22f);
+            return CreateBadge(parent, text, UIStyles.PhaseColor(phase), font, w, 22f, fontScale);
         }
 
         // ===== 数据行（带彩色前缀标记）=====
 
         /// <summary>创建带彩色圆点前缀的数据行（用于动荡/危机状态列表）。</summary>
         public static GameObject CreateStatusRow(Transform parent, string text, Color accent,
-            Font font, float width)
+            Font font, float width, float fontScale = 1f)
         {
             var row = new GameObject("StatusRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             row.transform.SetParent(parent, false);
@@ -181,8 +181,8 @@ namespace EconomyMod.UI
             hlg.childControlWidth = false; hlg.childControlHeight = true;
             hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = false;
             hlg.childAlignment = TextAnchor.MiddleLeft;
-            row.AddComponent<LayoutElement>().preferredHeight = UIStyles.BodyLineHeight;
-            row.GetComponent<RectTransform>().sizeDelta = new Vector2(width, UIStyles.BodyLineHeight);
+            row.AddComponent<LayoutElement>().preferredHeight = UIStyles.BodyLineHeight * fontScale;
+            row.GetComponent<RectTransform>().sizeDelta = new Vector2(width, UIStyles.BodyLineHeight * fontScale);
 
             // 圆点
             var dot = new GameObject("Dot", typeof(RectTransform), typeof(Image));
@@ -192,26 +192,26 @@ namespace EconomyMod.UI
             dotImg.type = Image.Type.Sliced;
             dotImg.color = accent;
             dotImg.raycastTarget = false;
-            dot.GetComponent<RectTransform>().sizeDelta = new Vector2(8f, 8f);
+            dot.GetComponent<RectTransform>().sizeDelta = new Vector2(8f * fontScale, 8f * fontScale);
             var dotEl = dot.AddComponent<LayoutElement>();
-            dotEl.preferredWidth = 8f; dotEl.preferredHeight = 8f;
+            dotEl.preferredWidth = 8f * fontScale; dotEl.preferredHeight = 8f * fontScale;
 
             // 文本
-            var lbl = UIHelpers.CreateText(text, row.transform, UIStyles.BodySize,
-                UIStyles.TextPrimary, font, UIStyles.BodyLineHeight, "Text");
+            var lbl = UIHelpers.CreateText(text, row.transform, UIStyles.BodySize * fontScale,
+                UIStyles.TextPrimary, font, UIStyles.BodyLineHeight * fontScale, "Text");
             lbl.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
             var lrt = lbl.GetComponent<RectTransform>();
-            lrt.sizeDelta = new Vector2(width - 18f, UIStyles.BodyLineHeight);
+            lrt.sizeDelta = new Vector2(width - 18f, UIStyles.BodyLineHeight * fontScale);
             var lel = lbl.AddComponent<LayoutElement>();
             lel.preferredWidth = width - 18f;
-            lel.preferredHeight = UIStyles.BodyLineHeight;
+            lel.preferredHeight = UIStyles.BodyLineHeight * fontScale;
             return row;
         }
 
         // ===== 王国排行行（排名 + 名称 + 关键指标）=====
 
         /// <summary>创建王国排行表头（列标题行：排名/王国/GDP/人均/基尼），弱色显示。</summary>
-        public static GameObject CreateKingdomHeader(Transform parent, Font font, float width)
+        public static GameObject CreateKingdomHeader(Transform parent, Font font, float width, float fontScale = 1f)
         {
             var row = new GameObject("KingdomHeader", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             row.transform.SetParent(parent, false);
@@ -225,14 +225,14 @@ namespace EconomyMod.UI
             row.AddComponent<LayoutElement>().preferredHeight = h;
 
             // 排名列
-            var rankGo = UIHelpers.CreateText("", row.transform, 10f, UIStyles.TextMuted, font, h, "Rank");
+            var rankGo = UIHelpers.CreateText("", row.transform, 10f * fontScale, UIStyles.TextMuted, font, h, "Rank");
             var rrt = rankGo.GetComponent<RectTransform>();
             rrt.sizeDelta = new Vector2(22f, h);
             var rel = rankGo.AddComponent<LayoutElement>();
             rel.preferredWidth = 22f; rel.preferredHeight = h;
 
             // 王国列
-            var nameGo = UIHelpers.CreateText(UIHelpers.L("col_kingdom"), row.transform, 10f,
+            var nameGo = UIHelpers.CreateText(UIHelpers.L("col_kingdom"), row.transform, 10f * fontScale,
                 UIStyles.TextMuted, font, h, "Name");
             var nrt = nameGo.GetComponent<RectTransform>();
             float nameW = width * 0.27f;
@@ -241,7 +241,7 @@ namespace EconomyMod.UI
             nel.preferredWidth = nameW; nel.preferredHeight = h;
 
             // GDP列
-            var gdpGo = UIHelpers.CreateText(UIHelpers.L("col_gdp"), row.transform, 10f,
+            var gdpGo = UIHelpers.CreateText(UIHelpers.L("col_gdp"), row.transform, 10f * fontScale,
                 UIStyles.TextMuted, font, h, "Gdp");
             gdpGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var grt = gdpGo.GetComponent<RectTransform>();
@@ -251,7 +251,7 @@ namespace EconomyMod.UI
             gel.preferredWidth = gdpW; gel.preferredHeight = h;
 
             // 人均列
-            var avgGo = UIHelpers.CreateText(UIHelpers.L("col_avg"), row.transform, 10f,
+            var avgGo = UIHelpers.CreateText(UIHelpers.L("col_avg"), row.transform, 10f * fontScale,
                 UIStyles.TextMuted, font, h, "Avg");
             avgGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var art = avgGo.GetComponent<RectTransform>();
@@ -261,7 +261,7 @@ namespace EconomyMod.UI
             ael.preferredWidth = avgW; ael.preferredHeight = h;
 
             // 基尼列
-            var giniGo = UIHelpers.CreateText(UIHelpers.L("col_gini"), row.transform, 10f,
+            var giniGo = UIHelpers.CreateText(UIHelpers.L("col_gini"), row.transform, 10f * fontScale,
                 UIStyles.TextMuted, font, h, "Gini");
             giniGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var girt = giniGo.GetComponent<RectTransform>();
@@ -271,7 +271,7 @@ namespace EconomyMod.UI
             giel.preferredWidth = giniW; giel.preferredHeight = h;
 
             // 本地价格列（v0.9：区域价格指数，1.0=基准 CPI）
-            var priceGo = UIHelpers.CreateText(UIHelpers.L("col_price"), row.transform, 10f,
+            var priceGo = UIHelpers.CreateText(UIHelpers.L("col_price"), row.transform, 10f * fontScale,
                 UIStyles.TextMuted, font, h, "Price");
             priceGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var prt = priceGo.GetComponent<RectTransform>();

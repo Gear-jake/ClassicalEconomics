@@ -829,7 +829,7 @@ namespace EconomyMod.UI
             // 周期 + 阶段徽章
             AddLine(UIHelpers.Lf("overview_cycle", EconomyEngine.CycleIndex), true);
             _lines.Add(UIComponents.CreatePhaseBadge(_content.transform, phase,
-                PhaseName(phase), _gameFont, contentW * 0.5f));
+                PhaseName(phase), _gameFont, contentW * 0.5f, Fs(1f)));
             AddLine(UIHelpers.Lf("cycle_detail",
                 EconomyCycleModulator.PhaseDuration,
                 EconomyCycleModulator.GrowthRate.ToString("+0.0%;-0.0%"),
@@ -859,7 +859,7 @@ namespace EconomyMod.UI
                         MemoryCleanupEngine.FormatMb(System.Math.Max(0L, MemoryCleanupEngine.LastFreedBytes)),
                         MemoryCleanupEngine.LastShrunkCount.ToString());
                 _lines.Add(UIComponents.CreateStatusRow(_content.transform, cleanupLine,
-                    UIStyles.TextMuted, _gameFont, contentW));
+                    UIStyles.TextMuted, _gameFont, contentW, Fs(1f)));
 
                 long unityUsed = MemoryCleanupEngine.UnityUsedBytes;
                 long unityReserved = MemoryCleanupEngine.UnityReservedBytes;
@@ -868,14 +868,14 @@ namespace EconomyMod.UI
                         MemoryCleanupEngine.FormatMb(MemoryCleanupEngine.ManagedHeapBytes),
                         unityUsed < 0 ? UIHelpers.L("hud_mem_na") : MemoryCleanupEngine.FormatMb(unityUsed),
                         unityReserved < 0 ? UIHelpers.L("hud_mem_na") : MemoryCleanupEngine.FormatMb(unityReserved)),
-                    UIStyles.TextMuted, _gameFont, contentW));
+                    UIStyles.TextMuted, _gameFont, contentW, Fs(1f)));
                 AddLine("");
             }
 
             // 王国排行
             _lines.Add(UIComponents.CreateSectionHeader(_content.transform,
-                UIHelpers.L("overview_kingdoms"), _gameFont, contentW));
-            _lines.Add(UIComponents.CreateKingdomHeader(_content.transform, _gameFont, contentW));
+                UIHelpers.L("overview_kingdoms"), _gameFont, contentW, Fs(1f)));
+            _lines.Add(UIComponents.CreateKingdomHeader(_content.transform, _gameFont, contentW, Fs(1f)));
             var top = EconomyEngine.TopKingdoms(8);
             if (top.Count == 0)
             {
@@ -893,7 +893,7 @@ namespace EconomyMod.UI
 
             // 社会动荡状态
             _lines.Add(UIComponents.CreateSectionHeader(_content.transform,
-                UIHelpers.L("unrest_state_title"), _gameFont, contentW));
+                UIHelpers.L("unrest_state_title"), _gameFont, contentW, Fs(1f)));
             int stateCount = 0;
             foreach (var k in top)
             {
@@ -902,21 +902,21 @@ namespace EconomyMod.UI
                 {
                     _lines.Add(UIComponents.CreateStatusRow(_content.transform,
                         UIHelpers.Lf("unrest_state_accum", k.KingdomName, elapsed),
-                        UIStyles.Warning, _gameFont, contentW));
+                        UIStyles.Warning, _gameFont, contentW, Fs(1f)));
                     stateCount++;
                 }
                 else if (st == 2)
                 {
                     _lines.Add(UIComponents.CreateStatusRow(_content.transform,
                         UIHelpers.Lf("unrest_state_active", k.KingdomName),
-                        UIStyles.Danger, _gameFont, contentW));
+                        UIStyles.Danger, _gameFont, contentW, Fs(1f)));
                     stateCount++;
                 }
                 else if (st == 3)
                 {
                     _lines.Add(UIComponents.CreateStatusRow(_content.transform,
                         UIHelpers.Lf("unrest_state_uprising", k.KingdomName),
-                        UIStyles.Negative, _gameFont, contentW));
+                        UIStyles.Negative, _gameFont, contentW, Fs(1f)));
                     stateCount++;
                 }
             }
