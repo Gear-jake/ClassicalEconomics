@@ -29,7 +29,7 @@ namespace EconomyMod.UI
             vlg.childAlignment = TextAnchor.UpperLeft;
             var crt = container.GetComponent<RectTransform>();
             crt.sizeDelta = new Vector2(width, 0);
-            float totalH = UIStyles.BodyLineHeight + 2f + 2f;
+            float totalH = UIStyles.BodyLineHeight * fontScale + 2f + 2f;
             container.AddComponent<LayoutElement>().preferredHeight = totalH;
 
             // 标题文本
@@ -301,17 +301,17 @@ namespace EconomyMod.UI
             row.AddComponent<LayoutElement>().preferredHeight = h;
 
             // 排名徽章（圆形数字）
-            var rankGo = UIHelpers.CreateText(rank.ToString(), row.transform, 11f, rankColor,
-                font, 20f, "Rank");
+            var rankGo = UIHelpers.CreateText(rank.ToString(), row.transform, 11f * fontScale, rankColor,
+                font, 20f * fontScale, "Rank");
             rankGo.GetComponent<Text>().alignment = TextAnchor.MiddleCenter;
             rankGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
             var rrt = rankGo.GetComponent<RectTransform>();
-            rrt.sizeDelta = new Vector2(22f, 20f);
+            rrt.sizeDelta = new Vector2(22f * fontScale, 20f * fontScale);
             var rel = rankGo.AddComponent<LayoutElement>();
-            rel.preferredWidth = 22f; rel.preferredHeight = 20f;
+            rel.preferredWidth = 22f * fontScale; rel.preferredHeight = 20f * fontScale;
 
             // 名称（左对齐，可截断）
-            var nameGo = UIHelpers.CreateText(name, row.transform, UIStyles.BodySize,
+            var nameGo = UIHelpers.CreateText(name, row.transform, UIStyles.BodySize * fontScale,
                 highlight ? UIStyles.Gold : UIStyles.TextPrimary, font, h, "Name");
             nameGo.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
             nameGo.GetComponent<Text>().fontStyle = highlight ? FontStyle.Bold : FontStyle.Normal;
@@ -322,7 +322,7 @@ namespace EconomyMod.UI
             nel.preferredWidth = nameW; nel.preferredHeight = h;
 
             // GDP（右对齐）
-            var gdpGo = UIHelpers.CreateText(gdp, row.transform, UIStyles.BodySize,
+            var gdpGo = UIHelpers.CreateText(gdp, row.transform, UIStyles.BodySize * fontScale,
                 UIStyles.TextSecondary, font, h, "Gdp");
             gdpGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var grt = gdpGo.GetComponent<RectTransform>();
@@ -332,7 +332,7 @@ namespace EconomyMod.UI
             gel.preferredWidth = gdpW; gel.preferredHeight = h;
 
             // 人均（右对齐）
-            var avgGo = UIHelpers.CreateText(avg, row.transform, UIStyles.BodySize,
+            var avgGo = UIHelpers.CreateText(avg, row.transform, UIStyles.BodySize * fontScale,
                 UIStyles.TextSecondary, font, h, "Avg");
             avgGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var art = avgGo.GetComponent<RectTransform>();
@@ -346,7 +346,7 @@ namespace EconomyMod.UI
             float.TryParse(gini, out giniVal);
             Color giniColor = giniVal >= 0.7f ? UIStyles.Danger
                 : giniVal >= 0.55f ? UIStyles.Warning : UIStyles.TextSecondary;
-            var giniGo = UIHelpers.CreateText(gini, row.transform, UIStyles.BodySize,
+            var giniGo = UIHelpers.CreateText(gini, row.transform, UIStyles.BodySize * fontScale,
                 giniColor, font, h, "Gini");
             giniGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             giniGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
@@ -361,7 +361,7 @@ namespace EconomyMod.UI
             float.TryParse(price, out priceVal);
             Color priceColor = priceVal >= 1.3f ? UIStyles.Warning
                 : priceVal <= 0.8f ? UIStyles.Info : UIStyles.TextSecondary;
-            var priceGo = UIHelpers.CreateText(price, row.transform, UIStyles.BodySize,
+            var priceGo = UIHelpers.CreateText(price, row.transform, UIStyles.BodySize * fontScale,
                 priceColor, font, h, "Price");
             priceGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var prt = priceGo.GetComponent<RectTransform>();

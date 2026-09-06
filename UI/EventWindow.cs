@@ -124,7 +124,7 @@ namespace EconomyMod.UI
             var chipRow = new GameObject("FilterChips", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             chipRow.transform.SetParent(_content.transform, false);
             var chipLe = chipRow.AddComponent<LayoutElement>();
-            chipLe.preferredHeight = 26f;
+            chipLe.preferredHeight = Fs(26f);
             chipLe.flexibleWidth = 1f;
             var hlg = chipRow.GetComponent<HorizontalLayoutGroup>();
             hlg.spacing = 4;
@@ -135,8 +135,8 @@ namespace EconomyMod.UI
             for (int f = 0; f < FilterKeys.Length; f++)
             {
                 int filter = f;
-                var chip = UIHelpers.CreateButton(UIHelpers.L(FilterKeys[f]), chipRow.transform, -1, 26,
-                    _gameFont, _filter == f ? ChipOn : ChipOff, 11f);
+                var chip = UIHelpers.CreateButton(UIHelpers.L(FilterKeys[f]), chipRow.transform, -1, Fs(26f),
+                    _gameFont, _filter == f ? ChipOn : ChipOff, Fs(11f));
                 chip.onClick.AddListener(() =>
                 {
                     if (_filter == filter) return;
@@ -181,7 +181,7 @@ namespace EconomyMod.UI
                 {
                     var fold = UIHelpers.CreateButton(
                         UIHelpers.Lf("events_fold_year", y, count),
-                        _content.transform, -1, 24, _gameFont, new Color(0.28f, 0.29f, 0.34f, 0.7f), 11f);
+                        _content.transform, -1, Fs(24f), _gameFont, new Color(0.28f, 0.29f, 0.34f, 0.7f), Fs(11f));
                     fold.onClick.AddListener(() =>
                     {
                         if (!_expandedYears.Add(y)) _expandedYears.Remove(y);
