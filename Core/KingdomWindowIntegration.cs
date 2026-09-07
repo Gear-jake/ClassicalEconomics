@@ -68,8 +68,9 @@ namespace EconomyMod.Core
 
         /// <summary>向窗口注入入口按钮（幂等）；返回是否执行了注入。</summary>
         /// <summary>
-        /// 找窗口内第一个"右上角小按钮"：锚定 (>=0.99, >=0.99)、锚点收敛、宽高 30~60 的
-        /// 带 Button 组件物体（关闭 X 或同一列的原版按钮）。找到后入口钮随其列排列。
+        /// 找窗口内第一个"右上角小按钮"：锚定 (>=0.99, >=0.99) 且位于窗口顶部区域
+        /// （y ∈ [-400, 0]）、宽高 24~72、带 Button 组件（关闭 X 或同列工具钮）。
+        /// 排除本模组自己的入口钮，避免把自身当参照造成自我偏移。
         /// </summary>
         private static Transform FindCornerButton(Transform root)
         {
@@ -77,8 +78,10 @@ namespace EconomyMod.Core
             for (int i = 0; i < root.childCount; i++)
             {
                 var c = root.GetChild(i);
+                if (c.name == ButtonName) continue; // 跳过自己
                 var crt = c as RectTransform;
                 if (crt != null && crt.anchorMin.x >= 0.99f && crt.anchorMin.y >= 0.99f
+                    && crt.anchoredPosition.y >= -400f && crt.anchoredPosition.y <= 0f
                     && crt.sizeDelta.x >= 24f && crt.sizeDelta.x <= 72f
                     && crt.sizeDelta.y >= 24f && crt.sizeDelta.y <= 72f
                     && c.GetComponent<Button>() != null)
@@ -117,7 +120,8 @@ namespace EconomyMod.Core
                 Transform background = window.transform.Find("Background");
                 if (background == null) background = FindChild(window.transform, "Background");
                 if (background == null) return false;
-                if (background.Find(ButtonName) != null) return false; // 该窗口已注入
+                // 幂等：入口钮宿主动态（原版按钮列容器），须全树查找防重复注入
+                if (FindChild(window.transform, ButtonName) != null) return false;
 
                 var btn = PowerButtonCreator.CreateSimpleButton(
                     ButtonName,
@@ -125,35 +129,44 @@ namespace EconomyMod.Core
                     UI.IconLoader.Get("ledger"),
                     window.transform).gameObject;
 
-                // 运行时自适应：找到窗口内第一个"右上角小按钮"（关闭 X 或同列按钮），
-                // 把入口钮挂在它同一父级、锚定其下方 -52px 处——与原版按钮列同列排列，
-                // 不猜固定坐标（窗口尺寸/缩放不同导致固定值漂移）。
+                // 运行时自适应：以窗口内第一个"右上角小按钮"（原版关闭 X 或同列工具钮）
+                // 的底边中心为参照，把入口钮放到其正下方 8px 处。宿主固定为 window.transform
+                // （稳定对象，不会被原版 create 的后续逻辑重建/清理）；位置用世界坐标换算，
+                // 不依赖宿主坐标系，也不受布局组接管。
                 var rt = btn.GetComponent<RectTransform>();
+                bool placed = false;
                 var cornerBtn = FindCornerButton(window.transform);
-                if (cornerBtn != null)
+                if (cornerBtn != null && cornerBtn is RectTransform crt)
                 {
-                    Transform host = cornerBtn.parent != null ? cornerBtn.parent : window.transform;
-                    if (host != null && !host.name.Contains("Background")) btn.transform.SetParent(host, false);
-                    var crt = cornerBtn as RectTransform;
-                    if (crt != null && crt.anchorMin.x >= 0.99f)
+                    try
                     {
-                        rt.anchorMin = crt.anchorMin;
-                        rt.anchorMax = crt.anchorMax;
+                        var windowRt = (RectTransform)window.transform;
+                        // 参照按钮底边中心的世界坐标 → 窗口局部坐标
+                        Vector3 bottomCenterWorld = crt.TransformPoint(
+                            new Vector3(crt.rect.center.x, crt.rect.yMin, 0f));
+                        Vector3 local = windowRt.InverseTransformPoint(bottomCenterWorld);
+                        rt.anchorMin = new Vector2(1f, 1f);
+                        rt.anchorMax = new Vector2(1f, 1f);
                         rt.pivot = new Vector2(1f, 1f);
-                        rt.anchoredPosition = crt.anchoredPosition + new Vector2(crt.sizeDelta.x, -crt.sizeDelta.y - 8f);
+                        float px = local.x - windowRt.rect.xMax;              // 右缘对齐（负值=内侧）
+                        float py = local.y - windowRt.rect.yMax - 8f;         // 参照按钮下方 8px
+                        // 自我保护：偏移落在窗口右上区域内才采用，防止布局未就绪时换算跑飞
+                        if (px >= -200f && px <= 20f && py >= -500f && py <= 0f)
+                        {
+                            rt.anchoredPosition = new Vector2(px, py);
+                            rt.sizeDelta = new Vector2(38f, 38f);
+                            placed = true;
+                        }
                     }
-                    else
-                    {
-                        FallbackAnchor(rt);
-                    }
+                    catch (System.Exception) { }
                 }
-                else
+                if (!placed)
                 {
                     FallbackAnchor(rt);
+                    rt.sizeDelta = new Vector2(38f, 38f);
                 }
-                rt.sizeDelta = new Vector2(38f, 38f);
-#if DEBUG_LAYOUT
-                // 布局探测：打印窗口子物体树（右上角按钮列位置参照），仅调试构建。
+                // 布局探测：每次注入时打印窗口子物体树（仅写日志不上屏），
+                // 若按钮位置仍不理想，可凭日志一次定准锚点。
                 try
                 {
                     var log = new System.Text.StringBuilder();
@@ -161,7 +174,6 @@ namespace EconomyMod.Core
                     Debug.Log("[ClassicalEconomics][LayoutProbe]\n" + log.ToString());
                 }
                 catch (System.Exception) { }
-#endif
                 // 原版窗口按钮底图（与窗口内其他方形按钮同款），保持"和他们一样"的外观
                 var img = btn.GetComponent<Image>();
                 var vanillaBg = Resources.Load<Sprite>("ui/window_back_button_bg");
@@ -240,12 +252,12 @@ namespace EconomyMod.Core
             {
                 float s = UnrestConfig.Instance != null ? Mathf.Clamp(UnrestConfig.Instance.UiScale, 0.8f, 1.6f) : 1.2f;
                 var go = new GameObject(SummaryName, typeof(RectTransform), typeof(Text));
-                go.transform.SetParent(window.transform, false);
+                go.transform.SetParent(background, false); // 面板内右上（面板右缘在框架按钮列左侧，互不重叠）
                 var rt = go.GetComponent<RectTransform>();
                 rt.anchorMin = new Vector2(1f, 1f);
                 rt.anchorMax = new Vector2(1f, 1f);
                 rt.pivot = new Vector2(1f, 1f);
-                rt.anchoredPosition = new Vector2(-12f, -118f);
+                rt.anchoredPosition = new Vector2(-12f, -56f);
                 rt.sizeDelta = new Vector2(Mathf.Min(240f, 190f * s), Mathf.Min(96f, 72f * s));
                 var t = go.GetComponent<Text>();
                 t.font = LocalizedTextManager.current_font != null
