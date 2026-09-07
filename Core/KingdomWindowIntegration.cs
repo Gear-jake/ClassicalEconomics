@@ -67,7 +67,47 @@ namespace EconomyMod.Core
         }
 
         /// <summary>向窗口注入入口按钮（幂等）；返回是否执行了注入。</summary>
-        private static bool InjectEntry(StatsWindow window)
+        /// <summary>
+        /// 找窗口内第一个"右上角小按钮"：锚定 (>=0.99, >=0.99)、锚点收敛、宽高 30~60 的
+        /// 带 Button 组件物体（关闭 X 或同一列的原版按钮）。找到后入口钮随其列排列。
+        /// </summary>
+        private static Transform FindCornerButton(Transform root)
+        {
+            if (root == null) return null;
+            for (int i = 0; i < root.childCount; i++)
+            {
+                var c = root.GetChild(i);
+                var crt = c as RectTransform;
+                if (crt != null && crt.anchorMin.x >= 0.99f && crt.anchorMin.y >= 0.99f
+                    && crt.sizeDelta.x >= 24f && crt.sizeDelta.x <= 72f
+                    && crt.sizeDelta.y >= 24f && crt.sizeDelta.y <= 72f
+                    && c.GetComponent<Button>() != null)
+                    return c;
+                var r = FindCornerButton(c);
+                if (r != null) return r;
+            }
+            return null;
+        }
+
+        /// <summary>兜底：直接锚窗口框架右上角（探测不到角落按钮时）。</summary>
+        private static void FallbackAnchor(RectTransform rt)
+        {
+            rt.anchorMin = new Vector2(1f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(1f, 1f);
+            rt.anchoredPosition = new Vector2(-12f, -64f);
+        }
+
+        private static void DumpChildren(Transform t, int depth, System.Text.StringBuilder sb, int maxDepth)
+        {
+            if (t == null || depth > maxDepth) return;
+            var rt = t as RectTransform;
+            string sz = rt != null ? " size=" + rt.sizeDelta.x + "x" + rt.sizeDelta.y
+                + " anchor=" + rt.anchorMin.x + "," + rt.anchorMin.y + " pos=" + rt.anchoredPosition.x + "," + rt.anchoredPosition.y : "";
+            sb.Append(new string(' ', depth * 2)).Append(t.name).Append(sz).Append('\n');
+            for (int i = 0; i < t.childCount; i++)
+                DumpChildren(t.GetChild(i), depth + 1, sb, maxDepth);
+        }        private static bool InjectEntry(StatsWindow window)
         {
             try
             {
@@ -85,14 +125,43 @@ namespace EconomyMod.Core
                     UI.IconLoader.Get("ledger"),
                     window.transform).gameObject;
 
-                // 用户指定位置：窗口框架右缘、原版按钮列（X/水晶球/宝石/星）之下的空白区。
-                // 锚定框架右上角下移避免与那列工具按钮重叠（红框示意处）。
+                // 运行时自适应：找到窗口内第一个"右上角小按钮"（关闭 X 或同列按钮），
+                // 把入口钮挂在它同一父级、锚定其下方 -52px 处——与原版按钮列同列排列，
+                // 不猜固定坐标（窗口尺寸/缩放不同导致固定值漂移）。
                 var rt = btn.GetComponent<RectTransform>();
-                rt.anchorMin = new Vector2(1f, 1f);
-                rt.anchorMax = new Vector2(1f, 1f);
-                rt.pivot = new Vector2(1f, 1f);
-                rt.anchoredPosition = new Vector2(-32f, -260f);
+                var cornerBtn = FindCornerButton(window.transform);
+                if (cornerBtn != null)
+                {
+                    Transform host = cornerBtn.parent != null ? cornerBtn.parent : window.transform;
+                    if (host != null && !host.name.Contains("Background")) btn.transform.SetParent(host, false);
+                    var crt = cornerBtn as RectTransform;
+                    if (crt != null && crt.anchorMin.x >= 0.99f)
+                    {
+                        rt.anchorMin = crt.anchorMin;
+                        rt.anchorMax = crt.anchorMax;
+                        rt.pivot = new Vector2(1f, 1f);
+                        rt.anchoredPosition = crt.anchoredPosition + new Vector2(crt.sizeDelta.x, -crt.sizeDelta.y - 8f);
+                    }
+                    else
+                    {
+                        FallbackAnchor(rt);
+                    }
+                }
+                else
+                {
+                    FallbackAnchor(rt);
+                }
                 rt.sizeDelta = new Vector2(38f, 38f);
+#if DEBUG_LAYOUT
+                // 布局探测：打印窗口子物体树（右上角按钮列位置参照），仅调试构建。
+                try
+                {
+                    var log = new System.Text.StringBuilder();
+                    DumpChildren(window.transform, 0, log, 3);
+                    Debug.Log("[ClassicalEconomics][LayoutProbe]\n" + log.ToString());
+                }
+                catch (System.Exception) { }
+#endif
                 // 原版窗口按钮底图（与窗口内其他方形按钮同款），保持"和他们一样"的外观
                 var img = btn.GetComponent<Image>();
                 var vanillaBg = Resources.Load<Sprite>("ui/window_back_button_bg");
@@ -171,12 +240,12 @@ namespace EconomyMod.Core
             {
                 float s = UnrestConfig.Instance != null ? Mathf.Clamp(UnrestConfig.Instance.UiScale, 0.8f, 1.6f) : 1.2f;
                 var go = new GameObject(SummaryName, typeof(RectTransform), typeof(Text));
-                go.transform.SetParent(window.transform, false); // 与入口按钮同锚（框架右缘列）
+                go.transform.SetParent(window.transform, false);
                 var rt = go.GetComponent<RectTransform>();
                 rt.anchorMin = new Vector2(1f, 1f);
                 rt.anchorMax = new Vector2(1f, 1f);
                 rt.pivot = new Vector2(1f, 1f);
-                rt.anchoredPosition = new Vector2(-32f, -304f);
+                rt.anchoredPosition = new Vector2(-12f, -118f);
                 rt.sizeDelta = new Vector2(Mathf.Min(240f, 190f * s), Mathf.Min(96f, 72f * s));
                 var t = go.GetComponent<Text>();
                 t.font = LocalizedTextManager.current_font != null
