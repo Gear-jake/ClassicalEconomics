@@ -48,6 +48,7 @@ namespace EconomyMod.Core
             public int phase = -1;               // 条件：经济阶段 0繁荣 1衰退 2萧条 3复苏（-1 不限）
             public float treasuryRatioMin = -1f; // 条件：金库/GDP ≥（仅玩家国可判）
             public string variantGroup;           // 变体互斥组：同组事件每局仅部分启用（种子决定，同局稳定）
+            public float rarityWeight = 1f;       // 稀有度权重（概率极小事件设 <1；抽样时乘入，下限 0.05，门禁约束）
             public string chainNext;             // 连锁：结算后触发的后续事件 id（null=无）
             public int chainDelay = 1;           // 连锁：后续事件延迟年数
             public int chainAfterOption = -1;    // 连锁：仅该选项序号触发（-1=任意选项）
@@ -63,6 +64,12 @@ namespace EconomyMod.Core
             public int goodwillAll;              // 对所有其他王国外交好感增量
             public bool unrest;                  // 触发动荡（UnrestEngine.Incite）
             public int commercePenaltyYears;     // 商路断绝：商业税减半持续年数（0=无）
+            public int declareWarTarget;         // 外交：对某王国宣战（-1=最强邻国 0=随机 1=最弱邻国 2=当前交战国；>=0 代表意图）
+            public int formAllianceTarget;       // 外交：与某国结盟（-1=关系最好 0=随机 1=国力最强；>=0 代表意图）
+            public bool moveCapital;             // 迁都（到第二大城市；无第二城不动）
+            public int upgradeBuildings;         // 升级城市可升级建筑 N 座（逐城遍历 cap）
+            public float citizenWealthRatio;     // 个体收益/损失（占人均财富比例：>0 发财 <0 破产扣钱）
+            public bool worldWar;                // 世界大战（eventSpite：全世界攻事件国）
             public Dictionary<string, float> styleWeights; // AI 国性 → 权重（缺省 1）
         }
 
@@ -108,6 +115,15 @@ namespace EconomyMod.Core
             if (!_poolBuilt) return 1f;
             string fam = string.IsNullOrEmpty(family) ? "civil" : family;
             return _familyBias.TryGetValue(fam, out float w) ? w : 1f;
+        }
+
+        /// <summary>事件抽样权重 = 族倾向 × 稀有度（下限 0.05，门禁约束 rarityWeight ∈ [0.05,1]）。</summary>
+        private static float OptionWeight(EventDef d)
+        {
+            float r = d.rarityWeight;
+            if (r < 0.05f) r = 0.05f;
+            else if (r > 1f) r = 1f;
+            return FamilyWeight(d.family) * r;
         }
 
         // 加权抽样候选复用缓冲（EvaluateYear 主线程年度路径，不跨周期持有）
@@ -537,15 +553,15 @@ namespace EconomyMod.Core
                     if (year < ReadyYearOf(d)) continue;
                     if (!ConditionsOk(d, k, stats, year, isPlayer)) continue;
                     _candidatePool.Add(d);
-                    totalWeight += FamilyWeight(d.family);
+                    totalWeight += OptionWeight(d);
                 }
                 if (totalWeight > 0f)
                 {
-                    // 加权抽样（族倾向：此局天灾频仍、彼局宫廷喧哗）
+                    // 加权抽样（族倾向 × 稀有度：此局天灾频仍、彼局宫廷喧哗；世界大战等稀有事件权重压低）
                     float roll = Random.value * totalWeight;
                     for (int ci = 0; ci < _candidatePool.Count; ci++)
                     {
-                        roll -= FamilyWeight(_candidatePool[ci].family);
+                        roll -= OptionWeight(_candidatePool[ci]);
                         if (roll <= 0f) { picked = _candidatePool[ci]; break; }
                     }
                     if (picked == null && _candidatePool.Count > 0) picked = _candidatePool[_candidatePool.Count - 1];
@@ -689,6 +705,30 @@ namespace EconomyMod.Core
             if (o.commercePenaltyYears > 0)
                 BankEngine.SetCommercePenalty(year + o.commercePenaltyYears);
 
+            // 5.45 v1.8 效果库扩展：宣战/结盟/迁都/建筑升级/个体财富/世界大战
+            if (o.declareWarTarget >= -1 && o.declareWarTarget != 0)
+            {
+                var t = NationDiplomacy.PickTarget(k, o.declareWarTarget, true);
+                if (t != null)
+                {
+                    string msg;
+                    NationDiplomacy.StartWarBetween(k, t, out msg);
+                }
+            }
+            if (o.formAllianceTarget >= -1 && o.formAllianceTarget != 0)
+            {
+                var t = NationDiplomacy.PickTarget(k, o.formAllianceTarget, false);
+                if (t != null)
+                {
+                    string msg;
+                    NationDiplomacy.FormAllianceBetween(k, t, out msg);
+                }
+            }
+            if (o.moveCapital) TryMoveCapital(k);
+            if (o.upgradeBuildings > 0) TryUpgradeBuildings(k, o.upgradeBuildings);
+            if (o.citizenWealthRatio != 0f) TryCitizenWealth(k, stats, o.citizenWealthRatio);
+            if (o.worldWar) TryWorldWar(k);
+
             // 5.5 连锁：按选项把后续事件排入队列（跨年生成，绕过概率/冷却）
             if (!string.IsNullOrEmpty(d.chainNext) && FindDef(d.chainNext) != null
                 && (d.chainAfterOption < 0 || d.chainAfterOption == optIndex)
@@ -714,6 +754,139 @@ namespace EconomyMod.Core
                 else GameHelpers.Notify(resText);
             }
         }
+
+        // ===== v1.8 效果执行辅助（全部静默失败，遵循 fail-closed 惯例）=====
+
+        /// <summary>迁都：选王国第二大城市（按 GDP 优先级；无第二城不动）。</summary>
+        private static void TryMoveCapital(Kingdom k)
+        {
+            try
+            {
+                if (k == null || k.data == null) return;
+                _capitalPool.Clear();
+                NationEngine.SnapshotCities(k, _capitalPool);
+                if (_capitalPool.Count < 2) return;
+                City best = null;
+                long bestPop = -1;
+                for (int i = 0; i < _capitalPool.Count; i++)
+                {
+                    var c = _capitalPool[i];
+                    if (c == null) continue;
+                    if (k.capital != null && c == k.capital) continue; // 跳过当前首都
+                    long pop = 0;
+                    try { pop = c.getPopulationPeople(); } catch (System.Exception) { }
+                    if (pop > bestPop) { bestPop = pop; best = c; }
+                }
+                if (best != null) k.setCapital(best);
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>升级 N 座可升级建筑：逐城遍历，Building.upgradeBuilding() 反射一次；静默跳过不可升级/施工中。</summary>
+        private static void TryUpgradeBuildings(Kingdom k, int n)
+        {
+            try
+            {
+                if (k == null || k.data == null || n <= 0) return;
+                if (_upgradeMethod == null && !_upgradeProbed)
+                {
+                    _upgradeProbed = true;
+                    try
+                    {
+                        _upgradeMethod = typeof(Building).GetMethod("upgradeBuilding",
+                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+                            | System.Reflection.BindingFlags.Instance);
+                    }
+                    catch (System.Exception) { }
+                }
+                if (_upgradeMethod == null) return;
+
+                _capitalPool.Clear();
+                NationEngine.SnapshotCities(k, _capitalPool);
+                int done = 0;
+                for (int ci = 0; ci < _capitalPool.Count && done < n; ci++)
+                {
+                    var c = _capitalPool[ci];
+                    if (c == null || c.buildings == null) continue;
+                    for (int bi = 0; bi < c.buildings.Count && done < n; bi++)
+                    {
+                        var b = c.buildings[bi];
+                        if (b == null) continue;
+                        try
+                        {
+                            object r = _upgradeMethod.Invoke(b, null);
+                            if (r is bool ok && ok) done++;
+                        }
+                        catch (System.Exception) { }
+                    }
+                }
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>个体财富：ratio>0 给 top 富豪发钱（分块 addMoney）；&lt;0 按人均比例随机扣钱（clamp 0 保底）。</summary>
+        private static void TryCitizenWealth(Kingdom k, EconomyMod.Models.KingdomStats stats, float ratio)
+        {
+            try
+            {
+                if (k == null || k.units == null || ratio == 0f) return;
+                long perCapita = (long)((stats?.AvgWealth ?? 0f) * System.Math.Abs(ratio));
+                if (perCapita <= 0) return;
+                var pool = _citizenPool;
+                pool.Clear();
+                foreach (var a in k.units)
+                {
+                    if (a == null || !a.isAlive()) continue;
+                    if (!GameHelpers.IsCivilizedActor(a)) continue;
+                    pool.Add(a);
+                }
+                if (ratio > 0)
+                {
+                    // 发财：按财富排序取 top 25%（至少 1 人）
+                    pool.Sort((x, y) =>
+                    {
+                        try { return GameHelpers.TryGetWealth(x, out float wx) && GameHelpers.TryGetWealth(y, out float wy)
+                            ? wy.CompareTo(wx) : 0; }
+                        catch (System.Exception) { return 0; }
+                    });
+                    int count = System.Math.Max(1, pool.Count / 4);
+                    for (int i = 0; i < count && i < pool.Count; i++)
+                        GameHelpers.AddPositiveMoney(pool[i], perCapita);
+                }
+                else
+                {
+                    // 破产：随机扣池中 30%（至少 1 人），逐人扣到 0 为止
+                    int count = System.Math.Max(1, pool.Count * 3 / 10);
+                    for (int i = 0; i < count && pool.Count > 0; i++)
+                    {
+                        var a = pool[UnityEngine.Random.Range(0, pool.Count)];
+                        pool.RemoveAt(pool.IndexOf(a));
+                        try { if (GameHelpers.TryGetWealth(a, out float w) && w > 0) a.addMoney(-(int)System.Math.Min(int.MaxValue, System.Math.Min(perCapita, w))); }
+                        catch (System.Exception) { }
+                    }
+                }
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>世界大战：public eventSpite（全世界攻事件国；单世界仅一场总战争，已存在则无效果）。</summary>
+        private static void TryWorldWar(Kingdom k)
+        {
+            try
+            {
+                if (k == null || k.data == null) return;
+                var d = World.world != null ? World.world.diplomacy : null;
+                if (d == null) return;
+                d.eventSpite(k);
+            }
+            catch (System.Exception) { }
+        }
+
+        // v1.8 效果辅助缓存（主线程年度路径；仅分配一次）
+        private static readonly List<City> _capitalPool = new List<City>(8);
+        private static readonly List<Actor> _citizenPool = new List<Actor>(64);
+        private static System.Reflection.MethodInfo _upgradeMethod;
+        private static bool _upgradeProbed;
 
         // ===== 存档（NationSave 调用；rb_ev_* 三键）=====
 

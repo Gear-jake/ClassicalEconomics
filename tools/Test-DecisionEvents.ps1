@@ -7,7 +7,7 @@ function Fail($msg) { Write-Host "DECISION_EVENTS_RED: $msg"; exit 1 }
 $jsonPath = Join-Path $Root 'events.json'
 if (-not (Test-Path -LiteralPath $jsonPath -PathType Leaf)) { Fail 'events.json missing from mod root' }
 try { $json = Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail "events.json is not valid JSON: $_" }
-if (-not $json.events -or $json.events.Count -lt 300) { Fail "events.json must define at least 300 events (found $($json.events.Count))" }
+if (-not $json.events -or $json.events.Count -lt 300) { Fail "events.json must define at least 325 events (found $($json.events.Count))" }
 
 # ===== 1. 每事件结构完整性 =====
 $validFamilies = @('finance','disaster','court','military','civil','diplomacy')
@@ -46,6 +46,35 @@ foreach ($e in $json.events) {
         if ($e.variantGroup -isnot [string] -or $e.variantGroup.Length -eq 0) { Fail "event $($e.id): variantGroup must be a non-empty string" }
         if ($e.chainNext) { Fail "event $($e.id): variantGroup event must not also be a chain member (chain units stay whole)" }
     }
+    # v1.8.0：稀有度权重 ∈ [0.05, 1]（缺省 1）
+    if ($null -ne $e.rarityWeight) {
+        $rw = [double]$e.rarityWeight
+        if ($rw -lt 0.05 -or $rw -gt 1.0) { Fail "event $($e.id): rarityWeight must be in [0.05, 1] (got $rw)" }
+    }
+    # v1.8.0：选项效果字段白名单校验
+    foreach ($o in $e.options) {
+        if ($o.PSObject.Properties.Name -contains 'declareWarTarget') {
+            $dw = [int]$o.declareWarTarget
+            if ($dw -ne 0 -and $dw -ne 1 -and $dw -ne 2 -and $dw -ne -1) { Fail "event $($e.id): declareWarTarget must be -1/0/1/2 (got $dw)" }
+        }
+        if ($o.PSObject.Properties.Name -contains 'formAllianceTarget') {
+            $fa = [int]$o.formAllianceTarget
+            if ($fa -ne 0 -and $fa -ne 1 -and $fa -ne -1) { Fail "event $($e.id): formAllianceTarget must be -1/0/1 (got $fa)" }
+        }
+        if ($o.PSObject.Properties.Name -contains 'upgradeBuildings') {
+            $ub = [int]$o.upgradeBuildings
+            if ($ub -lt 0 -or $ub -gt 12) { Fail "event $($e.id): upgradeBuildings must be 0..12 (got $ub)" }
+        }
+        if ($o.PSObject.Properties.Name -contains 'citizenWealthRatio') {
+            $cw = [double]$o.citizenWealthRatio
+            if ($cw -lt -1.0 -or $cw -gt 1.0) { Fail "event $($e.id): citizenWealthRatio must be in [-1, 1] (got $cw)" }
+        }
+        foreach ($fb in @('moveCapital','worldWar')) {
+            if ($o.PSObject.Properties.Name -contains $fb -and $o.$fb -ne $true -and $o.$fb -ne $false) {
+                Fail "event $($e.id): '$fb' must be boolean"
+            }
+        }
+    }
 }
 # 链无环（chainNext 图中每个 id 沿链不超过事件总数）
 foreach ($e in $json.events) {
@@ -76,6 +105,7 @@ if ($src -notmatch 'BuildWorldPool\(') { Fail 'DecisionEvents must build the per
 if ($src -notmatch 'current_world_seed_id') { Fail 'DecisionEvents must derive the pool from the world seed' }
 if ($src -notmatch 'PoolActive\(') { Fail 'EvaluateYear must filter candidates by PoolActive' }
 if ($src -notmatch 'FamilyWeight\(') { Fail 'EvaluateYear must weight candidates by family bias (FamilyWeight)' }
+if ($src -notmatch 'StartWarBetween\(' -or $src -notmatch 'TryWorldWar\(' -or $src -notmatch 'TryUpgradeBuildings\(') { Fail 'v1.8 effects must wire StartWarBetween/TryWorldWar/TryUpgradeBuildings' }
 
 $pipeline = [System.IO.File]::ReadAllText((Join-Path $Root 'Core\AnnualPipeline.cs'))
 if ($pipeline -notmatch 'Nation,\s*\r?\n\s*Events,\s*\r?\n\s*Snapshot') { Fail 'AnnualStage enum must declare Events between Nation and Snapshot' }

@@ -206,6 +206,22 @@ namespace EconomyMod.UI
                 parts.Add(UIHelpers.Lf("event_choice_goodwill", o.goodwillAll > 0 ? "+" : "", o.goodwillAll));
             if (o.unrest)
                 parts.Add(UIHelpers.L("event_choice_unrest"));
+            if (o.commercePenaltyYears > 0)
+                parts.Add(UIHelpers.Lf("event_choice_commerce", o.commercePenaltyYears));
+            if (o.declareWarTarget != 0)
+                parts.Add(UIHelpers.L("event_choice_declare_war"));
+            if (o.formAllianceTarget != 0)
+                parts.Add(UIHelpers.L("event_choice_alliance"));
+            if (o.moveCapital)
+                parts.Add(UIHelpers.L("event_choice_move_capital"));
+            if (o.upgradeBuildings > 0)
+                parts.Add(UIHelpers.Lf("event_choice_upgrade", o.upgradeBuildings));
+            if (o.citizenWealthRatio > 0f)
+                parts.Add(UIHelpers.L("event_choice_citizen_gain"));
+            else if (o.citizenWealthRatio < 0f)
+                parts.Add(UIHelpers.L("event_choice_citizen_loss"));
+            if (o.worldWar)
+                parts.Add(UIHelpers.L("event_choice_worldwar"));
             return parts.Count > 0 ? string.Join("  ", parts.ToArray()) : null;
         }
 

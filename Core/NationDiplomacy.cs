@@ -70,6 +70,105 @@ namespace EconomyMod.Core
             return id != 0 ? GameHelpers.FindKingdom(id) : null;
         }
 
+        // ===== 抉择事件效果：目标王国选择（按事件字段 mode 选）=====
+
+        /// <summary>
+        /// 按 mode 挑选另一王国作为宣战/结盟目标（不含 a 自身与已亡国）：
+        /// 宣战 mode：-1=最强邻国(GDP最高非本国) 0=随机 1=最弱邻国(有文明人口) 2=当前交战国（无交战则回退最强邻国）。
+        /// 结盟 mode：-1=关系最好 0=随机 1=国力最强。
+        /// 选择失败（王国数不足等）返回 null，调用方静默跳过（事件效果落空不报错）。
+        /// </summary>
+        internal static Kingdom PickTarget(Kingdom a, int mode, bool forWar)
+        {
+            if (a == null) return null;
+            try
+            {
+                var ks = GameHelpers.KingdomSnapshot();
+                if (ks == null || ks.Count < 2) return null;
+
+                // 交战国优先
+                if (forWar && mode == 2)
+                {
+                    Kingdom atWar = null;
+                    foreach (var w in GetActiveWars(a))
+                    {
+                        if (w.hasEnded()) continue;
+                        foreach (var o in ks)
+                        {
+                            if (o == null || o == a || o.data == null) continue;
+                            if (w.isAttacker(o) || w.isDefender(o)) { atWar = o; break; }
+                        }
+                        if (atWar != null) break;
+                    }
+                    if (atWar != null) return atWar;
+                }
+
+                var pool = new List<Kingdom>(System.Math.Min(ks.Count, 48));
+                for (int i = 0; i < ks.Count; i++)
+                {
+                    var o = ks[i];
+                    if (o == null || o == a || o.data == null) continue;
+                    if (o.data.id == a.data.id) continue;
+                    pool.Add(o);
+                }
+                if (pool.Count == 0) return null;
+
+                if (mode == 0) return pool[UnityEngine.Random.Range(0, pool.Count)];
+
+                // 排序选择：宣战 -1=GDP高 → 1=人类少（弱）优先；结盟 -1=好 -1/1 类似逻辑走位
+                if (forWar)
+                {
+                    if (mode == -1)
+                    {
+                        Kingdom best = null; long bestGdp = -1;
+                        for (int i = 0; i < pool.Count; i++)
+                        {
+                            EconomyEngine.KingdomStats.TryGetValue(pool[i].data.id, out var st);
+                            long g = st?.GDP ?? 0;
+                            if (g > bestGdp) { bestGdp = g; best = pool[i]; }
+                        }
+                        return best;
+                    }
+                    // mode == 1：最弱（GDP 最小但 actor 数 >0）
+                    {
+                        Kingdom weak = null; long weakGdp = long.MaxValue;
+                        for (int i = 0; i < pool.Count; i++)
+                        {
+                            EconomyEngine.KingdomStats.TryGetValue(pool[i].data.id, out var st);
+                            if (st == null || st.ActorCount <= 0) continue;
+                            if (st.GDP < weakGdp) { weakGdp = st.GDP; weak = pool[i]; }
+                        }
+                        return weak ?? pool[UnityEngine.Random.Range(0, pool.Count)];
+                    }
+                }
+                else
+                {
+                    if (mode == -1)
+                    {
+                        Kingdom best = null; int bestScore = int.MinValue;
+                        for (int i = 0; i < pool.Count; i++)
+                        {
+                            int s = GetRelationScore(pool[i]) + GetGoodwill(pool[i].data.id);
+                            if (s > bestScore) { bestScore = s; best = pool[i]; }
+                        }
+                        return best ?? pool[0];
+                    }
+                    // mode == 1：GDP 最强
+                    {
+                        Kingdom strongest = null; long bestGdp = -1;
+                        for (int i = 0; i < pool.Count; i++)
+                        {
+                            EconomyEngine.KingdomStats.TryGetValue(pool[i].data.id, out var st);
+                            long g = st?.GDP ?? 0;
+                            if (g > bestGdp) { bestGdp = g; strongest = pool[i]; }
+                        }
+                        return strongest ?? pool[0];
+                    }
+                }
+            }
+            catch (System.Exception) { return null; }
+        }
+
         /// <summary>目标国与本国的原版好感（异常时为 0）。</summary>
         public static int GetRelationScore(Kingdom target)
         {
@@ -112,18 +211,30 @@ namespace EconomyMod.Core
         /// <summary>宣战：解散共同联盟（背叛）+ startWar(whisper_of_war)。</summary>
         public static bool DeclareWar(Kingdom target, out string msgKey)
         {
-            msgKey = "toast_dip_declare_ok";
             var mine = Mine();
             if (mine == null || target == null || target.data == null) { msgKey = "toast_dip_no_nation"; return false; }
             if (UnrestConfig.Instance == null || !UnrestConfig.Instance.NationPlayEnabled) { msgKey = "toast_dip_no_nation"; return false; }
-            if (IsAtWarWith(target)) { msgKey = "toast_dip_already_war"; return false; }
+            return StartWarBetween(mine, target, out msgKey);
+        }
 
+        /// <summary>
+        /// 通用宣战（抉择事件效果用）：任意王国 a 向 b 开战，逻辑与 DeclareWar 一致。
+        /// 事件国为主语（AI 国事件 → AI 国宣战；玩家国事件 → 认领国视角）。
+        /// </summary>
+        internal static bool StartWarBetween(Kingdom a, Kingdom b, out string msgKey)
+        {
+            msgKey = "toast_dip_declare_ok";
+            if (a == null || b == null || a.data == null || b.data == null) { msgKey = "toast_dip_no_nation"; return false; }
             try
             {
+                if (a.isEnemy(b)) { msgKey = "toast_dip_already_war"; return false; }
+                foreach (var w in GetActiveWars(a))
+                    if (!w.hasEnded() && (w.isAttacker(b) || w.isDefender(b))) { msgKey = "toast_dip_already_war"; return false; }
+
                 // 共同联盟因背叛瓦解
-                if (mine.hasAlliance() && target.hasAlliance() && mine.getAlliance() == target.getAlliance())
+                if (a.hasAlliance() && b.hasAlliance() && a.getAlliance() == b.getAlliance())
                 {
-                    try { World.world.alliances.dissolveAlliance(mine.getAlliance()); } catch (System.Exception) { }
+                    try { World.world.alliances.dissolveAlliance(a.getAlliance()); } catch (System.Exception) { }
                 }
 
                 var warAsset = ResolveWarAsset();
@@ -134,8 +245,8 @@ namespace EconomyMod.Core
                     msgKey = "toast_dip_unavailable";
                     return false;
                 }
-                startWar.Invoke(World.world.diplomacy, new object[] { mine, target, warAsset, true });
-                EventStreamService.Record(EventStreamService.TypeNationDiplomacy, target.data.name, 1);
+                startWar.Invoke(World.world.diplomacy, new object[] { a, b, warAsset, true });
+                EventStreamService.Record(EventStreamService.TypeNationDiplomacy, b.data.name, 1);
                 return true;
             }
             catch (System.Exception e)
@@ -189,33 +300,40 @@ namespace EconomyMod.Core
         /// <summary>结盟：无战争 + (原版好感 + 赠礼好感) ≥ 0；双方均无联盟 → 新建，单方有 → 加入。</summary>
         public static bool FormAlliance(Kingdom target, out string msgKey)
         {
-            msgKey = "toast_dip_alliance_ok";
             var mine = Mine();
             if (mine == null || target == null || target.data == null) { msgKey = "toast_dip_no_nation"; return false; }
-            if (IsAtWarWith(target)) { msgKey = "toast_dip_alliance_war"; return false; }
-            if (mine.hasAlliance() && target.hasAlliance() && mine.getAlliance() == target.getAlliance()) { msgKey = "toast_dip_alliance_exists"; return false; }
+            return FormAllianceBetween(mine, target, out msgKey);
+        }
 
-            int score = GetRelationScore(target) + GetGoodwill(target.data.id);
+        /// <summary>通用结盟（抉择事件效果用）：a 与 b 结盟，逻辑与 FormAlliance 一致。</summary>
+        internal static bool FormAllianceBetween(Kingdom a, Kingdom b, out string msgKey)
+        {
+            msgKey = "toast_dip_alliance_ok";
+            if (a == null || b == null || a.data == null || b.data == null) { msgKey = "toast_dip_no_nation"; return false; }
+            if (a.isEnemy(b)) { msgKey = "toast_dip_alliance_war"; return false; }
+            if (a.hasAlliance() && b.hasAlliance() && a.getAlliance() == b.getAlliance()) { msgKey = "toast_dip_alliance_exists"; return false; }
+
+            int score = GetRelationScore(b) + GetGoodwill(b.data.id);
             if (score < 0) { msgKey = "toast_dip_alliance_refused"; return false; }
 
             try
             {
-                bool hasMine = mine.hasAlliance();
-                bool hasTheirs = target.hasAlliance();
+                bool hasMine = a.hasAlliance();
+                bool hasTheirs = b.hasAlliance();
                 if (!hasMine && !hasTheirs)
                 {
-                    World.world.alliances.newAlliance(mine, target);
+                    World.world.alliances.newAlliance(a, b);
                 }
                 else if (hasMine && !hasTheirs)
                 {
-                    mine.getAlliance().join(target);
+                    a.getAlliance().join(b);
                 }
                 else if (!hasMine && hasTheirs)
                 {
-                    target.getAlliance().join(mine);
+                    b.getAlliance().join(a);
                 }
                 else { msgKey = "toast_dip_alliance_both"; return false; }
-                EventStreamService.Record(EventStreamService.TypeNationDiplomacy, target.data.name, 3);
+                EventStreamService.Record(EventStreamService.TypeNationDiplomacy, b.data.name, 3);
                 return true;
             }
             catch (System.Exception) { msgKey = "toast_dip_failed"; return false; }

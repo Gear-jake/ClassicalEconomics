@@ -5992,6 +5992,245 @@
           "key": "opt2"
         }
       ]
+    },
+    {
+      "id": "world_war_pact",
+      "family": "diplomacy",
+      "minYear": 8,
+      "timeoutYears": 3,
+      "fallback": 1,
+      "cooldownYears": 40,
+      "rarityWeight": 0.08,
+      "options": [
+        {
+          "key": "opt1",
+          "worldWar": true,
+          "goodwillAll": -3
+        },
+        {
+          "key": "opt2",
+          "worldWar": true,
+          "goodwillAll": 3
+        }
+      ]
+    },
+    {
+      "id": "world_war_driven",
+      "family": "military",
+      "minYear": 8,
+      "timeoutYears": 3,
+      "fallback": 1,
+      "cooldownYears": 40,
+      "rarityWeight": 0.08,
+      "options": [
+        {
+          "key": "opt1",
+          "worldWar": true,
+          "treasuryGdpRatio": -0.01
+        },
+        {
+          "key": "opt2",
+          "worldWar": true,
+          "goodwillAll": -2
+        }
+      ]
+    },
+    {
+      "id": "declare_war_casus",
+      "family": "military",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 18,
+      "options": [
+        {
+          "key": "opt1",
+          "declareWarTarget": -1
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2,
+          "treasuryGdpRatio": -0.005
+        }
+      ]
+    },
+    {
+      "id": "war_monger",
+      "family": "court",
+      "minYear": 4,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 18,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "declareWarTarget": 2,
+          "goodwillAll": -1
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "forced_peace_breaker",
+      "family": "diplomacy",
+      "minYear": 5,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 20,
+      "chainNext": "war_escalation",
+      "chainDelay": 2,
+      "chainAfterOption": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "declareWarTarget": -1,
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "alliance_overture",
+      "family": "diplomacy",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "formAllianceTarget": -1,
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "treaty_of_salt",
+      "family": "diplomacy",
+      "minYear": 4,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 18,
+      "options": [
+        {
+          "key": "opt1",
+          "formAllianceTarget": 1,
+          "treasuryGdpRatio": 0.006
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "enemy_of_enemy",
+      "family": "court",
+      "minYear": 5,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 18,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "formAllianceTarget": -1,
+          "declareWarTarget": -1
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "capital_relocate",
+      "family": "court",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "moveCapital": true,
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.006
+        }
+      ]
+    },
+    {
+      "id": "capital_undaunted",
+      "family": "military",
+      "minYear": 4,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "moveCapital": true,
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "building_renaissance",
+      "family": "civil",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "upgradeBuildings": 4,
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "merchant_tycoon",
+      "family": "finance",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "citizenWealthRatio": 0.5,
+          "treasuryGdpRatio": 0.004
+        },
+        {
+          "key": "opt2",
+          "citizenWealthRatio": -0.4,
+          "goodwillAll": 1
+        }
+      ]
     }
   ]
 }
