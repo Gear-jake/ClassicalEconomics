@@ -81,9 +81,10 @@ namespace EconomyMod.UI
             var el = card.AddComponent<LayoutElement>();
             el.preferredWidth = w;
             el.preferredHeight = h;
-            // 左侧色条（价值色 = valueColor，视觉锚定）
+            // 左侧色条（价值色 = valueColor，视觉锚定；不参与布局）
             var strip = new GameObject("Strip", typeof(RectTransform), typeof(Image));
             strip.transform.SetParent(card.transform, false);
+            strip.transform.SetAsFirstSibling();
             var srt = strip.GetComponent<RectTransform>();
             srt.anchorMin = new Vector2(0, 0); srt.anchorMax = new Vector2(0, 1);
             srt.pivot = new Vector2(0, 0.5f);
@@ -91,15 +92,25 @@ namespace EconomyMod.UI
             srt.sizeDelta = new Vector2(3, 0);
             strip.GetComponent<Image>().color = valueColor;
             strip.GetComponent<Image>().raycastTarget = false;
+            var sIgnore = strip.AddComponent<LayoutElement>();
+            sIgnore.ignoreLayout = true;
+
+            // 卡片内部用 VerticalLayoutGroup 管理文本布局（锚点+BestFit 在缩放/换行时
+            // 会互相挤压导致文字错位叠出卡片——布局组接管后由 LayoutElement 明确占位）
+            var vlg = card.AddComponent<VerticalLayoutGroup>();
+            vlg.spacing = 2;
+            vlg.padding = new RectOffset(6, 6, 4, 4);
+            vlg.childControlWidth = true; vlg.childControlHeight = true;
+            vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+            vlg.childAlignment = TextAnchor.MiddleCenter;
 
             // 标签（顶部，弱色；BestFit 自动缩小字号，窄卡不溢出）
             var lbl = UIHelpers.CreateText(label, card.transform, UIStyles.StatLabelSize * fontScale,
                 UIStyles.TextMuted, font, 16f * fontScale, "Label");
-            var lrt = lbl.GetComponent<RectTransform>();
-            lrt.anchorMin = new Vector2(0, 1); lrt.anchorMax = new Vector2(1, 1);
-            lrt.pivot = new Vector2(0.5f, 1);
-            lrt.anchoredPosition = new Vector2(0, -4);
-            lrt.sizeDelta = new Vector2(-8, 16f * fontScale);
+            var lLe = lbl.AddComponent<LayoutElement>();
+            lLe.preferredHeight = 16f * fontScale;
+            lLe.flexibleHeight = 0;
+            lLe.flexibleWidth = 1;
             var lText = lbl.GetComponent<Text>();
             lText.alignment = TextAnchor.UpperCenter;
             lText.resizeTextForBestFit = true;
@@ -109,11 +120,11 @@ namespace EconomyMod.UI
             // 数值（底部，强调色，粗体；BestFit 自动缩小字号）
             var val = UIHelpers.CreateText(value, card.transform, UIStyles.StatValueSize * fontScale,
                 valueColor, font, 22f * fontScale, "Value");
-            var vrt = val.GetComponent<RectTransform>();
-            vrt.anchorMin = new Vector2(0, 0); vrt.anchorMax = new Vector2(1, 0);
-            vrt.pivot = new Vector2(0.5f, 0);
-            vrt.anchoredPosition = new Vector2(0, 3);
-            vrt.sizeDelta = new Vector2(-8, 22f * fontScale);
+            var vLe = val.AddComponent<LayoutElement>();
+            vLe.preferredHeight = 22f * fontScale;
+            vLe.flexibleHeight = 1;
+            vLe.flexibleWidth = 1;
+            vLe.minHeight = 18f * fontScale;
             var vt = val.GetComponent<Text>();
             vt.alignment = TextAnchor.LowerCenter;
             vt.fontStyle = FontStyle.Bold;
