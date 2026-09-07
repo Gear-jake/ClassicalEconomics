@@ -26,7 +26,6 @@
 
 ■ 下载
 GitHub 搜 Gear-jake/ClassicalEconomics：
-1. 仓库页 Code → Download ZIP（解压后整个文件夹直接放进 Mods/ 即玩，自带编译好的 DLL）；
-2. 或 Release 页下 ClassicalEconomics-2.0.0.zip（含源码的完整包）。
+1. 仓库页 Code → Download ZIP（源码工程，自行编译）；或 Release 页下 ClassicalEconomics-2.0.0.zip（纯源码包）。
 
 有问题带截图 @我，报错记得附 WorldBox/logs 日志。
