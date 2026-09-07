@@ -320,7 +320,8 @@
         {
           "key": "opt1",
           "treasuryGdpRatio": -0.008,
-          "goodwillAll": 6
+          "goodwillAll": 6,
+          "formAllianceTarget": -1
         },
         {
           "key": "opt2",
@@ -842,7 +843,8 @@
           "goodwillAll": 2,
           "styleWeights": {
             "style_legalist": 1.8
-          }
+          },
+          "upgradeBuildings": 4
         },
         {
           "key": "opt2",
@@ -922,7 +924,8 @@
       "options": [
         {
           "key": "opt1",
-          "treasuryGdpRatio": -0.007
+          "treasuryGdpRatio": -0.007,
+          "upgradeBuildings": 3
         },
         {
           "key": "opt2",
@@ -1393,7 +1396,8 @@
       "options": [
         {
           "key": "opt1",
-          "poorReliefRatio": 0.1
+          "poorReliefRatio": 0.1,
+          "moveCapital": true
         },
         {
           "key": "opt2",
@@ -1476,7 +1480,8 @@
         {
           "key": "opt1",
           "treasuryGdpRatio": -0.01,
-          "goodwillAll": 4
+          "goodwillAll": 4,
+          "formAllianceTarget": -1
         },
         {
           "key": "opt2",
@@ -1518,7 +1523,8 @@
           "treasuryGdpRatio": -0.012,
           "styleWeights": {
             "style_bellicose": 2.0
-          }
+          },
+          "declareWarTarget": -1
         },
         {
           "key": "opt2",
@@ -1596,7 +1602,8 @@
         {
           "key": "opt1",
           "unrest": true,
-          "goodwillAll": -2
+          "goodwillAll": -2,
+          "declareWarTarget": -1
         },
         {
           "key": "opt2",
@@ -1921,7 +1928,8 @@
         },
         {
           "key": "opt2",
-          "treasuryGdpRatio": 0.005
+          "treasuryGdpRatio": 0.005,
+          "citizenWealthRatio": 0.6
         }
       ]
     },
@@ -1936,7 +1944,8 @@
       "options": [
         {
           "key": "opt1",
-          "treasuryGdpRatio": 0.008
+          "treasuryGdpRatio": 0.008,
+          "citizenWealthRatio": 0.5
         },
         {
           "key": "opt2",
@@ -1973,7 +1982,8 @@
       "options": [
         {
           "key": "opt1",
-          "goodwillAll": 1
+          "goodwillAll": 1,
+          "citizenWealthRatio": 0.4
         },
         {
           "key": "opt2",
@@ -2047,7 +2057,8 @@
       "options": [
         {
           "key": "opt1",
-          "unrest": true
+          "unrest": true,
+          "citizenWealthRatio": -0.2
         },
         {
           "key": "opt2"
@@ -2178,7 +2189,8 @@
       "options": [
         {
           "key": "opt1",
-          "treasuryGdpRatio": 0.008
+          "treasuryGdpRatio": 0.008,
+          "citizenWealthRatio": 0.3
         },
         {
           "key": "opt2",
@@ -2235,7 +2247,8 @@
       "options": [
         {
           "key": "opt1",
-          "unrest": true
+          "unrest": true,
+          "citizenWealthRatio": -0.3
         },
         {
           "key": "opt2"
@@ -2935,7 +2948,8 @@
       "options": [
         {
           "key": "opt1",
-          "goodwillAll": 2
+          "goodwillAll": 2,
+          "formAllianceTarget": -1
         },
         {
           "key": "opt2"
@@ -3066,7 +3080,8 @@
       "options": [
         {
           "key": "opt1",
-          "goodwillAll": 2
+          "goodwillAll": 2,
+          "formAllianceTarget": 1
         },
         {
           "key": "opt2",
@@ -3431,7 +3446,8 @@
       "options": [
         {
           "key": "opt1",
-          "goodwillAll": 2
+          "goodwillAll": 2,
+          "citizenWealthRatio": 0.4
         },
         {
           "key": "opt2",
@@ -3809,7 +3825,8 @@
       "options": [
         {
           "key": "opt1",
-          "treasuryGdpRatio": -0.005
+          "treasuryGdpRatio": -0.005,
+          "upgradeBuildings": 3
         },
         {
           "key": "opt2"
@@ -4274,7 +4291,8 @@
       "options": [
         {
           "key": "opt1",
-          "treasuryGdpRatio": -0.009
+          "treasuryGdpRatio": -0.009,
+          "moveCapital": true
         },
         {
           "key": "opt2",
@@ -4657,7 +4675,8 @@
       "options": [
         {
           "key": "opt1",
-          "treasuryGdpRatio": -0.005
+          "treasuryGdpRatio": -0.005,
+          "upgradeBuildings": 2
         },
         {
           "key": "opt2"
@@ -4692,7 +4711,8 @@
       "options": [
         {
           "key": "opt1",
-          "treasuryGdpRatio": -0.006
+          "treasuryGdpRatio": -0.006,
+          "upgradeBuildings": 2
         },
         {
           "key": "opt2"
@@ -5168,7 +5188,8 @@
       "options": [
         {
           "key": "opt1",
-          "treasuryGdpRatio": -0.004
+          "treasuryGdpRatio": -0.004,
+          "upgradeBuildings": 2
         },
         {
           "key": "opt2"
@@ -5423,7 +5444,8 @@
         {
           "key": "opt1",
           "goodwillAll": 2,
-          "treasuryGdpRatio": -0.005
+          "treasuryGdpRatio": -0.005,
+          "formAllianceTarget": -1
         },
         {
           "key": "opt2"
@@ -5790,7 +5812,8 @@
       "options": [
         {
           "key": "opt1",
-          "goodwillAll": 3
+          "goodwillAll": 3,
+          "formAllianceTarget": 1
         },
         {
           "key": "opt2",
