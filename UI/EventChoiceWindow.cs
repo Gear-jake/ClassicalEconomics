@@ -43,24 +43,12 @@ namespace EconomyMod.UI
         private GameObject _backdrop;  // 全屏遮罩（拦截点击；随窗口显隐）
         private int _index;            // 当前展示的挂起事件下标（多件时循环切换）
 
-        // ===== 遮罩随窗口显隐（Show/Hide/Toggle 三口全覆盖）=====
+        // ===== 遮罩随窗口显隐（基类 Show/Hide/Toggle 虚化后经 OnVisibilityChanged 钩子；
+        // ===== 关闭按钮/OnWorldUnavailable 等全部路径统一走此钩子，杜绝遮罩残留）=====
 
-        public new void Show()
+        protected override void OnVisibilityChanged(bool visible)
         {
-            base.Show();
-            SetBackdrop(true);
-        }
-
-        public new void Hide()
-        {
-            base.Hide();
-            SetBackdrop(false);
-        }
-
-        public new void Toggle()
-        {
-            if (IsVisible) Hide();
-            else Show();
+            SetBackdrop(visible);
         }
 
         private void SetBackdrop(bool on)
@@ -84,8 +72,7 @@ namespace EconomyMod.UI
 
         public override void OnWorldUnavailable()
         {
-            Hide(); // 我们的 Hide 负责遮罩；基类再做窗口隐藏与内容清理
-            base.OnWorldUnavailable();
+            base.OnWorldUnavailable(); // 基类 Hide → 钩子关遮罩 + 清内容
         }
 
         /// <summary>弹出并展示最早挂起事件（无挂起则空态）。</summary>

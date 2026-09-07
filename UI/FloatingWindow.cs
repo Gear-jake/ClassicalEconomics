@@ -42,15 +42,31 @@ namespace EconomyMod.UI
             return go.AddComponent<T>();
         }
 
-        public void Toggle()
+        public virtual void Toggle()
         {
             _visible = !_visible;
             if (_visible) RefreshNow();
             if (_panelRoot != null) _panelRoot.SetActive(_visible);
+            OnVisibilityChanged(_visible);
         }
 
-        public void Show() { _visible = true; if (_panelRoot != null) { _panelRoot.SetActive(true); RefreshNow(); } }
-        public void Hide() { _visible = false; if (_panelRoot != null) _panelRoot.SetActive(false); }
+        public virtual void Show()
+        {
+            _visible = true;
+            if (_panelRoot != null) { _panelRoot.SetActive(true); RefreshNow(); }
+            OnVisibilityChanged(true);
+        }
+
+        public virtual void Hide()
+        {
+            _visible = false;
+            if (_panelRoot != null) _panelRoot.SetActive(false);
+            OnVisibilityChanged(false);
+        }
+
+        /// <summary>可见性变化钩子：子类在此挂遮罩/随窗资源（关闭按钮走基类 Hide，必须经此钩子）。</summary>
+        protected virtual void OnVisibilityChanged(bool visible) { }
+
         public bool IsVisible => _visible;
 
         /// <summary>世界退出时隐藏窗口并销毁动态内容，释放按钮委托及其捕获对象。</summary>
