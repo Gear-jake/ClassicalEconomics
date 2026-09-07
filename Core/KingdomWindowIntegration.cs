@@ -19,6 +19,9 @@ namespace EconomyMod.Core
         private const string ButtonName = "ClassicalEconomicsCabinetEntry";
         private static bool _installAttempted;
 
+        /// <summary>玩家拖拽后保存的按钮偏移（相对窗口右上角；NaN=未拖过，用参照按钮换算）。会话内记忆。</summary>
+        private static Vector2 _savedButtonOffset = new Vector2(float.NaN, float.NaN);
+
         /// <summary>手动打补丁（注解对预编译 DLL 模组不保证被 NML 应用——OptimeCompatibility 同款教训）。
         /// 由 EconomyTickRunner 首帧调用，幂等。</summary>
         public static void TryInstall()
@@ -129,14 +132,20 @@ namespace EconomyMod.Core
                     UI.IconLoader.Get("ledger"),
                     window.transform).gameObject;
 
-                // 运行时自适应：以窗口内第一个"右上角小按钮"（原版关闭 X 或同列工具钮）
-                // 的底边中心为参照，把入口钮放到其正下方 8px 处。宿主固定为 window.transform
-                // （稳定对象，不会被原版 create 的后续逻辑重建/清理）；位置用世界坐标换算，
-                // 不依赖宿主坐标系，也不受布局组接管。
+                // 定位：玩家拖拽过的偏移优先（会话内记忆）；否则以参照按钮换算；越界兜底。
                 var rt = btn.GetComponent<RectTransform>();
                 bool placed = false;
+                if (!float.IsNaN(_savedButtonOffset.x))
+                {
+                    rt.anchorMin = new Vector2(1f, 1f);
+                    rt.anchorMax = new Vector2(1f, 1f);
+                    rt.pivot = new Vector2(1f, 1f);
+                    rt.anchoredPosition = _savedButtonOffset;
+                    rt.sizeDelta = new Vector2(38f, 38f);
+                    placed = true;
+                }
                 var cornerBtn = FindCornerButton(window.transform);
-                if (cornerBtn != null && cornerBtn is RectTransform crt)
+                if (!placed && cornerBtn != null && cornerBtn is RectTransform crt)
                 {
                     try
                     {
@@ -165,6 +174,12 @@ namespace EconomyMod.Core
                     FallbackAnchor(rt);
                     rt.sizeDelta = new Vector2(38f, 38f);
                 }
+
+                // 可拖拽：玩家按住拖动调整位置，松手保存偏移（会话内记忆，此后所有窗口的按钮
+                // 都用该偏移注入）。点击仍走 Button 原回调（EventSystem 判定拖动后不触发 click）。
+                var drag = btn.gameObject.AddComponent<UI.DraggableWindowButton>();
+                drag.OnDragEnded = pos => _savedButtonOffset = pos;
+
                 // 布局探测：每次注入时打印窗口子物体树（仅写日志不上屏），
                 // 若按钮位置仍不理想，可凭日志一次定准锚点。
                 try
