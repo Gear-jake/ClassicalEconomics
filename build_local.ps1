@@ -88,7 +88,7 @@ if ($missingRefs.Count -gt 0) {
 }
 'DEPENDENCIES_OK' | Out-File -Encoding utf8 -Append $diag
 
-$excludedDirectories = @('bin', 'obj', 'evidence', 'tools')
+$excludedDirectories = @('bin', 'obj', 'evidence', 'tools', 'release')
 $src = @(Get-ChildItem -LiteralPath $root -Filter '*.cs' -File -Recurse | Where-Object {
     $relativePath = $_.FullName.Substring($root.Length).TrimStart('\', '/')
     $pathParts = $relativePath -split '[\\/]'
