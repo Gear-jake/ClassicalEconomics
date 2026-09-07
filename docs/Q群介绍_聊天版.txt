@@ -25,6 +25,8 @@
 悬停国家按 G 认领/开内阁（可改键）；国家窗口右上角账本按钮（可拖动）；内阁五页：财税/政策/法令建设/外交/法典；建设页选房屋、大厅、风车等 11 种原版建筑点地图放置。
 
 ■ 下载
-GitHub 搜 Gear-jake/ClassicalEconomics，Release 页下最新 v2.0.0。
+GitHub 搜 Gear-jake/ClassicalEconomics：
+1. 仓库页 Code → Download ZIP（解压后整个文件夹直接放进 Mods/ 即玩，自带编译好的 DLL）；
+2. 或 Release 页下 ClassicalEconomics-2.0.0.zip（含源码的完整包）。
 
 有问题带截图 @我，报错记得附 WorldBox/logs 日志。
