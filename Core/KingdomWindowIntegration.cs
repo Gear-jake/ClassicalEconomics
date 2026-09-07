@@ -83,15 +83,15 @@ namespace EconomyMod.Core
                     ButtonName,
                     () => OnEntryClick(window),
                     UI.IconLoader.Get("ledger"),
-                    window.transform).gameObject;
+                    background).gameObject;
 
-                // 锚定窗口框架右上角（不是内层面板——面板比窗口小一圈，贴面板会挤在原版关闭按钮旁）。
-                // X（原版关闭按钮）占用最右上角，入口钮下移一行避让，形成 X 下方一列。
+                // 面板右缘一列：锚定 Background 右上角（面板比窗口框架窄，右缘自然避开框架上
+                // 的原版关闭/工具按钮列），贴在面板自身右缘形成纵列，不压指标行。
                 var rt = btn.GetComponent<RectTransform>();
                 rt.anchorMin = new Vector2(1f, 1f);
                 rt.anchorMax = new Vector2(1f, 1f);
                 rt.pivot = new Vector2(1f, 1f);
-                rt.anchoredPosition = new Vector2(-6f, -64f);
+                rt.anchoredPosition = new Vector2(-12f, -12f);
                 rt.sizeDelta = new Vector2(38f, 38f);
                 // 原版窗口按钮底图（与窗口内其他方形按钮同款），保持"和他们一样"的外观
                 var img = btn.GetComponent<Image>();
@@ -171,12 +171,12 @@ namespace EconomyMod.Core
             {
                 float s = UnrestConfig.Instance != null ? Mathf.Clamp(UnrestConfig.Instance.UiScale, 0.8f, 1.6f) : 1.2f;
                 var go = new GameObject(SummaryName, typeof(RectTransform), typeof(Text));
-                go.transform.SetParent(window.transform, false); // 与入口按钮同锚（窗口框架）
+                go.transform.SetParent(background, false); // 与入口按钮同锚（面板右缘列）
                 var rt = go.GetComponent<RectTransform>();
                 rt.anchorMin = new Vector2(1f, 1f);
                 rt.anchorMax = new Vector2(1f, 1f);
                 rt.pivot = new Vector2(1f, 1f);
-                rt.anchoredPosition = new Vector2(-6f, -110f);
+                rt.anchoredPosition = new Vector2(-12f, -56f);
                 rt.sizeDelta = new Vector2(Mathf.Min(240f, 190f * s), Mathf.Min(96f, 72f * s));
                 var t = go.GetComponent<Text>();
                 t.font = LocalizedTextManager.current_font != null
