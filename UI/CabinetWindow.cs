@@ -546,6 +546,7 @@ namespace EconomyMod.UI
                 ("mine", "", "build_native_mine", "mine"),
                 ("statue", "", "build_native_statue", "statue"),
                 ("hall", "_0", "build_native_hall", "hall_human_0"),
+                ("windmill", "_0", "build_native_windmill", "windmill_human_0"),
                 ("bonfire", "", "build_native_bonfire", "bonfire"),
             };
 
