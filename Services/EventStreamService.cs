@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 
 namespace EconomyMod.Services
 {
@@ -204,6 +206,116 @@ namespace EconomyMod.Services
                 result.Add(_majorEvents[idx]);
             }
             return result;
+        }
+
+        /// <summary>
+        /// 序列化事件流（普通+重大环形 + 类型计数）为字符串，随存档 rb_ev_stream 落盘；
+        /// 格式：头=类型计数（type:count;...），主体=major:year|type|kingdom|value|detail;...
+        /// （major=1/0；kingdom/detail 用 '~' 转义与分隔符冲突字符，'~'本身转义为 '~~'）。
+        /// 空流返回空串（读档时 Restore 空串=清空）。
+        /// </summary>
+        public static string Serialize()
+        {
+            var sb = new StringBuilder(2048);
+            var inv = CultureInfo.InvariantCulture;
+            foreach (var kv in _typeCounts)
+                sb.Append(kv.Key).Append(':').Append(kv.Value).Append(';');
+            sb.Append('|');
+            int minorStart = (_head - _count + Capacity) % Capacity;
+            for (int i = 0; i < _count; i++)
+            {
+                var e = _events[(minorStart + i) % Capacity];
+                if (e == null) continue;
+                AppendEntry(sb, e, 0, inv);
+            }
+            int majorStart = (_majorHead - _majorCount + MajorCapacity) % MajorCapacity;
+            for (int i = 0; i < _majorCount; i++)
+            {
+                var e = _majorEvents[(majorStart + i) % MajorCapacity];
+                if (e == null) continue;
+                AppendEntry(sb, e, 1, inv);
+            }
+            return sb.ToString();
+        }
+
+        private static void AppendEntry(StringBuilder sb, EventEntry e, int major, CultureInfo inv)
+        {
+            sb.Append(major).Append(':')
+              .Append(e.GameYear).Append('|')
+              .Append(e.TypeKey ?? "").Append('|')
+              .Append(Escape(e.KingdomName)).Append('|')
+              .Append(e.Value.ToString(inv)).Append('|')
+              .Append(Escape(e.Detail)).Append(';');
+        }
+
+        /// <summary>字段转义：'~' → '~~'、';' → '~s'、'|' → '~p'（防破坏分隔符）。</summary>
+        private static string Escape(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace("~", "~~").Replace(";", "~s").Replace("|", "~p");
+        }
+
+        /// <summary>与 Escape 互逆。</summary>
+        private static string Unescape(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace("~p", "|").Replace("~s", ";").Replace("~~", "~");
+        }
+
+        /// <summary>从 Serialize 字符串恢复事件流（非法条目跳过；空串=清空）。</summary>
+        public static void Restore(string data)
+        {
+            Clear();
+            if (string.IsNullOrEmpty(data)) return;
+            var inv = CultureInfo.InvariantCulture;
+            try
+            {
+                int sep = data.IndexOf('|');
+                if (sep < 0) return;
+                if (sep > 0)
+                {
+                    foreach (var pair in data.Substring(0, sep).Split(';'))
+                    {
+                        if (string.IsNullOrEmpty(pair)) continue;
+                        string[] f = pair.Split(':');
+                        if (f.Length < 2) continue;
+                        if (!int.TryParse(f[1], out int c)) continue;
+                        _typeCounts[f[0]] = c;
+                    }
+                }
+                string[] entries = data.Substring(sep + 1).Split(';');
+                for (int i = 0; i < entries.Length; i++)
+                {
+                    if (string.IsNullOrEmpty(entries[i])) continue;
+                    string[] f = entries[i].Split('|');
+                    // 6 字段：major|year|type|kingdom|value|detail
+                    if (f.Length < 5) continue;
+                    if (!int.TryParse(f[0], out int major)) continue;
+                    if (!int.TryParse(f[1], out int year)) continue;
+                    if (!long.TryParse(f[4], NumberStyles.Integer, inv, out long val)) continue;
+                    if (!IsKnownType(f[2])) continue;
+                    var e = RentEntry();
+                    e.GameYear = year;
+                    e.TypeKey = f[2];
+                    e.KingdomName = Unescape(f[3]);
+                    e.Value = val;
+                    e.Detail = f.Length > 5 ? Unescape(f[5]) : null;
+                    if (major == 1)
+                    {
+                        _majorEvents[_majorHead] = e;
+                        _majorHead = (_majorHead + 1) % MajorCapacity;
+                        if (_majorCount < MajorCapacity) _majorCount++;
+                    }
+                    else
+                    {
+                        _events[_head] = e;
+                        _head = (_head + 1) % Capacity;
+                        if (_count < Capacity) _count++;
+                    }
+                }
+                unchecked { Version++; }
+            }
+            catch (System.Exception) { }
         }
 
         /// <summary>某类型累计发生次数（历史总数，环形覆盖不减）。</summary>

@@ -65,6 +65,9 @@ namespace EconomyMod.Core
                 {
                     try { histHost.data.set("rb_hist", HistoryService.Serialize()); }
                     catch (System.Exception) { }
+                    // 事件流（时间线）：与历史同宿主，读档按时间正序恢复（普通+重大+类型计数）
+                    try { histHost.data.set("rb_ev_stream", EventStreamService.Serialize()); }
+                    catch (System.Exception) { }
                 }
 
                 if (nation == null || nation.data == null || nationId == 0) return;
@@ -170,6 +173,10 @@ namespace EconomyMod.Core
                 // 历史：从任意王国读 rb_hist（写盘时挂认领国或第一个王国）
                 string hist = ReadAnyKingdomKey("rb_hist");
                 if (hist != null) HistoryService.Restore(hist);
+
+                // 事件流：与历史同宿主，读档恢复时间线
+                string evStream = ReadAnyKingdomKey("rb_ev_stream");
+                if (evStream != null) EventStreamService.Restore(evStream);
 
                 // 抉择事件状态（挂认领国 data，与写盘同键位）
                 string evPending = ReadAnyKingdomKey("rb_ev_pending");
