@@ -128,7 +128,10 @@ namespace EconomyMod.Core
                         }
                     }
                     // 暴动后基尼仍 ≥ 起义阈值持续 UprisingDelayYears 年 → 街头起义（政权崩塌：全城暴动+杀富济贫+推翻国王）
-                    else if (st.HasRebelled && !st.HasUprising && stats.GiniCoefficient >= cfg.UprisingGiniThreshold)
+                    // 遗孤城守卫：王国只剩一座城市时不触发起义——起义推翻国王+全城暴动，会让单城国家直接灭国，
+                    // 剩余城市继续保留高基尼震荡（普通暴动仍可触发，叛军可扩军复国）。
+                    else if (st.HasRebelled && !st.HasUprising && stats.GiniCoefficient >= cfg.UprisingGiniThreshold
+                             && KingdomCityCount(kingdom) >= 2)
                     {
                         if (st.UprisingStartYear < 0) st.UprisingStartYear = currentYear;
                         int uElapsed = currentYear - st.UprisingStartYear;
@@ -584,6 +587,22 @@ namespace EconomyMod.Core
         /// 3. 推翻国王：removeKing（政权崩塌，游戏稍后自动产生新王）。
         /// 返回处决的富豪数（0 = 无富余/无人口，起义未实质爆发）。
         /// </summary>
+        /// <summary>王国现存城市数（cities 为 null/空时按 0 计；仅主线程调用）。</summary>
+        private static int KingdomCityCount(Kingdom kingdom)
+        {
+            if (kingdom == null) return 0;
+            try
+            {
+                var cities = kingdom.cities;
+                if (cities == null) return 0;
+                return cities.Count;
+            }
+            catch (System.Exception)
+            {
+                return 0;
+            }
+        }
+
         private static int TriggerUprising(Kingdom kingdom, KingdomStats stats)
         {
             var cfg = UnrestConfig.Instance;
