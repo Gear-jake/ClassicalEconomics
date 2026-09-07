@@ -215,10 +215,12 @@ namespace EconomyMod.UI
             rowLe.flexibleWidth = 1;
             rowLe.minHeight = Fs(18f);
             var rowHlg = row.GetComponent<HorizontalLayoutGroup>();
-            rowHlg.spacing = 4; rowHlg.childControlWidth = false; rowHlg.childControlHeight = true;
+            rowHlg.spacing = 4;
+            rowHlg.childControlWidth = true; rowHlg.childControlHeight = true;
             rowHlg.childForceExpandWidth = false; rowHlg.childForceExpandHeight = true;
+            rowHlg.childAlignment = TextAnchor.MiddleLeft;
             _lines.Add(row);
-            // 族别色带
+            // 族别色带（固定宽，不参与弹性）
             var strip = new GameObject("Strip", typeof(RectTransform), typeof(Image));
             strip.transform.SetParent(row.transform, false);
             var srt = strip.GetComponent<RectTransform>();
@@ -226,12 +228,21 @@ namespace EconomyMod.UI
             strip.GetComponent<Image>().color = EventColor(e.TypeKey);
             strip.GetComponent<Image>().raycastTarget = false;
             var sle = strip.AddComponent<LayoutElement>();
-            sle.preferredWidth = 2; sle.flexibleHeight = 1;
-            // 正文
+            sle.preferredWidth = 2;
+            sle.preferredHeight = Fs(18f);
+            sle.flexibleWidth = 0;
+            sle.flexibleHeight = 0;
+            // 正文（唯一弹性项：占用剩余宽度，水平自动换行）
             var txt = UIHelpers.CreateText(UIHelpers.Lf("events_row", e.GameYear, kingdomPart, desc),
                 row.transform, Fs(12f), EventColor(e.TypeKey), _gameFont, Fs(18f));
             var tle = txt.AddComponent<LayoutElement>();
             tle.flexibleWidth = 1;
+            tle.flexibleHeight = 0;
+            var tRt = txt.GetComponent<RectTransform>();
+            tRt.anchorMin = new Vector2(0, 0.5f); tRt.anchorMax = new Vector2(1, 0.5f);
+            tRt.pivot = new Vector2(0.5f, 0.5f);
+            tRt.anchoredPosition = Vector2.zero;
+            tRt.sizeDelta = new Vector2(0, Fs(18f));
         }
 
         /// <summary>渲染关键类型统计行（仅发生过才显示，每行最多 3 项）。返回渲染行数。</summary>
