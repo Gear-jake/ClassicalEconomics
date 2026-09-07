@@ -257,12 +257,13 @@ namespace EconomyMod.UI
         // ===== 王国排行行（排名 + 名称 + 关键指标）=====
 
         /// <summary>
-        /// 王国排行列宽：总宽扣除排名列与 5 个列间距后按比例分配，
+        /// 王国排行列宽：总宽扣除排名列与 4 个列间距后按比例分配，
         /// 防止原 width×比例（合计 100%）与排名列/间距叠加后超出容器被 ScrollRect 截断。
+        /// 0.84f = 1 − 0.16（历史"本地价"列占比，已删除），保留原相对比例不变形。
         /// </summary>
         private static float ColumnWidth(float width, float fontScale, float frac)
         {
-            return (width - 22f * fontScale - 6f * 5f) * frac;
+            return (width - 22f * fontScale - 6f * 4f) * frac / 0.84f;
         }
 
         /// <summary>创建王国排行表头（列标题行：排名/王国/GDP/人均/基尼），弱色显示。</summary>
@@ -324,22 +325,12 @@ namespace EconomyMod.UI
             girt.sizeDelta = new Vector2(giniW, h);
             var giel = giniGo.AddComponent<LayoutElement>();
             giel.preferredWidth = giniW; giel.preferredHeight = h;
-
-            // 本地价格列（v0.9：区域价格指数，1.0=基准 CPI）
-            var priceGo = UIHelpers.CreateText(UIHelpers.L("col_price"), row.transform, 10f * fontScale,
-                UIStyles.TextMuted, font, h, "Price");
-            priceGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
-            var prt = priceGo.GetComponent<RectTransform>();
-            float priceW = ColumnWidth(width, fontScale, 0.16f);
-            prt.sizeDelta = new Vector2(priceW, h);
-            var pel = priceGo.AddComponent<LayoutElement>();
-            pel.preferredWidth = priceW; pel.preferredHeight = h;
             return row;
         }
 
-        /// <summary>创建王国排行行：排名徽章 + 名称 + GDP/人均/基尼/本地价格，返回 GameObject。</summary>
+        /// <summary>创建王国排行行：排名徽章 + 名称 + GDP/人均/基尼，返回 GameObject。</summary>
         public static GameObject CreateKingdomRow(Transform parent, int rank, string name,
-            string gdp, string avg, string gini, string price, Font font, float width, bool highlight = false, float fontScale = 1f)
+            string gdp, string avg, string gini, Font font, float width, bool highlight = false, float fontScale = 1f)
         {
             Color rankColor = rank == 1 ? UIStyles.Gold : rank == 2 ? UIStyles.Silver
                 : rank == 3 ? UIStyles.Bronze : UIStyles.TextMuted;
@@ -428,20 +419,6 @@ namespace EconomyMod.UI
             girt.sizeDelta = new Vector2(giniW, h);
             var giel = giniGo.AddComponent<LayoutElement>();
             giel.preferredWidth = giniW; giel.preferredHeight = h;
-
-            // 本地价格（右对齐，语义色：高 1.3× 基准 → 通胀区；低 0.8× → 廉价区）
-            float priceVal = 0f;
-            float.TryParse(price, out priceVal);
-            Color priceColor = priceVal >= 1.3f ? UIStyles.Warning
-                : priceVal <= 0.8f ? UIStyles.Info : UIStyles.TextSecondary;
-            var priceGo = UIHelpers.CreateText(price, row.transform, UIStyles.BodySize * fontScale,
-                priceColor, font, h, "Price");
-            priceGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
-            var prt = priceGo.GetComponent<RectTransform>();
-            float priceW = ColumnWidth(width, fontScale, 0.16f);
-            prt.sizeDelta = new Vector2(priceW, h);
-            var pel = priceGo.AddComponent<LayoutElement>();
-            pel.preferredWidth = priceW; pel.preferredHeight = h;
 
             return row;
         }

@@ -71,8 +71,8 @@ namespace EconomyMod.Core
             public int Year;
             public string Key;       // 本地化键（policy/decree 名）
             public long Amount;      // 金额（正=支出，负=收入）
-            public float GiniBefore, AvgBefore, PriceBefore;
-            public float GiniAfter, AvgAfter, PriceAfter; // 下一年 RunAnnual 回填
+            public float GiniBefore, AvgBefore;
+            public float GiniAfter, AvgAfter; // 下一年 RunAnnual 回填
             public bool Closed;
         }
         internal static readonly NationRecord[] _records = new NationRecord[RecordCapacity];
@@ -634,7 +634,6 @@ namespace EconomyMod.Core
                 if (r == null || r.Closed) continue;
                 r.GiniAfter = stats?.GiniCoefficient ?? r.GiniBefore;
                 r.AvgAfter = stats?.AvgWealth ?? r.AvgBefore;
-                r.PriceAfter = stats?.LocalPrice ?? r.PriceBefore;
                 r.Closed = true;
             }
 
@@ -756,8 +755,7 @@ namespace EconomyMod.Core
                 Key = key,
                 Amount = amount,
                 GiniBefore = stats?.GiniCoefficient ?? 0f,
-                AvgBefore = stats?.AvgWealth ?? 0f,
-                PriceBefore = stats?.LocalPrice ?? 0f
+                AvgBefore = stats?.AvgWealth ?? 0f
             };
             _records[_recordHead] = r;
             _recordHead = (_recordHead + 1) % RecordCapacity;

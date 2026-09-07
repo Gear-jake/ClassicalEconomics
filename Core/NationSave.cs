@@ -99,7 +99,8 @@ namespace EconomyMod.Core
                     catch (System.Exception) { }
                 }
 
-                // 政绩记录（环形按时间正序：year|key|amount|giniB|avgB|priceB|giniA|avgA|priceA|closed;...）
+                // 政绩记录（环形按时间正序：year|key|amount|giniB|avgB|giniA|avgA|closed;...）
+                // 注：v1.6.2 及以前为含 priceB/priceA 的 10 槽位，读档兼容，写盘不再含价格。
                 int rc = NationEngine._recordCount;
                 if (rc > 0)
                 {
@@ -116,10 +117,8 @@ namespace EconomyMod.Core
                           .Append(r.Amount).Append('|')
                           .Append(r.GiniBefore.ToString("F4", inv)).Append('|')
                           .Append(r.AvgBefore.ToString("F2", inv)).Append('|')
-                          .Append(r.PriceBefore.ToString("F3", inv)).Append('|')
                           .Append(r.GiniAfter.ToString("F4", inv)).Append('|')
                           .Append(r.AvgAfter.ToString("F2", inv)).Append('|')
-                          .Append(r.PriceAfter.ToString("F3", inv)).Append('|')
                           .Append(r.Closed ? '1' : '0').Append(';');
                     }
                     try { nation.data.set("rb_nat_records", sb.ToString()); }
@@ -286,25 +285,35 @@ namespace EconomyMod.Core
                 {
                     if (string.IsNullOrEmpty(entry)) continue;
                     string[] f = entry.Split('|');
-                    if (f.Length < 10) continue;
+                    // 兼容两种格式：
+                    // - 新（v1.6.3+）：year|key|amount|giniB|avgB|giniA|avgA|closed（8 槽）
+                    // - 旧（≤v1.6.2）：year|key|amount|giniB|avgB|priceB|giniA|avgA|priceA|closed（10 槽，price 忽略）
+                    if (f.Length < 8) continue;
                     int year;
                     long amount;
-                    float gb, ab, pb, ga, aa, pa;
+                    float gb, ab, ga, aa;
                     if (!int.TryParse(f[0], out year) || !long.TryParse(f[2], out amount)) continue;
                     if (!float.TryParse(f[3], NumberStyles.Float, inv, out gb)) gb = 0f;
                     if (!float.TryParse(f[4], NumberStyles.Float, inv, out ab)) ab = 0f;
-                    if (!float.TryParse(f[5], NumberStyles.Float, inv, out pb)) pb = 0f;
-                    if (!float.TryParse(f[6], NumberStyles.Float, inv, out ga)) ga = 0f;
-                    if (!float.TryParse(f[7], NumberStyles.Float, inv, out aa)) aa = 0f;
-                    if (!float.TryParse(f[8], NumberStyles.Float, inv, out pa)) pa = 0f;
+                    if (f.Length >= 10)
+                    {
+                        // 旧格式：priceB 在 5、priceA 在 8，忽略；giniA/avgA 在 6/7
+                        if (!float.TryParse(f[6], NumberStyles.Float, inv, out ga)) ga = 0f;
+                        if (!float.TryParse(f[7], NumberStyles.Float, inv, out aa)) aa = 0f;
+                    }
+                    else
+                    {
+                        if (!float.TryParse(f[5], NumberStyles.Float, inv, out ga)) ga = 0f;
+                        if (!float.TryParse(f[6], NumberStyles.Float, inv, out aa)) aa = 0f;
+                    }
                     var r = new NationEngine.NationRecord
                     {
                         Year = year,
                         Key = f[1],
                         Amount = amount,
-                        GiniBefore = gb, AvgBefore = ab, PriceBefore = pb,
-                        GiniAfter = ga, AvgAfter = aa, PriceAfter = pa,
-                        Closed = f.Length > 9 && f[9] == "1"
+                        GiniBefore = gb, AvgBefore = ab,
+                        GiniAfter = ga, AvgAfter = aa,
+                        Closed = f.Length >= 10 ? f[9] == "1" : f[7] == "1"
                     };
                     NationEngine._records[NationEngine._recordHead] = r;
                     NationEngine._recordHead = (NationEngine._recordHead + 1) % NationEngine._records.Length;

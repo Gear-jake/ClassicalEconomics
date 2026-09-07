@@ -886,7 +886,6 @@ namespace EconomyMod.UI
             {
                 _lines.Add(UIComponents.CreateKingdomRow(_content.transform, rank, k.KingdomName,
                     k.GDP.ToString("F0"), k.AvgWealth.ToString("F1"), k.GiniCoefficient.ToString("F2"),
-                    k.LocalPrice.ToString("F2"),
                     _gameFont, contentW, rank == 1, Fs(1f)));
                 rank++;
             }

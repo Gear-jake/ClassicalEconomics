@@ -67,7 +67,6 @@
   "col_gdp": "GDP",
   "col_avg": "Ø",
   "col_gini": "Gini",
-  "col_price": "Preis",
   "chart_no_data": "Keine Daten",
   "chart_title": "GDP-Trend",
   "chart_title_dyn": "GDP-Trend Top{0} (Jahr {1}, {2} Zyklen)",

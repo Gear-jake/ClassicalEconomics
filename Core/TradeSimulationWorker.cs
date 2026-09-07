@@ -14,9 +14,7 @@ namespace EconomyMod.Core
     /// 统计内容（v1.3.0 起贸易模拟已移除）：
     /// - 全球 GDP / 人均财富 / 基尼系数（O(N log N) 升序排序单趟累加）；
     /// - 王国级聚合：GDP / 人均 / 基尼 / 就业 / 生产函数（产出 = Workers × Productivity × CapitalFactor，
-    ///   资本因子含基础设施权重 × 治理加成 × 规模不经济，并乘法典 Productivity 快照）；
-    /// - 区域价格指数（LocalPrice = 上期全局 CPI × 本地供需系数，clamp 0.5~2，
-    ///   法典 Price 乘数叠加；仅统计展示，无跨城市金流）。
+    ///   资本因子含基础设施权重 × 治理加成 × 规模不经济，并乘法典 Productivity 快照）。
     /// 主线程采集时把法典聚合快照（LawMods）复制进 KingdomFacts，后台只读该拷贝，零字典访问。
     /// </summary>
     public static class TradeSimulationWorker
@@ -56,7 +54,6 @@ namespace EconomyMod.Core
             public int Workers;       // 有职业人口
             public float Productivity; // 平均劳动生产率（职业倍率均值）
             public float Production;  // 年产出 = Workers × Productivity × CapitalFactor（生产函数）
-            public float LocalPrice;  // 区域价格指数（全局 CPI × 本地供需系数，1.0=基准）
         }
 
         /// <summary>一轮周期模拟结果。</summary>
@@ -436,16 +433,6 @@ namespace EconomyMod.Core
                 res.Kingdoms.Add(ks0);
             }
             res.TotalProduction = (float)totalProduction;
-
-            // --- 区域价格指数（v0.9 地理贸易）：本地价格 = 上期全局 CPI × 本地供需系数 ---
-            // 供给侧：人均产出相对全球均值（产出高→供给充足→本地价低）；
-            // 需求侧：人口压力（超载→需求旺盛→本地价高）。无王国桶不参与（LocalPrice=基准 CPI）。
-            float baseCPI = EconomyCycleModulator.CurrentCPI; // 上期价格指数（Evaluate 于发布后更新，此处读到即本期基准）
-            float totalPop = 0f;
-            foreach (var ks in res.Kingdoms)
-                if (ks.KingdomId != 0) totalPop += ks.Population;
-            float globalPerCapitaProd = totalPop > 0f ? (float)totalProduction / totalPop : 0f;
-
 
             return res;
         }

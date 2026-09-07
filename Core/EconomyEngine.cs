@@ -70,8 +70,7 @@ namespace EconomyMod.Core
                     AvgWealth = ks.AvgWealth,
                     ActorCount = ks.ActorCount,
                     GiniCoefficient = ks.Gini,
-                    Population = ks.Population,
-                    LocalPrice = ks.LocalPrice
+                    Population = ks.Population
                 };
                 // 法典：基尼平移（济贫抑富 / 自由市场拉大）
                 float gshift = LawEngine.GetMods(ks.KingdomId).GiniShift;

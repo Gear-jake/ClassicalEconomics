@@ -67,7 +67,6 @@
   "col_gdp": "GDP",
   "col_avg": "Avg",
   "col_gini": "Gini",
-  "col_price": "Price",
   "chart_no_data": "Wealth trend (need at least 2 records)",
   "chart_title": "Wealth Trend (Year {0} · {1} records)",
   "chart_title_dyn": "Wealth Trend · Dynamic Top {0} (Year {1} · {2} records)",

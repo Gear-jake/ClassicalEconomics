@@ -67,7 +67,6 @@
   "col_gdp": "GDP",
   "col_avg": "平均",
   "col_gini": "ジニ",
-  "col_price": "物価",
   "chart_no_data": "データなし",
   "chart_title": "GDPトレンド",
   "chart_title_dyn": "GDPトレンド Top{0}（第{1}期・{2}期分）",

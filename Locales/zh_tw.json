@@ -67,7 +67,6 @@
   "col_gdp": "GDP",
   "col_avg": "人均",
   "col_gini": "基尼",
-  "col_price": "本地價",
   "chart_no_data": "財富趨勢（需至少 2 條記錄）",
   "chart_title": "財富趨勢（第 {0} 年 · 最近 {1} 條記錄）",
   "chart_title_dyn": "財富趨勢 · 動態前 {0} 名（第 {1} 年 · 最近 {2} 條）",

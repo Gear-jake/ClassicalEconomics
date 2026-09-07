@@ -67,7 +67,6 @@
   "col_gdp": "GDP",
   "col_avg": "人均",
   "col_gini": "基尼",
-  "col_price": "本地价",
   "chart_no_data": "财富趋势（需至少 2 条记录）",
   "chart_title": "财富趋势（第 {0} 年 · 最近 {1} 条记录）",
   "chart_title_dyn": "财富趋势 · 动态前 {0} 名（第 {1} 年 · 最近 {2} 条）",
