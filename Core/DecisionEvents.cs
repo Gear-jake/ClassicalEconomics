@@ -468,14 +468,16 @@ namespace EconomyMod.Core
                 });
             }
 
-            // 6. 结果横幅（进史书级事件流，Detail=结果键供事件窗渲染）+ 玩家屏上通知
-            EventStreamService.Record(TypeDecision, GameHelpers.SafeKingdomName(k), optIndex + 1,
-                "ev_" + d.id + "_res" + (optIndex + 1));
+            // 6. 结果横幅（进史书级事件流，Detail=渲染后文本供事件窗展示）+ 玩家屏上通知。
+            // Detail 先做名字代入：{king}/{kingdom} 在记录时即替换（AI 国无弹窗，渲染只能读 Detail）。
+            string resKey = "ev_" + d.id + "_res" + (optIndex + 1);
+            string resText = Contextualize(Services.LocalizationService.Get(resKey), k.data.id);
+            EventStreamService.Record(TypeDecision, GameHelpers.SafeKingdomName(k), optIndex + 1, resText);
             if (isPlayer)
             {
-                string key = "ev_" + d.id + "_res" + (optIndex + 1);
-                if (goldMoved != 0) GameHelpers.NotifyLocalized(key, NationEngine.FormatGold(System.Math.Abs(goldMoved)));
-                else GameHelpers.NotifyLocalized(key);
+                if (goldMoved != 0)
+                    GameHelpers.Notify(string.Format(resText, NationEngine.FormatGold(System.Math.Abs(goldMoved))));
+                else GameHelpers.Notify(resText);
             }
         }
 
