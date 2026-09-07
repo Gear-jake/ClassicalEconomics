@@ -1,6 +1,6 @@
 # Classical Economics
 
-> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.6.0* ｜ Requires NeoModLoader (NML)
+> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.6.1* ｜ Requires NeoModLoader (NML)
 
 ## Feature Overview
 
@@ -35,7 +35,7 @@
 - Commerce: markets yield yearly commerce tax; franchise / fair-price mutually exclusive policies; 5 new events incl. caravan ambush and bank run (**61 events** total)
 
 **Decision Events**
-- **56 events** across 6 families (finance/disaster/court/military/civil/diplomacy); condition-filtered yearly draw, max one per kingdom per year
+- **78 events** across 6 families (finance/disaster/court/military/civil/diplomacy); condition-filtered yearly draw, max one per kingdom per year
 - **Chained storylines**: choices bear fruit across years (foreign loan → debt comes due; the heir's plot → loose ends; a defector → his ambition); **king-name immersion**: event text embeds the reigning monarch's name; court-intrigue events are exclusive to the player's kingdom
 - Player kingdom: non-modal choice window + Cabinet to-do; the cautious option runs on timeout; AI kingdoms decide by national character and land in the event feed
 - Event window rebuilt: filter chips (all/decisions/states & wars/economy) + fold by year + single-column timeline; **an always-open event window rebuilds only once per year**

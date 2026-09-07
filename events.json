@@ -377,7 +377,10 @@
           "goodwillAll": -4,
           "unrest": true
         }
-      ]
+      ],
+      "chainNext": "loan_recovery",
+      "chainDelay": 2,
+      "chainAfterOption": 0
     },
     {
       "id": "tax_farm",
@@ -617,7 +620,9 @@
           "key": "opt2",
           "goodwillAll": 2
         }
-      ]
+      ],
+      "chainNext": "heir_legacy",
+      "chainDelay": 2
     },
     {
       "id": "concubine_rivalry",
@@ -803,7 +808,10 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "chainNext": "defector_rebellion",
+      "chainDelay": 2,
+      "chainAfterOption": 1
     },
     {
       "id": "supply_convoy",
@@ -1280,6 +1288,346 @@
         {
           "key": "opt2",
           "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "loan_recovery",
+      "family": "finance",
+      "minYear": 0,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 3,
+          "treasuryGdpRatio": -0.004
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "heir_legacy",
+      "family": "court",
+      "minYear": 0,
+      "timeoutYears": 3,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01,
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "defector_rebellion",
+      "family": "military",
+      "minYear": 0,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.008,
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "royal_heist",
+      "family": "finance",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.004,
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "mint_shortage",
+      "family": "finance",
+      "minYear": 4,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 18,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008,
+          "styleWeights": {
+            "style_merchant": 2.0
+          }
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "volcano_eruption",
+      "family": "disaster",
+      "minYear": 3,
+      "timeoutYears": 1,
+      "fallback": 1,
+      "cooldownYears": 10,
+      "options": [
+        {
+          "key": "opt1",
+          "poorReliefRatio": 0.1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "plague_second",
+      "family": "disaster",
+      "minYear": 4,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 12,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01,
+          "styleWeights": {
+            "style_welfare": 2.0
+          }
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "cult_rise",
+      "family": "court",
+      "minYear": 3,
+      "timeoutYears": 3,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "onlyPlayer": true,
+      "chainNext": "cult_aftermath",
+      "chainDelay": 2,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2,
+          "treasuryGdpRatio": -0.005
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "cult_aftermath",
+      "family": "court",
+      "minYear": 0,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 0,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006,
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "princess_betrothal",
+      "family": "court",
+      "minYear": 4,
+      "timeoutYears": 3,
+      "fallback": 1,
+      "cooldownYears": 18,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01,
+          "goodwillAll": 4
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -2
+        }
+      ]
+    },
+    {
+      "id": "border_skirmish",
+      "family": "military",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 12,
+      "chainNext": "war_escalation",
+      "chainDelay": 2,
+      "chainAfterOption": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 3
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "war_escalation",
+      "family": "military",
+      "minYear": 0,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.012,
+          "styleWeights": {
+            "style_bellicose": 2.0
+          }
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2,
+          "treasuryGdpRatio": -0.004
+        }
+      ]
+    },
+    {
+      "id": "armory_explosion",
+      "family": "military",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 14,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "city_fire",
+      "family": "civil",
+      "minYear": 2,
+      "timeoutYears": 1,
+      "fallback": 1,
+      "cooldownYears": 10,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "refugee_wave",
+      "family": "civil",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 14,
+      "options": [
+        {
+          "key": "opt1",
+          "poorReliefRatio": 0.08,
+          "goodwillAll": 2,
+          "styleWeights": {
+            "style_welfare": 2.0
+          }
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "ally_betrayal",
+      "family": "diplomacy",
+      "minYear": 4,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true,
+          "goodwillAll": -2
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 3
+        }
+      ]
+    },
+    {
+      "id": "secret_negotiation",
+      "family": "diplomacy",
+      "minYear": 4,
+      "timeoutYears": 3,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004,
+          "goodwillAll": 3
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -1
         }
       ]
     }

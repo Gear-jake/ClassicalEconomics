@@ -7,7 +7,7 @@ function Fail($msg) { Write-Host "DECISION_EVENTS_RED: $msg"; exit 1 }
 $jsonPath = Join-Path $Root 'events.json'
 if (-not (Test-Path -LiteralPath $jsonPath -PathType Leaf)) { Fail 'events.json missing from mod root' }
 try { $json = Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail "events.json is not valid JSON: $_" }
-if (-not $json.events -or $json.events.Count -lt 50) { Fail "events.json must define at least 50 events (found $($json.events.Count))" }
+if (-not $json.events -or $json.events.Count -lt 70) { Fail "events.json must define at least 70 events (found $($json.events.Count))" }
 
 # ===== 1. 每事件结构完整性 =====
 $validFamilies = @('finance','disaster','court','military','civil','diplomacy')
