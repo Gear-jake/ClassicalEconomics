@@ -83,15 +83,15 @@ namespace EconomyMod.Core
                     ButtonName,
                     () => OnEntryClick(window),
                     UI.IconLoader.Get("ledger"),
-                    background).gameObject;
+                    window.transform).gameObject;
 
-                // 面板右缘一列：锚定 Background 右上角（面板比窗口框架窄，右缘自然避开框架上
-                // 的原版关闭/工具按钮列），贴在面板自身右缘形成纵列，不压指标行。
+                // 用户指定位置：窗口框架右缘、原版按钮列（X/水晶球/宝石/星）之下的空白区。
+                // 锚定框架右上角下移避免与那列工具按钮重叠（红框示意处）。
                 var rt = btn.GetComponent<RectTransform>();
                 rt.anchorMin = new Vector2(1f, 1f);
                 rt.anchorMax = new Vector2(1f, 1f);
                 rt.pivot = new Vector2(1f, 1f);
-                rt.anchoredPosition = new Vector2(-12f, -12f);
+                rt.anchoredPosition = new Vector2(-32f, -260f);
                 rt.sizeDelta = new Vector2(38f, 38f);
                 // 原版窗口按钮底图（与窗口内其他方形按钮同款），保持"和他们一样"的外观
                 var img = btn.GetComponent<Image>();
@@ -171,12 +171,12 @@ namespace EconomyMod.Core
             {
                 float s = UnrestConfig.Instance != null ? Mathf.Clamp(UnrestConfig.Instance.UiScale, 0.8f, 1.6f) : 1.2f;
                 var go = new GameObject(SummaryName, typeof(RectTransform), typeof(Text));
-                go.transform.SetParent(background, false); // 与入口按钮同锚（面板右缘列）
+                go.transform.SetParent(window.transform, false); // 与入口按钮同锚（框架右缘列）
                 var rt = go.GetComponent<RectTransform>();
                 rt.anchorMin = new Vector2(1f, 1f);
                 rt.anchorMax = new Vector2(1f, 1f);
                 rt.pivot = new Vector2(1f, 1f);
-                rt.anchoredPosition = new Vector2(-12f, -56f);
+                rt.anchoredPosition = new Vector2(-32f, -304f);
                 rt.sizeDelta = new Vector2(Mathf.Min(240f, 190f * s), Mathf.Min(96f, 72f * s));
                 var t = go.GetComponent<Text>();
                 t.font = LocalizedTextManager.current_font != null
