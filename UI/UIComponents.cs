@@ -29,36 +29,52 @@ namespace EconomyMod.UI
             vlg.childAlignment = TextAnchor.UpperLeft;
             var crt = container.GetComponent<RectTransform>();
             crt.sizeDelta = new Vector2(width, 0);
-            float totalH = UIStyles.BodyLineHeight * fontScale + 2f + 2f;
-            container.AddComponent<LayoutElement>().preferredHeight = totalH;
+            float titleH = UIStyles.BodyLineHeight * fontScale;
+            const float dividerH = 2f;
+            // 容器高度 = 标题行 + 行间 2px + 金线 2px（与实际子项排布一致，防溢出重叠下一行）
+            container.AddComponent<LayoutElement>().preferredHeight = titleH + 2f + dividerH;
 
-            // 金色装饰条（标题左侧短竖条）
+            // 内层横排：左侧金色短竖条 + 标题文本（金条与标题同行，而非另一行）
+            var row = new GameObject("TitleRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            row.transform.SetParent(container.transform, false);
+            var hlg = row.GetComponent<HorizontalLayoutGroup>();
+            hlg.spacing = 6f;
+            hlg.childControlWidth = false; hlg.childControlHeight = true;
+            hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = false;
+            hlg.childAlignment = TextAnchor.MiddleLeft;
+            var rowRt = row.GetComponent<RectTransform>();
+            rowRt.sizeDelta = new Vector2(width, titleH);
+            var rowLe = row.AddComponent<LayoutElement>();
+            rowLe.preferredWidth = width; rowLe.preferredHeight = titleH;
+
             var accentBar = new GameObject("AccentBar", typeof(RectTransform), typeof(Image));
-            accentBar.transform.SetParent(container.transform, false);
+            accentBar.transform.SetParent(row.transform, false);
             var abRt = accentBar.GetComponent<RectTransform>();
-            abRt.sizeDelta = new Vector2(3, UIStyles.BodyLineHeight * fontScale);
+            abRt.sizeDelta = new Vector2(3, titleH);
             accentBar.GetComponent<Image>().color = UIStyles.SectionBar;
             accentBar.GetComponent<Image>().raycastTarget = false;
             var abLe = accentBar.AddComponent<LayoutElement>();
-            abLe.preferredWidth = 3; abLe.preferredHeight = UIStyles.BodyLineHeight * fontScale;
+            abLe.preferredWidth = 3; abLe.preferredHeight = titleH;
+
             // 标题文本
-            var go = UIHelpers.CreateText(text, container.transform, UIStyles.SectionHeaderSize * fontScale, UIStyles.Gold,
-                font, UIStyles.BodyLineHeight, "Title");
+            var go = UIHelpers.CreateText(text, row.transform, UIStyles.SectionHeaderSize * fontScale, UIStyles.Gold,
+                font, titleH, "Title");
             var t = go.GetComponent<Text>();
             t.fontStyle = FontStyle.Bold;
             var rt = go.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(width, UIStyles.BodyLineHeight);
+            rt.sizeDelta = new Vector2(width - 9f, titleH);
             var el = go.AddComponent<LayoutElement>();
-            el.preferredHeight = UIStyles.BodyLineHeight;
-            el.preferredWidth = width;
+            el.preferredHeight = titleH;
+            el.preferredWidth = width - 9f;
+            el.flexibleWidth = 1;
 
             // 分隔线（作为容器子物体，随容器销毁）
             var line = UIHelpers.CreateDivider(container.transform, UIStyles.GoldDeep);
             line.name = "SectionLine";
             var lrt = line.GetComponent<RectTransform>();
-            lrt.sizeDelta = new Vector2(width, 2f);
+            lrt.sizeDelta = new Vector2(width, dividerH);
             var lel = line.AddComponent<LayoutElement>();
-            lel.preferredHeight = 2f;
+            lel.preferredHeight = dividerH;
             lel.preferredWidth = width;
             return container;
         }
@@ -240,6 +256,15 @@ namespace EconomyMod.UI
 
         // ===== 王国排行行（排名 + 名称 + 关键指标）=====
 
+        /// <summary>
+        /// 王国排行列宽：总宽扣除排名列与 5 个列间距后按比例分配，
+        /// 防止原 width×比例（合计 100%）与排名列/间距叠加后超出容器被 ScrollRect 截断。
+        /// </summary>
+        private static float ColumnWidth(float width, float fontScale, float frac)
+        {
+            return (width - 22f * fontScale - 6f * 5f) * frac;
+        }
+
         /// <summary>创建王国排行表头（列标题行：排名/王国/GDP/人均/基尼），弱色显示。</summary>
         public static GameObject CreateKingdomHeader(Transform parent, Font font, float width, float fontScale = 1f)
         {
@@ -250,22 +275,22 @@ namespace EconomyMod.UI
             hlg.childControlWidth = false; hlg.childControlHeight = true;
             hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = false;
             hlg.childAlignment = TextAnchor.MiddleLeft;
-            float h = 18f;
+            float h = 20f * fontScale;
             row.GetComponent<RectTransform>().sizeDelta = new Vector2(width, h);
             row.AddComponent<LayoutElement>().preferredHeight = h;
 
             // 排名列
             var rankGo = UIHelpers.CreateText("", row.transform, 10f * fontScale, UIStyles.TextMuted, font, h, "Rank");
             var rrt = rankGo.GetComponent<RectTransform>();
-            rrt.sizeDelta = new Vector2(22f, h);
+            rrt.sizeDelta = new Vector2(22f * fontScale, h);
             var rel = rankGo.AddComponent<LayoutElement>();
-            rel.preferredWidth = 22f; rel.preferredHeight = h;
+            rel.preferredWidth = 22f * fontScale; rel.preferredHeight = h;
 
             // 王国列
             var nameGo = UIHelpers.CreateText(UIHelpers.L("col_kingdom"), row.transform, 10f * fontScale,
                 UIStyles.TextMuted, font, h, "Name");
             var nrt = nameGo.GetComponent<RectTransform>();
-            float nameW = width * 0.27f;
+            float nameW = ColumnWidth(width, fontScale, 0.27f);
             nrt.sizeDelta = new Vector2(nameW, h);
             var nel = nameGo.AddComponent<LayoutElement>();
             nel.preferredWidth = nameW; nel.preferredHeight = h;
@@ -275,7 +300,7 @@ namespace EconomyMod.UI
                 UIStyles.TextMuted, font, h, "Gdp");
             gdpGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var grt = gdpGo.GetComponent<RectTransform>();
-            float gdpW = width * 0.24f;
+            float gdpW = ColumnWidth(width, fontScale, 0.24f);
             grt.sizeDelta = new Vector2(gdpW, h);
             var gel = gdpGo.AddComponent<LayoutElement>();
             gel.preferredWidth = gdpW; gel.preferredHeight = h;
@@ -285,7 +310,7 @@ namespace EconomyMod.UI
                 UIStyles.TextMuted, font, h, "Avg");
             avgGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var art = avgGo.GetComponent<RectTransform>();
-            float avgW = width * 0.18f;
+            float avgW = ColumnWidth(width, fontScale, 0.18f);
             art.sizeDelta = new Vector2(avgW, h);
             var ael = avgGo.AddComponent<LayoutElement>();
             ael.preferredWidth = avgW; ael.preferredHeight = h;
@@ -295,7 +320,7 @@ namespace EconomyMod.UI
                 UIStyles.TextMuted, font, h, "Gini");
             giniGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var girt = giniGo.GetComponent<RectTransform>();
-            float giniW = width * 0.15f;
+            float giniW = ColumnWidth(width, fontScale, 0.15f);
             girt.sizeDelta = new Vector2(giniW, h);
             var giel = giniGo.AddComponent<LayoutElement>();
             giel.preferredWidth = giniW; giel.preferredHeight = h;
@@ -305,7 +330,7 @@ namespace EconomyMod.UI
                 UIStyles.TextMuted, font, h, "Price");
             priceGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var prt = priceGo.GetComponent<RectTransform>();
-            float priceW = width * 0.16f;
+            float priceW = ColumnWidth(width, fontScale, 0.16f);
             prt.sizeDelta = new Vector2(priceW, h);
             var pel = priceGo.AddComponent<LayoutElement>();
             pel.preferredWidth = priceW; pel.preferredHeight = h;
@@ -364,7 +389,7 @@ namespace EconomyMod.UI
             nameGo.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
             nameGo.GetComponent<Text>().fontStyle = highlight ? FontStyle.Bold : FontStyle.Normal;
             var nrt = nameGo.GetComponent<RectTransform>();
-            float nameW = width * 0.27f;
+            float nameW = ColumnWidth(width, fontScale, 0.27f);
             nrt.sizeDelta = new Vector2(nameW, h);
             var nel = nameGo.AddComponent<LayoutElement>();
             nel.preferredWidth = nameW; nel.preferredHeight = h;
@@ -374,7 +399,7 @@ namespace EconomyMod.UI
                 UIStyles.TextSecondary, font, h, "Gdp");
             gdpGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var grt = gdpGo.GetComponent<RectTransform>();
-            float gdpW = width * 0.24f;
+            float gdpW = ColumnWidth(width, fontScale, 0.24f);
             grt.sizeDelta = new Vector2(gdpW, h);
             var gel = gdpGo.AddComponent<LayoutElement>();
             gel.preferredWidth = gdpW; gel.preferredHeight = h;
@@ -384,7 +409,7 @@ namespace EconomyMod.UI
                 UIStyles.TextSecondary, font, h, "Avg");
             avgGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var art = avgGo.GetComponent<RectTransform>();
-            float avgW = width * 0.18f;
+            float avgW = ColumnWidth(width, fontScale, 0.18f);
             art.sizeDelta = new Vector2(avgW, h);
             var ael = avgGo.AddComponent<LayoutElement>();
             ael.preferredWidth = avgW; ael.preferredHeight = h;
@@ -399,7 +424,7 @@ namespace EconomyMod.UI
             giniGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             giniGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
             var girt = giniGo.GetComponent<RectTransform>();
-            float giniW = width * 0.15f;
+            float giniW = ColumnWidth(width, fontScale, 0.15f);
             girt.sizeDelta = new Vector2(giniW, h);
             var giel = giniGo.AddComponent<LayoutElement>();
             giel.preferredWidth = giniW; giel.preferredHeight = h;
@@ -413,7 +438,7 @@ namespace EconomyMod.UI
                 priceColor, font, h, "Price");
             priceGo.GetComponent<Text>().alignment = TextAnchor.MiddleRight;
             var prt = priceGo.GetComponent<RectTransform>();
-            float priceW = width * 0.16f;
+            float priceW = ColumnWidth(width, fontScale, 0.16f);
             prt.sizeDelta = new Vector2(priceW, h);
             var pel = priceGo.AddComponent<LayoutElement>();
             pel.preferredWidth = priceW; pel.preferredHeight = h;
