@@ -47,6 +47,7 @@ namespace EconomyMod.Core
             public int maxPop = -1;              // 条件：人口 ≤
             public int phase = -1;               // 条件：经济阶段 0繁荣 1衰退 2萧条 3复苏（-1 不限）
             public float treasuryRatioMin = -1f; // 条件：金库/GDP ≥（仅玩家国可判）
+            public string variantGroup;           // 变体互斥组：同组事件每局仅部分启用（种子决定，同局稳定）
             public string chainNext;             // 连锁：结算后触发的后续事件 id（null=无）
             public int chainDelay = 1;           // 连锁：后续事件延迟年数
             public int chainAfterOption = -1;    // 连锁：仅该选项序号触发（-1=任意选项）
@@ -83,6 +84,34 @@ namespace EconomyMod.Core
         private static readonly Dictionary<string, int> _readyYear = new Dictionary<string, int>(16);
         private static int _lastGlobalYear = int.MinValue;
         private static bool _popupQueued;
+
+        // ===== 每局事件池（v1.7.0 种子化）=====
+        // 每局按世界种子（MapBox.current_world_seed_id）确定性筛池，同 seed 同池：
+        // 链/变体组为整体启用，单事件保留率 68%，每族保底，onlyPlayer 保底。
+        // 读档后世界种子不变 → 池不变，存档兼容零改动。
+        private static readonly HashSet<string> _activeIds = new HashSet<string>(64);
+        private static bool _poolBuilt;
+        private static int _worldSeed = 1;                          // 失败降级 1（确定性优先）
+        private static readonly Dictionary<string, float> _familyBias = new Dictionary<string, float>(8);
+        private const float PoolRetainRatio = 0.68f;                // 单事件保留率
+        private const float FamilyBiasMin = 0.65f, FamilyBiasMax = 1.4f;
+
+        /// <summary>事件是否在本局事件池中（EvaluateYear 候选过滤用）。</summary>
+        private static bool PoolActive(EventDef d)
+        {
+            return _activeIds.Contains(d.id);
+        }
+
+        /// <summary>族倾向权重（每局固定；池未建时回退 1）。</summary>
+        private static float FamilyWeight(string family)
+        {
+            if (!_poolBuilt) return 1f;
+            string fam = string.IsNullOrEmpty(family) ? "civil" : family;
+            return _familyBias.TryGetValue(fam, out float w) ? w : 1f;
+        }
+
+        // 加权抽样候选复用缓冲（EvaluateYear 主线程年度路径，不跨周期持有）
+        private static readonly List<EventDef> _candidatePool = new List<EventDef>(32);
 
         /// <summary>连锁队列：到年限期直接生成（绕过概率/冷却），跨存档持久化。</summary>
         private class ChainSpawn
@@ -175,7 +204,7 @@ namespace EconomyMod.Core
             Debug.LogWarning("[ClassicalEconomics] " + msg);
         }
 
-        /// <summary>新地图/新游戏：清空运行时状态（事件定义保留）。</summary>
+        /// <summary>新地图/新游戏：清空运行时状态（事件定义保留，事件池待下届世界重建）。</summary>
         public static void Reset()
         {
             _pending.Clear();
@@ -183,6 +212,195 @@ namespace EconomyMod.Core
             _chains.Clear();
             _lastGlobalYear = int.MinValue;
             _popupQueued = false;
+            _activeIds.Clear();
+            _familyBias.Clear();
+            _poolBuilt = false;
+        }
+
+        // ===== 每局事件池构建（种子确定性；首次 EvaluateYear 惰性执行）=====
+
+        /// <summary>读世界种子：MapBox.current_world_seed_id（静态 int，新地图递增，读档同局不变）。</summary>
+        private static int ReadWorldSeed()
+        {
+            try
+            {
+                var t = typeof(MapBox);
+                var f = t.GetField("current_world_seed_id",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static
+                    | System.Reflection.BindingFlags.NonPublic);
+                if (f != null)
+                {
+                    int s = System.Convert.ToInt32(f.GetValue(null));
+                    if (s != 0) return s; // 0=世界未就绪，保持降级
+                }
+            }
+            catch (System.Exception) { }
+            return 1;
+        }
+
+        /// <summary>FNV-1a 64→32 位字符串哈希（与种子混合，确定性，仅主线程构建时用）。</summary>
+        private static uint HashMix(string s, int seed)
+        {
+            unchecked
+            {
+                uint h = 2166136261u;
+                h = (h ^ (uint)seed) * 16777619u;
+                for (int i = 0; i < s.Length; i++)
+                {
+                    h = (h ^ (uint)s[i]) * 16777619u;
+                }
+                return h;
+            }
+        }
+
+        /// <summary>
+        /// 惰性构建：首次 EvaluateYear 时执行一次（此时 World 已就绪、种子可读）。
+        /// 规则：链整链启用/禁用；变体组整组启用、组内种子序取 ceil(n×0.6) 个；
+        /// 单事件按保留率；每族保底 max(5, 族数×0.45)；onlyPlayer 保底 6。
+        /// </summary>
+        private static void BuildWorldPool()
+        {
+            if (_poolBuilt || _defs.Count == 0) return;
+            _poolBuilt = true;
+            _worldSeed = ReadWorldSeed();
+            _activeIds.Clear();
+            _familyBias.Clear();
+
+            for (int i = 0; i < _defs.Count; i++)
+            {
+                var d = _defs[i];
+                if (!string.IsNullOrEmpty(d.family) && !_familyBias.ContainsKey(d.family))
+                {
+                    // 族倾向：0.65~1.4 均匀映射，营造"此局天灾频仍、彼局宫廷喧哗"的氛围差
+                    float t = HashMix("bias:" + d.family, _worldSeed) / 4294967295f;
+                    _familyBias[d.family] = FamilyBiasMin + t * (FamilyBiasMax - FamilyBiasMin);
+                }
+            }
+
+            // 单元化：链以"链尾"为单元 key（沿 chainNext 走到尽头），整链同生共死，
+            // 防止链头启用而链尾被单抽漏掉（断链）；变体组以组为单元；其余单事件各自抽签。
+            var chainIds = new HashSet<string>(32);          // 所有链上成员 id（含头/中/尾）
+            foreach (var d in _defs)
+            {
+                if (string.IsNullOrEmpty(d.chainNext)) continue;
+                chainIds.Add(d.id);
+                chainIds.Add(d.chainNext);
+            }
+
+            var groups = new Dictionary<string, List<EventDef>>(8);
+            var singles = new List<EventDef>(_defs.Count);
+            foreach (var d in _defs)
+            {
+                if (string.IsNullOrEmpty(d.id)) continue;
+                if (chainIds.Contains(d.id)) continue; // 链成员归链单元
+                if (!string.IsNullOrEmpty(d.variantGroup))
+                {
+                    if (!groups.TryGetValue(d.variantGroup, out var g))
+                    {
+                        g = new List<EventDef>(4);
+                        groups[d.variantGroup] = g;
+                    }
+                    g.Add(d);
+                }
+                else singles.Add(d);
+            }
+
+            // 1) 变体组：整组启用，组内按种子序取 ceil(n×0.6) 个（互斥：同组只出部分版本）
+            foreach (var g in groups.Values)
+            {
+                g.Sort((a, b) => HashMix(a.id, _worldSeed + 7).CompareTo(HashMix(b.id, _worldSeed + 7)));
+                int keep = System.Math.Max(1, (g.Count * 3 + 4) / 5);
+                for (int i = 0; i < keep && i < g.Count; i++)
+                    _activeIds.Add(g[i].id);
+            }
+
+            // 2) 链单元：以链尾为 key 归一化成员，链尾哈希抽签决定整链启用
+            var chainTailOf = new Dictionary<string, string>(16); // 成员 id → 链尾 id
+            foreach (var id in chainIds)
+            {
+                string cur = id;
+                int guard = 0;
+                while (guard++ < 16)
+                {
+                    var curDef = FindDef(cur);
+                    if (curDef == null || string.IsNullOrEmpty(curDef.chainNext)) break;
+                    cur = curDef.chainNext;
+                }
+                chainTailOf[id] = cur;
+            }
+            var tailActive = new HashSet<string>(8);
+            foreach (var kv in chainTailOf)
+            {
+                if (tailActive.Contains(kv.Value)) continue;
+                uint h = HashMix("chain:" + kv.Value, _worldSeed + 13);
+                bool on = h / 4294967295f < PoolRetainRatio;
+                if (on) tailActive.Add(kv.Value);
+            }
+            foreach (var kv in chainTailOf)
+                if (tailActive.Contains(kv.Value)) _activeIds.Add(kv.Key);
+
+            // 3) 单事件（不在链、不在组）：保留率
+            for (int i = 0; i < singles.Count; i++)
+            {
+                var d = singles[i];
+                uint h = HashMix(d.id, _worldSeed + 29);
+                bool on = h / 4294967295f < PoolRetainRatio;
+                if (on) _activeIds.Add(d.id);
+            }
+
+            // 5) 保底：每族至少 max(5, 族数×0.45)，onlyPlayer 至少 6（种子序补首）
+            var familyCount = new Dictionary<string, int>(8);
+            var familyActiveCount = new Dictionary<string, int>(8);
+            int onlyPlayerTotal = 0, onlyPlayerActive = 0;
+            for (int i = 0; i < _defs.Count; i++)
+            {
+                var d = _defs[i];
+                if (string.IsNullOrEmpty(d.id)) continue;
+                string fam = string.IsNullOrEmpty(d.family) ? "civil" : d.family;
+                familyCount.TryGetValue(fam, out int c); familyCount[fam] = c + 1;
+                if (_activeIds.Contains(d.id)) { familyActiveCount.TryGetValue(fam, out int a); familyActiveCount[fam] = a + 1; }
+                if (d.onlyPlayer) { onlyPlayerTotal++; if (_activeIds.Contains(d.id)) onlyPlayerActive++; }
+            }
+            foreach (var kv in familyCount)
+            {
+                int min = System.Math.Max(5, (int)(kv.Value * 0.45f));
+                familyActiveCount.TryGetValue(kv.Key, out int act);
+                if (act >= min) continue;
+                // 按种子序补足
+                var candidates = new List<EventDef>(8);
+                for (int i = 0; i < _defs.Count; i++)
+                {
+                    var d = _defs[i];
+                    string fam = string.IsNullOrEmpty(d.family) ? "civil" : d.family;
+                    if (fam != kv.Key || _activeIds.Contains(d.id)) continue;
+                    candidates.Add(d);
+                }
+                candidates.Sort((a, b) => HashMix(a.id, _worldSeed + 41).CompareTo(HashMix(b.id, _worldSeed + 41)));
+                for (int i = 0; i < candidates.Count && act < min; i++)
+                {
+                    _activeIds.Add(candidates[i].id);
+                    act++;
+                }
+            }
+            if (onlyPlayerTotal > 0 && onlyPlayerActive < 6)
+            {
+                var candidates = new List<EventDef>(8);
+                for (int i = 0; i < _defs.Count; i++)
+                {
+                    var d = _defs[i];
+                    if (!d.onlyPlayer || _activeIds.Contains(d.id)) continue;
+                    candidates.Add(d);
+                }
+                candidates.Sort((a, b) => HashMix(a.id, _worldSeed + 53).CompareTo(HashMix(b.id, _worldSeed + 53)));
+                for (int i = 0; i < candidates.Count && onlyPlayerActive < 6; i++)
+                {
+                    _activeIds.Add(candidates[i].id);
+                    onlyPlayerActive++;
+                }
+            }
+
+            Debug.Log($"[ClassicalEconomics] 每局事件池已构建（seed={_worldSeed}）：" +
+                      $"启用 {_activeIds.Count}/{_defs.Count}，族倾向 " + string.Join(",", _familyBias.Keys));
         }
 
         // ===== 条件评估（纯数据 + 王国 API，主线程年度调用）=====
@@ -250,6 +468,9 @@ namespace EconomyMod.Core
             var cfg = UnrestConfig.Instance;
             if (cfg == null || !cfg.NationPlayEnabled) return;
 
+            // 0. 每局事件池惰性构建（世界种子此时已就绪；同 seed 跨读档稳定）
+            BuildWorldPool();
+
             // 1. 到期结算：玩家国挂起事件超时 → fallback
             for (int i = _pending.Count - 1; i >= 0; i--)
             {
@@ -306,15 +527,28 @@ namespace EconomyMod.Core
                 EconomyMod.Models.KingdomStats stats;
                 EconomyEngine.KingdomStats.TryGetValue(kid, out stats);
                 EventDef picked = null;
-                int candidates = 0;
+                float totalWeight = 0f;
+                _candidatePool.Clear();
                 for (int di = 0; di < _defs.Count; di++)
                 {
                     var d = _defs[di];
+                    if (!PoolActive(d)) continue; // 本局未启用（种子池）
                     if (d.onlyPlayer && !isPlayer) continue; // 宫廷/权谋剧情专属玩家国
                     if (year < ReadyYearOf(d)) continue;
                     if (!ConditionsOk(d, k, stats, year, isPlayer)) continue;
-                    candidates++;
-                    if (Random.Range(0, candidates) == 0) picked = d; // 蓄水池抽样（等权取一）
+                    _candidatePool.Add(d);
+                    totalWeight += FamilyWeight(d.family);
+                }
+                if (totalWeight > 0f)
+                {
+                    // 加权抽样（族倾向：此局天灾频仍、彼局宫廷喧哗）
+                    float roll = Random.value * totalWeight;
+                    for (int ci = 0; ci < _candidatePool.Count; ci++)
+                    {
+                        roll -= FamilyWeight(_candidatePool[ci].family);
+                        if (roll <= 0f) { picked = _candidatePool[ci]; break; }
+                    }
+                    if (picked == null && _candidatePool.Count > 0) picked = _candidatePool[_candidatePool.Count - 1];
                 }
                 if (picked == null) continue;
                 SpawnFor(picked, k, isPlayer, year, false);

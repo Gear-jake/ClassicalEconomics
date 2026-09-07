@@ -1,0 +1,614 @@
+{
+ "mill_guild": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "guild_walk",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "tailor_march": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "guild_walk",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "smith_guild": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "guild_walk",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "guild_monopoly": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": "guild_strike",
+  "chainAfter": 0,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "guild_strike": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "street_lamp": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005
+   },
+   {}
+  ]
+ },
+ "schooling_plan": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "surgery_house": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {}
+  ]
+ },
+ "bath_fee": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.005
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "beggar_raid": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {
+   "giniMin": 0.55
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "treasuryGdpRatio": -0.004
+   }
+  ]
+ },
+ "orphan_home": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {}
+  ]
+ },
+ "widow_fund": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "madman_case": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "rumor_wave": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {
+   "phase": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "book_market": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "playhouse": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.004
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "festival_curfew": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "boat_regatta": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.004
+   },
+   {
+    "goodwillAll": 2
+   }
+  ]
+ },
+ "flower_walk": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.004
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "wedding_boom": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {
+   "phase": 0
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.006
+   },
+   {}
+  ]
+ },
+ "funeral_custom": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "food_contest": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.004
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "night_market": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "water_taxi": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.005
+   },
+   {}
+  ]
+ },
+ "chimney_cleaner": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.004
+   },
+   {}
+  ]
+ },
+ "brew_wave": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "silk_weavers": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "paper_dealers": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.005
+   },
+   {}
+  ]
+ },
+ "potters_quarrel": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "lamp_oil": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "salt_caravan": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.007
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "spice_spree": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.006
+   },
+   {}
+  ]
+ },
+ "street_show": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.004
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "temple_market": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.005
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "communal_well": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.004
+   },
+   {}
+  ]
+ },
+ "bridge_toll": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "neighbor_dispute": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "house_rent": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "harvest_dance": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.003
+   },
+   {
+    "goodwillAll": 2
+   }
+  ]
+ },
+ "witch_case": {
+  "family": "civil",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ }
+}

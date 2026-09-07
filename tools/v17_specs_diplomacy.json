@@ -1,0 +1,624 @@
+{
+ "border_stone": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "border_rift",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": -2
+   },
+   {
+    "goodwillAll": 2
+   }
+  ]
+ },
+ "fishing_spat": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "border_rift",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": -1
+   },
+   {
+    "goodwillAll": 2
+   }
+  ]
+ },
+ "hunt_line": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "border_rift",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": -1
+   },
+   {
+    "goodwillAll": 2
+   }
+  ]
+ },
+ "hostage_walk": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": "hostage_return",
+  "chainAfter": 0,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "hostage_return": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "embassy_swap": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "state_visit": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006,
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "peace_priest": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "gift_entourage": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2,
+    "treasuryGdpRatio": -0.005
+   },
+   {}
+  ]
+ },
+ "salt_pact": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "goodwillAll": -1
+   }
+  ]
+ },
+ "grain_bridge": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "ship_licence": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.007
+   },
+   {
+    "goodwillAll": -1
+   }
+  ]
+ },
+ "ferry_treaty": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "exile_welcome": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "rival_envoy": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": -2
+   },
+   {
+    "goodwillAll": 2
+   }
+  ]
+ },
+ "neutral_pledge": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "betrothal_overture": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 3
+   },
+   {}
+  ]
+ },
+ "border_market": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.006,
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "trade_embargo": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": -2
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "embassy_code": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "spy_swap": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "pirate_offer": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "treasuryGdpRatio": 0.005
+   }
+  ]
+ },
+ "refugee_treaty": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "river_fishery": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "mountain_pass": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "goodwillAll": -1
+   }
+  ]
+ },
+ "temple_diplomacy": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "scholar_visit": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "doctor_mission": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "astronomical_mission": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "military_pact": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 3
+   },
+   {
+    "goodwillAll": -2
+   }
+  ]
+ },
+ "naval_truce": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "goodwillAll": -1
+   }
+  ]
+ },
+ "garrison_border": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005,
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "diplomat_bride": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "insult_word": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": -2
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "gesture_of_peace": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 3
+   },
+   {}
+  ]
+ },
+ "tax_for_trade": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.006,
+    "goodwillAll": 1
+   },
+   {
+    "goodwillAll": -1
+   }
+  ]
+ },
+ "royal_letter": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "currency_pact": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "map_dispute": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": -1
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "goodwill_feast": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005,
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "embassy_rotation": {
+  "family": "diplomacy",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ }
+}

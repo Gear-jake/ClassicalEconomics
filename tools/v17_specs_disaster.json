@@ -1,0 +1,618 @@
+{
+ "shooting_star": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "celestial_omen",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "solar_eclipse": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "celestial_omen",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "blood_moon": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "celestial_omen",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "quake_aftershock": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": "quake_rebuild",
+  "chainAfter": 0,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.01
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "quake_rebuild": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.012
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "hailstorm": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {}
+  ]
+ },
+ "frostbite_spring": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.007
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "heat_wave": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "typhoon_wind": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.009
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "sandstorm": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": -1
+   },
+   {}
+  ]
+ },
+ "mudslide": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.007
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "avalanche": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {}
+  ]
+ },
+ "lightning_storm": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.004
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "drought_wells": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "river_channel": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.007
+   },
+   {}
+  ]
+ },
+ "locust_larvae": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "crop_blight": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.007
+   },
+   {}
+  ]
+ },
+ "orchard_wilt": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005
+   },
+   {}
+  ]
+ },
+ "cattle_pest": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "well_poison": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "roof_snow": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005
+   },
+   {}
+  ]
+ },
+ "glacier_melt": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.007
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "sea_riser": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "dust_death": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "earthquake_fissure": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.009
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "ash_cloud": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.01
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "forest_fire": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "ice_storm": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {}
+  ]
+ },
+ "thunder_harvest": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "famine_seed": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": "famine_full",
+  "chainAfter": 0,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "famine_full": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.015
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "storm_ruin": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "plague_carrier": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.01
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "rat_wave": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "harvest_rot": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.007
+   },
+   {}
+  ]
+ },
+ "crop_ice": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "storm_tide": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "rain_delayed": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "grass_fire": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {}
+  ]
+ },
+ "river_ice": {
+  "family": "disaster",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005
+   },
+   {}
+  ]
+ }
+}

@@ -1,0 +1,650 @@
+{
+ "embezzle_ring": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "giniMin": 0.45
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": false
+   },
+   {
+    "treasuryGdpRatio": -0.005
+   }
+  ]
+ },
+ "toll_rebellion": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "giniMin": 0.5
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "treasuryGdpRatio": -0.006
+   }
+  ]
+ },
+ "debt_auction": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.01
+   },
+   {}
+  ]
+ },
+ "specie_crisis": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "phase": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "bank_discount": {
+  "family": "finance",
+  "onlyPlayer": true,
+  "conds": {
+   "treasuryRatioMin": 0.3
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "salt_law": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "trade_net",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.012
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "liquor_law": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "trade_net",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.01
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "iron_law": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "trade_net",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.008
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "currency_ruin": {
+  "family": "finance",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": "mint_clampdown",
+  "chainAfter": 0,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.012
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "mint_clampdown": {
+  "family": "finance",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "treasuryGdpRatio": -0.004
+   }
+  ]
+ },
+ "customs_raise": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.009
+   },
+   {
+    "goodwillAll": -2
+   }
+  ]
+ },
+ "treasury_moth": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "giniMin": 0.4
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.007
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "war_debt": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.015
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "subsidy_cut": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "phase": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": -2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "trade_house_rise": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "usury_ring": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "giniMin": 0.55
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "treasuryGdpRatio": 0.005
+   }
+  ]
+ },
+ "granary_speculation": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "phase": 3
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "ferry_tax": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.006
+   },
+   {
+    "goodwillAll": -1
+   }
+  ]
+ },
+ "market_margin": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "phase": 0
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "treasuryGdpRatio": 0.005
+   }
+  ]
+ },
+ "tax_reform_court": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.01,
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "royal_mint_debase": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "phase": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.015
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "savings_hunt": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.01
+   },
+   {
+    "goodwillAll": -1
+   }
+  ]
+ },
+ "wage_freeze": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "giniMax": 0.55
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "gdp_boom_report": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "land_sale_urgent": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "treasuryRatioMin": 0.1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.012
+   },
+   {}
+  ]
+ },
+ "prize_fund": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "customs_leak": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "giniMax": 0.5
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "debt_default": {
+  "family": "finance",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": "credit_ice",
+  "chainAfter": 0,
+  "opts": [
+   {
+    "goodwillAll": -3
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "credit_ice": {
+  "family": "finance",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.01
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "merchant_gift": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.008
+   },
+   {
+    "goodwillAll": -1
+   }
+  ]
+ },
+ "tax_shield": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "giniMax": 0.5
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "relief_auction": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "phase": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.007
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "coin_cut": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "phase": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "enterprise_rent": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.007
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "tax_relief_petition": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "giniMax": 0.5
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2,
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "state_pawnshop": {
+  "family": "finance",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.006
+   },
+   {}
+  ]
+ },
+ "port_duties": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.009
+   },
+   {
+    "goodwillAll": -1
+   }
+  ]
+ },
+ "fraud_accounting": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "treasuryGdpRatio": -0.005
+   }
+  ]
+ },
+ "budget_lean": {
+  "family": "finance",
+  "onlyPlayer": false,
+  "conds": {
+   "phase": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ }
+}

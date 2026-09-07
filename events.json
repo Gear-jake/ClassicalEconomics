@@ -7,9 +7,6 @@
       "timeoutYears": 2,
       "fallback": 1,
       "cooldownYears": 12,
-      "conditions": {
-        "treasuryRatioMax": 0.02
-      },
       "options": [
         {
           "key": "opt1",
@@ -19,7 +16,9 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "treasuryRatioMax": 0.02,
+      "variantGroup": "treasury_crisis"
     },
     {
       "id": "tax_corruption",
@@ -28,9 +27,6 @@
       "timeoutYears": 2,
       "fallback": 1,
       "cooldownYears": 10,
-      "conditions": {
-        "giniMax": 0.7
-      },
       "options": [
         {
           "key": "opt1",
@@ -42,7 +38,9 @@
           "treasuryGdpRatio": 0.008,
           "unrest": true
         }
-      ]
+      ],
+      "giniMax": 0.7,
+      "variantGroup": "treasury_crisis"
     },
     {
       "id": "rich_petition",
@@ -51,9 +49,6 @@
       "timeoutYears": 3,
       "fallback": 1,
       "cooldownYears": 14,
-      "conditions": {
-        "giniMin": 0.45
-      },
       "options": [
         {
           "key": "opt1",
@@ -68,7 +63,9 @@
           "treasuryGdpRatio": 0.004,
           "goodwillAll": -3
         }
-      ]
+      ],
+      "giniMin": 0.45,
+      "variantGroup": "treasury_crisis"
     },
     {
       "id": "drought",
@@ -86,7 +83,8 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "variantGroup": "extreme_weather"
     },
     {
       "id": "locust",
@@ -104,7 +102,8 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "variantGroup": "extreme_weather"
     },
     {
       "id": "quake_aftermath",
@@ -193,9 +192,6 @@
       "timeoutYears": 1,
       "fallback": 1,
       "cooldownYears": 10,
-      "conditions": {
-        "atWar": 1
-      },
       "options": [
         {
           "key": "opt1",
@@ -206,7 +202,9 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "atWar": 1,
+      "variantGroup": "military_supply"
     },
     {
       "id": "mercenary_default",
@@ -224,7 +222,8 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "variantGroup": "military_supply"
     },
     {
       "id": "prisoner_ransom",
@@ -233,9 +232,6 @@
       "timeoutYears": 2,
       "fallback": 1,
       "cooldownYears": 12,
-      "conditions": {
-        "atWar": 1
-      },
       "options": [
         {
           "key": "opt1",
@@ -246,7 +242,8 @@
           "key": "opt2",
           "goodwillAll": -4
         }
-      ]
+      ],
+      "atWar": 1
     },
     {
       "id": "bread_riot",
@@ -255,9 +252,6 @@
       "timeoutYears": 1,
       "fallback": 1,
       "cooldownYears": 10,
-      "conditions": {
-        "giniMin": 0.5
-      },
       "options": [
         {
           "key": "opt1",
@@ -267,7 +261,9 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "giniMin": 0.5,
+      "variantGroup": "civil_unrest"
     },
     {
       "id": "plague",
@@ -298,9 +294,6 @@
       "timeoutYears": 2,
       "fallback": 0,
       "cooldownYears": 14,
-      "conditions": {
-        "atWar": 0
-      },
       "options": [
         {
           "key": "opt1",
@@ -312,7 +305,9 @@
           "unrest": true,
           "goodwillAll": -1
         }
-      ]
+      ],
+      "atWar": 0,
+      "variantGroup": "diplomacy_pressure"
     },
     {
       "id": "marriage_alliance",
@@ -321,9 +316,6 @@
       "timeoutYears": 3,
       "fallback": 1,
       "cooldownYears": 16,
-      "conditions": {
-        "atWar": 0
-      },
       "options": [
         {
           "key": "opt1",
@@ -336,7 +328,8 @@
             "style_isolationist": 2.0
           }
         }
-      ]
+      ],
+      "atWar": 0
     },
     {
       "id": "merchant_loan",
@@ -411,9 +404,6 @@
       "timeoutYears": 2,
       "fallback": 1,
       "cooldownYears": 12,
-      "conditions": {
-        "atWar": 1
-      },
       "options": [
         {
           "key": "opt1",
@@ -423,7 +413,8 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "atWar": 1
     },
     {
       "id": "land_survey",
@@ -484,7 +475,8 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "variantGroup": "extreme_weather"
     },
     {
       "id": "wildfire",
@@ -502,7 +494,8 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "variantGroup": "extreme_weather"
     },
     {
       "id": "blizzard",
@@ -520,7 +513,8 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "variantGroup": "extreme_weather"
     },
     {
       "id": "mine_collapse",
@@ -641,7 +635,8 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "variantGroup": "court_scandal"
     },
     {
       "id": "royal_astrologer",
@@ -664,7 +659,8 @@
             "style_tech": 0.4
           }
         }
-      ]
+      ],
+      "variantGroup": "court_scandal"
     },
     {
       "id": "hunt_accident",
@@ -688,7 +684,8 @@
           "key": "opt3",
           "unrest": true
         }
-      ]
+      ],
+      "variantGroup": "court_scandal"
     },
     {
       "id": "old_regent",
@@ -761,9 +758,6 @@
       "timeoutYears": 2,
       "fallback": 2,
       "cooldownYears": 16,
-      "conditions": {
-        "atWar": 1
-      },
       "chainNext": "defector_ambition",
       "chainDelay": 2,
       "chainAfterOption": 1,
@@ -787,7 +781,8 @@
           "key": "opt3",
           "goodwillAll": -3
         }
-      ]
+      ],
+      "atWar": 1
     },
     {
       "id": "defector_ambition",
@@ -820,9 +815,6 @@
       "timeoutYears": 1,
       "fallback": 1,
       "cooldownYears": 10,
-      "conditions": {
-        "atWar": 1
-      },
       "options": [
         {
           "key": "opt1",
@@ -832,7 +824,9 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "atWar": 1,
+      "variantGroup": "military_supply"
     },
     {
       "id": "fort_rebuild",
@@ -955,7 +949,8 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "variantGroup": "civil_unrest"
     },
     {
       "id": "tenant_strike",
@@ -973,7 +968,8 @@
           "key": "opt2",
           "unrest": true
         }
-      ]
+      ],
+      "variantGroup": "civil_unrest"
     },
     {
       "id": "festival_request",
@@ -1096,7 +1092,8 @@
           "key": "opt2",
           "goodwillAll": -3
         }
-      ]
+      ],
+      "variantGroup": "diplomacy_pressure"
     },
     {
       "id": "border_treaty",
@@ -1105,9 +1102,6 @@
       "timeoutYears": 3,
       "fallback": 1,
       "cooldownYears": 18,
-      "conditions": {
-        "atWar": 0
-      },
       "options": [
         {
           "key": "opt1",
@@ -1118,7 +1112,8 @@
           "key": "opt2",
           "goodwillAll": -2
         }
-      ]
+      ],
+      "atWar": 0
     },
     {
       "id": "pirate_bribe",
@@ -1140,7 +1135,8 @@
             "style_bellicose": 1.8
           }
         }
-      ]
+      ],
+      "variantGroup": "diplomacy_pressure"
     },
     {
       "id": "pilgrim_wave",
@@ -1244,9 +1240,7 @@
           }
         }
       ],
-      "conditions": {
-        "giniMin": 0.4
-      }
+      "giniMin": 0.4
     },
     {
       "id": "bank_run",
@@ -1266,11 +1260,9 @@
           "unrest": true
         }
       ],
-      "conditions": {
-        "bankRiskMin": 2
-      },
       "chainNext": "bank_run_aftermath",
-      "chainDelay": 1
+      "chainDelay": 1,
+      "bankRiskMin": 2
     },
     {
       "id": "bank_run_aftermath",
@@ -1628,6 +1620,4376 @@
         {
           "key": "opt2",
           "goodwillAll": -1
+        }
+      ]
+    },
+    {
+      "id": "embezzle_ring",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "giniMin": 0.45,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": false
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.005
+        }
+      ]
+    },
+    {
+      "id": "toll_rebellion",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "giniMin": 0.5,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.006
+        }
+      ]
+    },
+    {
+      "id": "debt_auction",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.01
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "specie_crisis",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "phase": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "bank_discount",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "onlyPlayer": true,
+      "treasuryRatioMin": 0.3,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "salt_law",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "trade_net",
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.012
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "liquor_law",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "trade_net",
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.01
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "iron_law",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "trade_net",
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.008
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "currency_ruin",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "onlyPlayer": true,
+      "chainNext": "mint_clampdown",
+      "chainDelay": 2,
+      "chainAfterOption": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.012
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "mint_clampdown",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.004
+        }
+      ]
+    },
+    {
+      "id": "customs_raise",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.009
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -2
+        }
+      ]
+    },
+    {
+      "id": "treasury_moth",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "giniMin": 0.4,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.007
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "war_debt",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.015
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "subsidy_cut",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "phase": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": -2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "trade_house_rise",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "usury_ring",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "giniMin": 0.55,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": 0.005
+        }
+      ]
+    },
+    {
+      "id": "granary_speculation",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "phase": 3,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "ferry_tax",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.006
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -1
+        }
+      ]
+    },
+    {
+      "id": "market_margin",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "phase": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": 0.005
+        }
+      ]
+    },
+    {
+      "id": "tax_reform_court",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.01,
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "royal_mint_debase",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "phase": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.015
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "savings_hunt",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.01
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -1
+        }
+      ]
+    },
+    {
+      "id": "wage_freeze",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "giniMax": 0.55,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "gdp_boom_report",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "land_sale_urgent",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "treasuryRatioMin": 0.1,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.012
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "prize_fund",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "customs_leak",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "giniMax": 0.5,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "debt_default",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "onlyPlayer": true,
+      "chainNext": "credit_ice",
+      "chainDelay": 2,
+      "chainAfterOption": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": -3
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "credit_ice",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "merchant_gift",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.008
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -1
+        }
+      ]
+    },
+    {
+      "id": "tax_shield",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "giniMax": 0.5,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "relief_auction",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "phase": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.007
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "coin_cut",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "phase": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "enterprise_rent",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.007
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "tax_relief_petition",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "giniMax": 0.5,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2,
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "state_pawnshop",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.006
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "port_duties",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.009
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -1
+        }
+      ]
+    },
+    {
+      "id": "fraud_accounting",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.005
+        }
+      ]
+    },
+    {
+      "id": "budget_lean",
+      "family": "finance",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "phase": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "duke_sword",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "variantGroup": "court_undercurrent",
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "palace_lady",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "variantGroup": "court_undercurrent",
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "eunuch_power",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "variantGroup": "court_undercurrent",
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005,
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "dowager_veil",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "chainNext": "regent_reform",
+      "chainDelay": 2,
+      "chainAfterOption": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "regent_reform",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "crown_prince_visit",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "royal_confessor",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "palace_oath",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "hunt_omen",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "heir_tutor",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "concubine_audit",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "marriage_plot",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "royal_bodyguard",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "eunuch_land",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "censor_impeach",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "court_banquet",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006,
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "astrology_omen",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "phase": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "royal_seal",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.004
+        }
+      ]
+    },
+    {
+      "id": "succession_will",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "old_guard_pension",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "prince_exile",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": -2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "royal_birth",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 3
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "heir_duel",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "court_faction",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "eunuch_reform",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.007
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "queen_rescript",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "loyalist_swear",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "spy_in_palace",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "chainNext": "spy_exposure",
+      "chainDelay": 1,
+      "chainAfterOption": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": -1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "spy_exposure",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "crown_jewels",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "hunting_pact",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "fortune_teller",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "princess_guard",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "noble_trial",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "jester_reign",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "ancestral_rites",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.007,
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "royal_soothsayer",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "phase": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "heir_foreign",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "king_brew",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004,
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "heir_adoption",
+      "family": "court",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 15,
+      "onlyPlayer": true,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "sword_guild",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "arms_rivalry",
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "armor_works",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "arms_rivalry",
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "archer_lodge",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "arms_rivalry",
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "wage_arrears",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "chainNext": "mutiny_quell",
+      "chainDelay": 2,
+      "chainAfterOption": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "mutiny_quell",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.006
+        }
+      ]
+    },
+    {
+      "id": "levy_call",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.008
+        }
+      ]
+    },
+    {
+      "id": "border_watch",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "veteran_pension",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.007
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "marching_training",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "general_rivalry",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "siege_test",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "scout_failure",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "navy_draft",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.007
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "camp_disease",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "weapon_bribe",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "royal_guard_move",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "desertion",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.004
+        }
+      ]
+    },
+    {
+      "id": "war_plunder_share",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "general_young",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "fort_novelty",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "outpost_security",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "wounded_care",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.007
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "hero_statue",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "land_grant_soldier",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "militia_rise",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "spy_report",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "ambush_warning",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "army_reduction",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.01
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "war_trophy",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.008
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "general_madness",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "barracks_brawl",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "supply_shortfall",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.009
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "battlefield_courage",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "victory_parade",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.007,
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "troop_resupply",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "atWar": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "general_protector",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "border_feast",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005,
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "archery_club",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "watchtower_signal",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "army_fund_embezzle",
+      "family": "military",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.005
+        }
+      ]
+    },
+    {
+      "id": "shooting_star",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "celestial_omen",
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "solar_eclipse",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "celestial_omen",
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "blood_moon",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "celestial_omen",
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "quake_aftershock",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "chainNext": "quake_rebuild",
+      "chainDelay": 2,
+      "chainAfterOption": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "quake_rebuild",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.012
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "hailstorm",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "frostbite_spring",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.007
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "heat_wave",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "typhoon_wind",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.009
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "sandstorm",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": -1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "mudslide",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.007
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "avalanche",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "lightning_storm",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "drought_wells",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "river_channel",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.007
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "locust_larvae",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "crop_blight",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.007
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "orchard_wilt",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "cattle_pest",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "well_poison",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "roof_snow",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "glacier_melt",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.007
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "sea_riser",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "dust_death",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "earthquake_fissure",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.009
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "ash_cloud",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "forest_fire",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "ice_storm",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "thunder_harvest",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "famine_seed",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "chainNext": "famine_full",
+      "chainDelay": 2,
+      "chainAfterOption": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "famine_full",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.015
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "storm_ruin",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "plague_carrier",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.01
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "rat_wave",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "harvest_rot",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.007
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "crop_ice",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "storm_tide",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "rain_delayed",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "grass_fire",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "river_ice",
+      "family": "disaster",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "mill_guild",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "guild_walk",
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "tailor_march",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "guild_walk",
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "smith_guild",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "guild_walk",
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "guild_monopoly",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "chainNext": "guild_strike",
+      "chainDelay": 2,
+      "chainAfterOption": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "guild_strike",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "street_lamp",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "schooling_plan",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "surgery_house",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "bath_fee",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.005
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "beggar_raid",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "giniMin": 0.55,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.004
+        }
+      ]
+    },
+    {
+      "id": "orphan_home",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "widow_fund",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "madman_case",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "rumor_wave",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "phase": 1,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "book_market",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "playhouse",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "festival_curfew",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "boat_regatta",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "flower_walk",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "wedding_boom",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "phase": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.006
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "funeral_custom",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "food_contest",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "night_market",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "water_taxi",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.005
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "chimney_cleaner",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.004
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "brew_wave",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "silk_weavers",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "paper_dealers",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.005
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "potters_quarrel",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "lamp_oil",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "salt_caravan",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.007
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "spice_spree",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.006
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "street_show",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "temple_market",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.005
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "communal_well",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.004
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "bridge_toll",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.006
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "neighbor_dispute",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "house_rent",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "harvest_dance",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.003
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "witch_case",
+      "family": "civil",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "border_stone",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "border_rift",
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": -2
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "fishing_spat",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "border_rift",
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": -1
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "hunt_line",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "variantGroup": "border_rift",
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": -1
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "hostage_walk",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "chainNext": "hostage_return",
+      "chainDelay": 2,
+      "chainAfterOption": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "hostage_return",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 0,
+      "cooldownYears": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "embassy_swap",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "state_visit",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006,
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "peace_priest",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "gift_entourage",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2,
+          "treasuryGdpRatio": -0.005
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "salt_pact",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -1
+        }
+      ]
+    },
+    {
+      "id": "grain_bridge",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "ship_licence",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.007
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -1
+        }
+      ]
+    },
+    {
+      "id": "ferry_treaty",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "exile_welcome",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "rival_envoy",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": -2
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "neutral_pledge",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "betrothal_overture",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 3
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "border_market",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.006,
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "trade_embargo",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": -2
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "embassy_code",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "spy_swap",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "pirate_offer",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": 0.005
+        }
+      ]
+    },
+    {
+      "id": "refugee_treaty",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "river_fishery",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "mountain_pass",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -1
+        }
+      ]
+    },
+    {
+      "id": "temple_diplomacy",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "scholar_visit",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "doctor_mission",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "astronomical_mission",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "military_pact",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 3
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -2
+        }
+      ]
+    },
+    {
+      "id": "naval_truce",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -1
+        }
+      ]
+    },
+    {
+      "id": "garrison_border",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005,
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "diplomat_bride",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "insult_word",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": -2
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "gesture_of_peace",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 3
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "tax_for_trade",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.006,
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": -1
+        }
+      ]
+    },
+    {
+      "id": "royal_letter",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "currency_pact",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "map_dispute",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": -1
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "goodwill_feast",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.005,
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "embassy_rotation",
+      "family": "diplomacy",
+      "minYear": 1,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
         }
       ]
     }

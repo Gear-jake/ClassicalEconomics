@@ -7,7 +7,7 @@ function Fail($msg) { Write-Host "DECISION_EVENTS_RED: $msg"; exit 1 }
 $jsonPath = Join-Path $Root 'events.json'
 if (-not (Test-Path -LiteralPath $jsonPath -PathType Leaf)) { Fail 'events.json missing from mod root' }
 try { $json = Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail "events.json is not valid JSON: $_" }
-if (-not $json.events -or $json.events.Count -lt 70) { Fail "events.json must define at least 70 events (found $($json.events.Count))" }
+if (-not $json.events -or $json.events.Count -lt 300) { Fail "events.json must define at least 300 events (found $($json.events.Count))" }
 
 # ===== 1. 每事件结构完整性 =====
 $validFamilies = @('finance','disaster','court','military','civil','diplomacy')
@@ -23,12 +23,48 @@ foreach ($e in $json.events) {
     }
 }
 $ids = @($json.events | ForEach-Object { $_.id })
+$byId = @{}
+foreach ($e2 in $json.events) { $byId[$e2.id] = $e2 }
 if ($ids.Count -ne ($ids | Sort-Object -Unique).Count) { Fail 'duplicate event ids in events.json' }
 foreach ($e in $json.events) {
     if ($e.onlyPlayer -ne $null -and $e.onlyPlayer -ne $true -and $e.onlyPlayer -ne $false) { Fail "event $($e.id): onlyPlayer must be boolean" }
     if ($null -ne $e.phase -and $e.phase -ge 0 -and $e.phase -gt 3) { Fail "event $($e.id): phase must be -1 or 0..3" }
     if ($e.chainNext -and ($ids -notcontains $e.chainNext)) { Fail "event $($e.id): chainNext '$($e.chainNext)' does not exist" }
     if ($null -ne $e.chainAfterOption -and $e.chainAfterOption -ge 0 -and (-not $e.options -or $e.chainAfterOption -ge $e.options.Count)) { Fail "event $($e.id): chainAfterOption out of range" }
+    # v1.7.0：条件必须扁平（嵌套 conditions 会被 Newtonsoft 静默忽略——历史 14 事件已在 v1.7.0 转扁平）
+    if ($null -ne $e.conditions) { Fail "event $($e.id): nested 'conditions' object forbidden (flatten to top-level keys)" }
+    foreach ($ck in @('treasuryRatioMax','treasuryRatioMin','giniMin','giniMax','atWar','bankRiskMin','minPop','maxPop','phase')) {
+        if ($e.PSObject.Properties.Name -contains $ck) {
+            $v = $e.$ck
+            if ($null -ne $v) {
+                $numeric = $v -is [int] -or $v -is [double] -or $v -is [decimal]
+                if (-not $numeric) { Fail "event $($e.id): '$ck' must be numeric (got $($v.GetType().Name))" }
+            }
+        }
+    }
+    if ($null -ne $e.variantGroup) {
+        if ($e.variantGroup -isnot [string] -or $e.variantGroup.Length -eq 0) { Fail "event $($e.id): variantGroup must be a non-empty string" }
+        if ($e.chainNext) { Fail "event $($e.id): variantGroup event must not also be a chain member (chain units stay whole)" }
+    }
+}
+# 链无环（chainNext 图中每个 id 沿链不超过事件总数）
+foreach ($e in $json.events) {
+    $seen = @{}
+    $nextId = $e.id
+    while ($null -ne $nextId -and $nextId.Length -gt 0) {
+        if ($seen.ContainsKey($nextId)) { Fail "event $($e.id): chainNext cycle at '$nextId'" }
+        $seen[$nextId] = $true
+        $def = $byId[$nextId]
+        if ($null -ne $def -and $def.chainNext) { $nextId = $def.chainNext } else { $nextId = $null }
+    }
+}
+# 变体组内事件 id 唯一（组定义本身）
+$groupSets = @{}
+foreach ($e in $json.events) {
+    if ($e.variantGroup) {
+        if (-not $groupSets.ContainsKey($e.variantGroup)) { $groupSets[$e.variantGroup] = @{} }
+        $groupSets[$e.variantGroup][$e.id] = $true
+    }
 }
 
 # ===== 2. 产品代码接线 =====
@@ -36,6 +72,10 @@ $src = [System.IO.File]::ReadAllText((Join-Path $Root 'Core\DecisionEvents.cs'))
 if ($src -notmatch 'JsonConvert\.DeserializeObject<EventsFile>') { Fail 'DecisionEvents must deserialize events.json via JsonConvert' }
 if ($src -notmatch 'WarnOnce\(') { Fail 'DecisionEvents must fail-open with WarnOnce on load errors' }
 if ($src -notmatch 'MaxPending\s*=\s*8') { Fail 'DecisionEvents pending pool must be bounded (MaxPending=8)' }
+if ($src -notmatch 'BuildWorldPool\(') { Fail 'DecisionEvents must build the per-run event pool (BuildWorldPool)' }
+if ($src -notmatch 'current_world_seed_id') { Fail 'DecisionEvents must derive the pool from the world seed' }
+if ($src -notmatch 'PoolActive\(') { Fail 'EvaluateYear must filter candidates by PoolActive' }
+if ($src -notmatch 'FamilyWeight\(') { Fail 'EvaluateYear must weight candidates by family bias (FamilyWeight)' }
 
 $pipeline = [System.IO.File]::ReadAllText((Join-Path $Root 'Core\AnnualPipeline.cs'))
 if ($pipeline -notmatch 'Nation,\s*\r?\n\s*Events,\s*\r?\n\s*Snapshot') { Fail 'AnnualStage enum must declare Events between Nation and Snapshot' }

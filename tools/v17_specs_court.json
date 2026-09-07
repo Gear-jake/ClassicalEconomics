@@ -1,0 +1,618 @@
+{
+ "duke_sword": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": "court_undercurrent",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "palace_lady": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": "court_undercurrent",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "eunuch_power": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": "court_undercurrent",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005,
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "dowager_veil": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": "regent_reform",
+  "chainAfter": 0,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "regent_reform": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "crown_prince_visit": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "royal_confessor": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "palace_oath": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "hunt_omen": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "heir_tutor": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "concubine_audit": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "marriage_plot": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "royal_bodyguard": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.004
+   },
+   {}
+  ]
+ },
+ "eunuch_land": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "censor_impeach": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "court_banquet": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006,
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "astrology_omen": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {
+   "phase": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "royal_seal": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "treasuryGdpRatio": -0.004
+   }
+  ]
+ },
+ "succession_will": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "old_guard_pension": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "prince_exile": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": -2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "royal_birth": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 3
+   },
+   {}
+  ]
+ },
+ "heir_duel": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "court_faction": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "goodwillAll": 2
+   }
+  ]
+ },
+ "eunuch_reform": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.007
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "queen_rescript": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "loyalist_swear": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "spy_in_palace": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": "spy_exposure",
+  "chainAfter": 0,
+  "opts": [
+   {
+    "goodwillAll": -1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "spy_exposure": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "crown_jewels": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "hunting_pact": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "fortune_teller": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "princess_guard": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.004
+   },
+   {}
+  ]
+ },
+ "noble_trial": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "jester_reign": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "ancestral_rites": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.007,
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "royal_soothsayer": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {
+   "phase": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "heir_foreign": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "king_brew": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.004,
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "heir_adoption": {
+  "family": "court",
+  "onlyPlayer": true,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ }
+}

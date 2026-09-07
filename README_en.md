@@ -1,6 +1,6 @@
 # Classical Economics
 
-> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.6.3* ｜ Requires NeoModLoader (NML)
+> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *1.7.0* ｜ Requires NeoModLoader (NML)
 
 ## Feature Overview
 
@@ -32,10 +32,10 @@
 - Real per-city ledgers: residents deposit, banks lend by rate/quota to low-income citizens, loans repay with interest, defaults write off — gold conserved end to end
 - **Central-bank panel**: a new "Bank & Trade" cabinet tab with base rate / lending quota / reserve ratio tiers, Stimulus-Neutral-Restrain presets, and a three-light bank-run risk lamp
 - **Real monetary policy**: net loan growth feeds the money supply (tunable factor), driving inflation and bubbles
-- Commerce: markets yield yearly commerce tax; franchise / fair-price mutually exclusive policies; 5 new events incl. caravan ambush and bank run (**61 events** total)
+- Commerce: markets yield yearly commerce tax; franchise / fair-price mutually exclusive policies; 5 new events incl. caravan ambush and bank run (**78 events** total)
 
 **Decision Events**
-- **78 events** across 6 families (finance/disaster/court/military/civil/diplomacy); condition-filtered yearly draw, max one per kingdom per year
+- **318 events** across 6 families (finance/disaster/court/military/civil/diplomacy); condition-filtered yearly draw, max one per kingdom per year; **per-run event pool**: ~68% of events activate per world seed (chains / variant groups stay whole), **variant mutex groups** (same storyline, several flavors, only some per run) and **family-bias rotation** (per-run weights 0.65~1.4 — one run is disaster-heavy, another court-heavy); every run tells a different story
 - **Chained storylines**: choices bear fruit across years (foreign loan → debt comes due; the heir's plot → loose ends; a defector → his ambition); **king-name immersion**: event text embeds the reigning monarch's name; court-intrigue events are exclusive to the player's kingdom
 - Player kingdom: non-modal choice window + Cabinet to-do; the cautious option runs on timeout; AI kingdoms decide by national character and land in the event feed
 - Event window rebuilt: filter chips (all/decisions/states & wars/economy) + fold by year + single-column timeline; **an always-open event window rebuilds only once per year**

@@ -1,0 +1,632 @@
+{
+ "sword_guild": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "arms_rivalry",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "armor_works": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "arms_rivalry",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.006
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "archer_lodge": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": "arms_rivalry",
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "wage_arrears": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": "mutiny_quell",
+  "chainAfter": 0,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.01
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "mutiny_quell": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "treasuryGdpRatio": -0.006
+   }
+  ]
+ },
+ "levy_call": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "treasuryGdpRatio": -0.008
+   }
+  ]
+ },
+ "border_watch": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {}
+  ]
+ },
+ "veteran_pension": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.007
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "marching_training": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005
+   },
+   {}
+  ]
+ },
+ "general_rivalry": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "siege_test": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {}
+  ]
+ },
+ "scout_failure": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "navy_draft": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.007
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "camp_disease": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {}
+  ]
+ },
+ "weapon_bribe": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "royal_guard_move": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.004
+   },
+   {}
+  ]
+ },
+ "desertion": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "treasuryGdpRatio": -0.004
+   }
+  ]
+ },
+ "war_plunder_share": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "general_young": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "fort_novelty": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {}
+  ]
+ },
+ "outpost_security": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005
+   },
+   {}
+  ]
+ },
+ "wounded_care": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.007
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "hero_statue": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.006
+   },
+   {
+    "goodwillAll": 2
+   }
+  ]
+ },
+ "land_grant_soldier": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "militia_rise": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "spy_report": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "ambush_warning": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "army_reduction": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.01
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "war_trophy": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": 0.008
+   },
+   {
+    "goodwillAll": 1
+   }
+  ]
+ },
+ "general_madness": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "barracks_brawl": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {}
+  ]
+ },
+ "supply_shortfall": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.009
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "battlefield_courage": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "victory_parade": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.007,
+    "goodwillAll": 2
+   },
+   {}
+  ]
+ },
+ "troop_resupply": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {
+   "atWar": 1
+  },
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.008
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "general_protector": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 2
+   },
+   {
+    "unrest": true
+   }
+  ]
+ },
+ "border_feast": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005,
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "archery_club": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "goodwillAll": 1
+   },
+   {}
+  ]
+ },
+ "watchtower_signal": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "treasuryGdpRatio": -0.005
+   },
+   {}
+  ]
+ },
+ "army_fund_embezzle": {
+  "family": "military",
+  "onlyPlayer": false,
+  "conds": {},
+  "group": null,
+  "chainNext": null,
+  "chainAfter": null,
+  "opts": [
+   {
+    "unrest": true
+   },
+   {
+    "treasuryGdpRatio": -0.005
+   }
+  ]
+ }
+}

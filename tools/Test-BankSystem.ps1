@@ -63,7 +63,7 @@ foreach ($e in $json.events) { $byId[$e.id] = $e }
 foreach ($id in @('caravan_ambush', 'trade_route_cut', 'guild_petition2', 'bank_run', 'bank_run_aftermath')) {
     if (-not $byId.ContainsKey($id)) { Fail "events.json missing banking event $id" }
 }
-if ($byId['bank_run'].conditions.bankRiskMin -ne 2) { Fail 'bank_run must require bankRiskMin = 2 (danger tier)' }
+if ($byId['bank_run'].bankRiskMin -ne 2) { Fail 'bank_run must require bankRiskMin = 2 (danger tier)' }
 if ($byId['bank_run'].chainNext -ne 'bank_run_aftermath') { Fail 'bank_run must chain to bank_run_aftermath' }
 
 # ===== 9. 四语键：页签/UI + 5 事件键组 =====
