@@ -1,0 +1,138 @@
+# -*- coding: utf-8 -*-
+"""v1.6.0 de 残り 230 鍵（イベント本文194 + UI/toast/config 36）。冪等。"""
+import io, json, collections
+
+en = json.load(io.open('Locales/en.json', encoding='utf-8'))
+path = 'Locales/de.json'
+existing = json.load(io.open(path, encoding='utf-8'), object_pairs_hook=collections.OrderedDict)
+
+DE = collections.OrderedDict()
+def t(**kw): DE.update(kw)
+
+t(**{
+ # --- イベント本文（タイトル/説明/オプション）---
+ 'ev_tax_farm_desc': 'Ein Magnat bietet drei Jahre Steuern im Voraus für die Pacht der Eintreiber — gute Bilanz, riskante Herzen.',
+ 'ev_tax_farm_opt1': 'Die Pacht gewähren', 'ev_tax_farm_opt1_desc': 'Das Gold jetzt nehmen; die Verstimmung kommt später.',
+ 'ev_tax_farm_opt2': 'Ablehnen', 'ev_tax_farm_opt2_desc': 'Die Eintreiber bleiben der Krone, Münze für Münze.',
+ 'ev_war_bonds_desc': 'Der Krieg zehrt an der Börse: Anleihen ans Volk, Einlösung nach dem Sieg.',
+ 'ev_war_bonds_opt1': 'Anleihen ausgeben', 'ev_war_bonds_opt1_desc': 'Das Volk zeichnet eifrig; der Kriegsschatz füllt sich.',
+ 'ev_war_bonds_opt2': 'Ablehnen', 'ev_war_bonds_opt2_desc': 'Keine Schulden beim Volk; die Kriegskasse wird aufs Knochenmark gekürzt.',
+ 'ev_land_survey_desc': 'Die Staatskasse bittet um Vermessung aller Felder; verstecktes Land, verdeckte Steuern — Schluss damit.',
+ 'ev_land_survey_opt1': 'Vermessung genehmigen', 'ev_land_survey_opt1_desc': 'Den Vermessern jetzt zahlen; nächstes Jahr ist die Steuerbasis ehrlich.',
+ 'ev_land_survey_opt2': 'Verschieben', 'ev_land_survey_opt2_desc': 'Zu großer Aufruhr — {king} lässt die alten Bücher in Ruhe.',
+ 'ev_guild_bank_desc': 'Die Handwerksgilden wollen eine Leihbank und bieten der Krone einen Anteil.',
+ 'ev_guild_bank_opt1': 'Krone investiert', 'ev_guild_bank_opt1_desc': 'Investieren und Dividenden kassieren — und das Boot der Gilden teilen.',
+ 'ev_guild_bank_opt2': 'Ablehnen', 'ev_guild_bank_opt2_desc': 'Den Namen der Krone vom Geldverleih fernhalten; stattdessen die Armen trösten.',
+ 'ev_heir_plot_desc': 'Geheimes Wort: Der Erbe von {king} umwirbt die Generäle. Die Klinge ist halb aus der Scheide.',
+ 'ev_heir_plot_opt1': 'Verhaften', 'ev_heir_plot_opt1_desc': 'Sofort verhaften — der Hof erzittert, aber die Bedrohung stirbt heute.',
+ 'ev_heir_plot_opt2': 'Loyalität kaufen', 'ev_heir_plot_opt2_desc': 'Gold und Ehren, um den Ehrgeiz zu füttern.',
+ 'ev_heir_plot_opt3': 'Beobachten und warten', 'ev_heir_plot_opt3_desc': 'Blindheit vortäuschen und das Netz stellen; die Schlange nie erschrecken.',
+ 'ev_heir_plot_crushed_desc': 'Die Fraktion des Erben ist zerbrochen, aber seine Männer bleiben in jedem Amt. Was nun?',
+ 'ev_heir_plot_crushed_opt1': 'Güter konfiszieren', 'ev_heir_plot_crushed_opt1_desc': 'Querbeet konfiszieren; die Staatskasse schwillt.',
+ 'ev_heir_plot_crushed_opt2': 'Kleine Fische schonen', 'ev_heir_plot_crushed_opt2_desc': 'Nur die Häuptlinge bestrafen; Gnade bringt Dank.',
+ 'ev_concubine_rivalry_desc': 'Zwei Konkubinen streiten offen; die Zänkereien erreichen den Thronsaal.',
+ 'ev_concubine_rivalry_opt1': 'Frieden kaufen', 'ev_concubine_rivalry_opt1_desc': 'Geschenke für beide — ein unruhiger Frieden.',
+ 'ev_concubine_rivalry_opt2': 'Beide bestrafen', 'ev_concubine_rivalry_opt2_desc': 'Beide degradieren und bestrafen; Ordnung wiederherstellen.',
+ 'ev_royal_astrologer_desc': 'Der Astrologe liest ein großes Omen in den Sternen — für ein Entgelt für den Altar.',
+ 'ev_royal_astrologer_opt1': 'Ritus finanzieren', 'ev_royal_astrologer_opt1_desc': 'Besser auf Nummer sicher — Seelenfrieden kaufen.',
+ 'ev_royal_astrologer_opt2': 'Verbannen', 'ev_royal_astrologer_opt2_desc': 'Zauberei nennen und verbannen; Gelehrte jubeln, Priester schäumen.',
+ 'ev_hunt_accident_desc': 'Beim Herbstjagd rennt das Pferd von {king} und trampelt einen Bürger — vor einer Menge.',
+ 'ev_hunt_accident_opt1': 'Großzügig entschädigen', 'ev_hunt_accident_opt1_desc': 'Ein königliches Begräbnis, reiche Entschädigung; {king} verneigt sich vor der Familie.',
+ 'ev_hunt_accident_opt2': 'Nach dem Gesetz', 'ev_hunt_accident_opt2_desc': 'Die Magistrate zahlen die übliche Summe.',
+ 'ev_hunt_accident_opt3': 'Vertuschen', 'ev_hunt_accident_opt3_desc': 'Die Menge zerstreuen und die Geschichte vergraben.',
+ 'ev_old_regent_desc': 'Der alte Regent, der Jahre regierte, bittet um Entlassung — der Hof hält den Atem an.',
+ 'ev_old_regent_opt1': 'Ihn ehren', 'ev_old_regent_opt1_desc': 'Gold, Ehren und ein grandioser Abschied.',
+ 'ev_old_regent_opt2': 'Macht zurücknehmen', 'ev_old_regent_opt2_desc': 'Die Zügel zurücknehmen; der Groll des Alten ist tief.',
+ 'ev_bastard_claim_desc': 'Ein junger Mann mit altem Zeichen behauptet, das Blut von {king} zu sein.',
+ 'ev_bastard_claim_opt1': 'Anerkennen', 'ev_bastard_claim_opt1_desc': 'Prüfen und anerkennen — der Name und der Skandal zusammen.',
+ 'ev_bastard_claim_opt2': 'Betrug, verweisen', 'ev_bastard_claim_opt2_desc': 'Das Zeichen als Fälschung anprangern und ihn vertreiben.',
+ 'ev_spy_ring_desc': 'Der innere Hof schlägt einen Spionagering über Gesandte und Minister vor.',
+ 'ev_spy_ring_opt1': 'Ring finanzieren', 'ev_spy_ring_opt1_desc': 'Für Ohren überall zahlen; alle Länder flüstern {king} zu.',
+ 'ev_spy_ring_opt2': 'Als unziemlich ablehnen', 'ev_spy_ring_opt2_desc': 'Die Krone handelt im Tageslicht; Spione sind unter {kingdom}.',
+ 'ev_war_defector_desc': 'Ein Veteranengeneral läuft mit Geheimnissen über — und Absichten, die niemand lesen kann.',
+ 'ev_war_defector_opt1': 'Als Trophäe binden', 'ev_war_defector_opt1_desc': 'Vor der Front hinrichten; der Feind wird schaudern.',
+ 'ev_war_defector_opt2': 'In Dienst nehmen', 'ev_war_defector_opt2_desc': 'Ihn ehren und seine Talente nehmen — mit ungeprüftem Herzen.',
+ 'ev_war_defector_opt3': 'Höflich wegsenden', 'ev_war_defector_opt3_desc': 'Den Überläufer ablehnen; die Ehre rein halten.',
+ 'ev_defector_ambition_desc': 'Der Überläufer hat eigene Macht aufgebaut und gehorcht nur widerwillig. Der alte Same sprießt.',
+ 'ev_defector_ambition_opt1': 'Zuerst schlagen', 'ev_defector_ambition_opt1_desc': 'Jeden Preis zahlen, um sein Kommando endgültig zu brechen.',
+ 'ev_defector_ambition_opt2': 'Abwarten', 'ev_defector_ambition_opt2_desc': 'Eine Säuberung droht Bürgerkrieg — jetzt ertragen.',
+ 'ev_supply_convoy_desc': 'Der Versorgungskonvoi wird überfallen; der Geleitschutz bittet um Verstärkung.',
+ 'ev_supply_convoy_opt1': 'Wachen senden', 'ev_supply_convoy_opt1_desc': 'Männer aus der Stadt abziehen, um die Getreidestraßen zu schützen.',
+ 'ev_supply_convoy_opt2': 'Keine Männer übrig', 'ev_supply_convoy_opt2_desc': 'Ablehnen und dem Konvoi Glück wünschen.',
+ 'ev_fort_rebuild_desc': 'Die Grenzfestung zerfällt; der Wächter bittet um Wiederaufbau.',
+ 'ev_fort_rebuild_opt1': 'Wiederaufbau finanzieren', 'ev_fort_rebuild_opt1_desc': 'Gold in die Bastion; die Grenze schläft ruhig.',
+ 'ev_fort_rebuild_opt2': 'Arbeiten verschieben', 'ev_fort_rebuild_opt2_desc': 'Grenzarbeiten können warten; anderswo ausgeben.',
+ 'ev_veteran_company_desc': 'Alte Soldaten bitten um eine stehende Veteranenkompanie — für gewöhnlichen Sold.',
+ 'ev_veteran_company_opt1': 'Kompanie gründen', 'ev_veteran_company_opt1_desc': 'Bezahlen und die Veteranen die Grenze halten lassen.',
+ 'ev_veteran_company_opt2': 'Freundlich ablehnen', 'ev_veteran_company_opt2_desc': 'Die Börse ist dünn; die alten Soldaten heimschicken.',
+ 'ev_privateer_licence_desc': 'Ein Piratenhäuptling bietet Gold für einen Kaperbrief gegen die feindliche Schifffahrt.',
+ 'ev_privateer_licence_opt1': 'Brief erteilen', 'ev_privateer_licence_opt1_desc': 'Das Gold nehmen; die Meere von {kingdom} erhalten lizenzierte Wölfe.',
+ 'ev_privateer_licence_opt2': 'Schiffe verbrennen', 'ev_privateer_licence_opt2_desc': 'Ablehnen und ihre Schiffe als Exempel verbrennen.',
+ 'ev_hero_funeral_desc': 'Der alte Wächter der Grenze ist gestorben; die Nation trauert und streitet über die Riten.',
+ 'ev_hero_funeral_opt1': 'Staatsbegräbnis', 'ev_hero_funeral_opt1_desc': 'Ein volles Staatsbegräbnis auf Kosten der Krone.',
+ 'ev_hero_funeral_opt2': 'Still begraben', 'ev_hero_funeral_opt2_desc': 'Seinen Willen ehren: ein einfaches Grab.',
+ 'ev_market_fire_desc': 'Ein Nachtbrand vernichtet den halben Markt; die Kaufleute verlieren alles.',
+ 'ev_market_fire_opt1': 'Mit Kronengold wiederaufbauen', 'ev_market_fire_opt1_desc': 'Kronengold baut den Markt wieder auf.',
+ 'ev_market_fire_opt2': 'Selbst verwalten lassen', 'ev_market_fire_opt2_desc': 'Die Kaufleute bauen allein; die Krone zahlt nichts.',
+ 'ev_water_shortage_desc': 'Ein trockener Sommer leert die Brunnen; täglich bilden sich Schlangen.',
+ 'ev_water_shortage_opt1': 'Tiefe Brunnen graben', 'ev_water_shortage_opt1_desc': 'Brunnenmeistern bezahlen, um tief zu graben und Wasser zu führen.',
+ 'ev_water_shortage_opt2': 'Wasser rationieren', 'ev_water_shortage_opt2_desc': 'Pro Haushalt rationieren — billig, aber unpopulär.',
+ 'ev_tenant_strike_desc': 'Die Pachten stiegen zu oft; die Pächter weigern sich zu zahlen, die Güter klagen.',
+ 'ev_tenant_strike_opt1': 'Auf niedrigere Pachten drängen', 'ev_tenant_strike_opt1_desc': 'Die Krone drängt die Grundherren, die Pachten zu senken.',
+ 'ev_tenant_strike_opt2': 'Beitreibung durchsetzen', 'ev_tenant_strike_opt2_desc': 'Beamte zur Eintreibung schicken; das Gesetz zuerst.',
+ 'ev_festival_request_desc': 'Das Volk bittet {king}: eine gute Ernte verdient ein Stadtfest.',
+ 'ev_festival_request_opt1': 'Fest ausrufen', 'ev_festival_request_opt1_desc': 'Kronengold, öffentliche Freude.',
+ 'ev_festival_request_opt2': 'Für schlechte Zeiten sparen', 'ev_festival_request_opt2_desc': 'Gute Zeiten können warten; für schlechte sparen.',
+ 'ev_night_patrol_desc': 'Diebe beherrschen die Nacht; Geschäfte werden nächtlich ausgeraubt; die Zünfte fordern Patrouillen.',
+ 'ev_night_patrol_opt1': 'Nachtwache gründen', 'ev_night_patrol_opt1_desc': 'Für eine Nachtwache zahlen und den Läden ihren Schlaf geben.',
+ 'ev_night_patrol_opt2': 'Läden selbst zurechtkommen lassen', 'ev_night_patrol_opt2_desc': 'Die Läden heuern eigene Wachen; die Krone zahlt nichts.',
+ 'ev_bathhouse_fad_desc': 'Eine Badehaus-Mode erfasst die Stadt; die Gilden bitten die Krone um Unterstützung.',
+ 'ev_bathhouse_fad_opt1': 'Neue Bäder fördern', 'ev_bathhouse_fad_opt1_desc': 'Die Bäder fördern; Gesundheit für die ganze Stadt.',
+ 'ev_bathhouse_fad_opt2': 'Die Mode vorbeiziehen lassen', 'ev_bathhouse_fad_opt2_desc': 'Die Krone jagt keine Moden; sie verblassen.',
+ 'ev_traveling_fair_desc': 'Ein Wanderjahrmarkt rollt in die Stadt und bittet um Handelsrecht unter Kronensteuer.',
+ 'ev_traveling_fair_opt1': 'Messe erlauben', 'ev_traveling_fair_opt1_desc': 'Erlauben und den Kronenanteil nehmen.',
+ 'ev_traveling_fair_opt2': 'Wegschicken', 'ev_traveling_fair_opt2_desc': 'Die Unordnung fürchten; die Messe wegsenden.',
+ 'ev_royal_visit_desc': 'Ein benachbartes Königshaus kündigt einen Besuch an — die Pracht muss mithalten.',
+ 'ev_royal_visit_opt1': 'Keine Kosten scheuen', 'ev_royal_visit_opt1_desc': 'Volle Staatshuldigung; Gast und Gastgeber erfreuen sich.',
+ 'ev_royal_visit_opt2': 'Standardprotokoll', 'ev_royal_visit_opt2_desc': 'Protokoll nach dem Buch — höflich, nie verschwenderisch.',
+ 'ev_hostage_request_desc': 'Ein mächtiges Bündnis verlangt eine königliche Geisel als Freundschaftsbeweis.',
+ 'ev_hostage_request_opt1': 'Geisel senden', 'ev_hostage_request_opt1_desc': 'Königliches Blut für die Leichtigkeit des Bündnisses — der Palast weint.',
+ 'ev_hostage_request_opt2': 'Sanft ablehnen', 'ev_hostage_request_opt2_desc': 'Auf das zarte Alter des Kindes plädieren; der Verbündete verliert das Gesicht.',
+ 'ev_border_treaty_desc': 'Der Nachbar schlägt einen Grenzvertrag mit festen Marksteinen vor — ein Ende der Fehden.',
+ 'ev_border_treaty_opt1': 'Vertrag unterschreiben', 'ev_border_treaty_opt1_desc': 'Den strittigen Streifen abtreten für ein Jahrhundert Frieden.',
+ 'ev_border_treaty_opt2': 'Keinen Zoll', 'ev_border_treaty_opt2_desc': 'Kein Zoll des Ahnenlandes; doppelte Grenzwache.',
+ 'ev_pirate_bribe_desc': 'Die Piraten senden Bedingungen: zahlen, und die Schiffe von {kingdom} segeln sicher.',
+ 'ev_pirate_bribe_opt1': 'Zoll zahlen', 'ev_pirate_bribe_opt1_desc': 'Zahlen; die Schiffe hissen die Flagge der sicheren Passage.',
+ 'ev_pirate_bribe_opt2': 'Stattdessen Kopfgeld', 'ev_pirate_bribe_opt2_desc': 'Kopfgeld auf Piratenköpfe.',
+ 'ev_pilgrim_wave_desc': 'Gerüchte über Wunder ziehen Pilger an die Grenzen von {kingdom}.',
+ 'ev_pilgrim_wave_opt1': 'Pilger beherbergen', 'ev_pilgrim_wave_opt1_desc': 'Wegunterstände und Suppe für die Durchreisenden.',
+ 'ev_pilgrim_wave_opt2': 'Grenze schließen', 'ev_pilgrim_wave_opt2_desc': 'Die Menge fürchten; Grenze schließen und sie abweisen.',
+ 'ev_tribute_envoy_desc': 'Ein kleines fernes Königreich sendet Tribut und bittet um den Schutz von {kingdom}.',
+ 'ev_tribute_envoy_opt1': 'Tribut annehmen', 'ev_tribute_envoy_opt1_desc': 'Die Gaben nehmen — und die Pflichten eines Beschützers.',
+ 'ev_tribute_envoy_opt2': 'Sanft ablehnen', 'ev_tribute_envoy_opt2_desc': 'Nichts von den Kleinen nehmen; sie als Gleiche behandeln.',
+ # UI ラベル / toast / config
+ 'col_gini':'Gini', 'gini_chart_gini':'Gini', 'gini_chart_phase':'Phase',
+ 'cycle_phase_boom':'Boom', 'cycle_phase_depression':'Depression',
+ 'nation_policy_propaganda':'Propaganda', 'toast_dip_alliance_exists':'Schon im selben Bündnis',
+ 'toast_dip_alliance_both':'Beide Seiten haben bereits Bündnisse',
+ 'nation_claim':'Königreich übernehmen', 'nation_claim_hotkey':'Kabinett-Hotkey',
+ 'nation_claim_hotkey Description':'Auf ein Königreich auf der Karte zeigen und diese Taste drücken zum Übernehmen/Öffnen (Unity KeyCode-Name; leer deaktiviert)',
+ 'ui_scale':'UI-Skalierung', 'ui_scale Description':'Gesamtskalierung von Schrift und Buttons des Kabinetts (0.8-1.6)',
+ 'nation_build_native':'Gebäude errichten',
+ 'toast_law_law_ok':'[Gesetz] Gesetz angepasst', 'toast_law_policy_ok':'[Gesetz] Politik angepasst',
+ 'toast_law_ai_poor':'[Gesetz] Nicht genug Geld zum Aufstufen',
+ 'toast_law_reform':'[Gesetz] <{0}> ändert seine Gesetze',
+ 'toast_law_reform_major':'[Gesetz] <{0}> große Verfassungsreform!',
+ 'law_suggest_btn':'→{0}', 'cabinet_dip_stat_gdp':'GDP {0}',
+})
+
+merged = 0
+for k, v in DE.items():
+    if existing.get(k) == en.get(k):
+        existing[k] = v; merged += 1
+json.dump(existing, io.open(path, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+io.open(path, 'a', encoding='utf-8').write('\n')
+t2 = sum(1 for k in en if existing.get(k) != en.get(k))
+miss = [k for k in en if existing.get(k) == en.get(k)]
+print('de merged:', merged, 'translated:', t2, '/', len(en), '(', round(t2/len(en)*100), '%)', 'remaining:', len(miss))
+for k in miss[:12]: print('  still:', k)

@@ -1,0 +1,181 @@
+# -*- coding: utf-8 -*-
+"""v1.6.0 残り全イベント本文（ja 59 de 242）。冪等。"""
+import io, json, collections
+
+en = json.load(io.open('Locales/en.json', encoding='utf-8'))
+
+JA = collections.OrderedDict()
+DE = collections.OrderedDict()
+def tja(**kw): JA.update(kw)
+def tde(**kw): DE.update(kw)
+
+# ============ JA 残りイベント（25 タイトル + 34 説明）============
+tja(
+ ev_tax_farm='包税の取引', ev_tax_farm_res1='三年分の税金が一度に庫に入るが、街に呪いの声が増えた。',
+ ev_tax_farm_res2='包税の提案は拒否され、王室は吏治を守った。',
+ ev_war_bonds='戦争債券', ev_war_bonds_res1='債券が物資を調達し、前線の士気が高揚した。',
+ ev_war_bonds_res2='財布が薄く、陣営に不平が響く。',
+ ev_land_survey='土地測量', ev_land_survey_res1='測量が完了し、隠れた税金が庫に流れ込んだ。',
+ ev_land_survey_res2='測量は棚上げされ、古い台帳は混沌のまま。',
+ ev_guild_bank='ギルド銀行', ev_guild_bank_res1='銀行が開業し、王室が毎年配当を受け取った。',
+ ev_guild_bank_res2='王室は辞退し、代わりに慈善に心を向けた。',
+ ev_heir_plot='王太子の陰謀', ev_heir_plot_res1='陰謀は鉄の手で粉砕された。',
+ ev_heir_plot_res2='金が王太子を静める——とりあえず。',
+ ev_heir_plot_res3='{king}は静観し、網は張られた。',
+ ev_heir_plot_crushed='残党の清算', ev_heir_plot_crushed_res1='没収された屋敷が国庫を満たした。',
+ ev_heir_plot_crushed_res2='寛大さはどの廷にも記憶された。',
+ ev_concubine_rivalry='妃の争い', ev_concubine_rivalry_res1='後宮は静まったが、宝物庫は軽くなった。',
+ ev_concubine_rivalry_res2='鉄の規則が後宮を沈黙させた。',
+ ev_royal_astrologer='宮廷占星官', ev_royal_astrologer_res1='祭壇が建ち、皆が天命は{kingdom}にあると言う。',
+ ev_royal_astrologer_res2='占星官は去り、星見たちは舌を慎んだ。',
+ ev_hunt_accident='狩場の事故', ev_hunt_accident_res1='民が{king}の徳を称えた。',
+ ev_hunt_accident_res2='法に従い、怒りも称賛もなかった。',
+ ev_hunt_accident_res3='情報は封じられたが、蹄の音は忘れられなかった。',
+ ev_old_regent='老摂政の請願', ev_old_regent_res1='老臣は涙で別れ、列国が{king}の恩義を讃えた。',
+ ev_old_regent_res2='権柄は王室に帰ったが、廷に怨者が増えた。',
+ ev_bastard_claim='庶子の認知', ev_bastard_claim_res1='認知が成り、街は噂で持ちきりになった。',
+ ev_bastard_claim_res2='追放され、去り際に冤罪を叫んだ。',
+ ev_spy_ring='密探網', ev_spy_ring_res1='耳が四方に置かれ、{king}が真っ先に知る。',
+ ev_spy_ring_res2='提案は拒否され、{king}は一線を越えなかった。',
+ ev_war_defector='敵将の来降', ev_war_defector_res1='陣前の処刑に敵軍が震えた。',
+ ev_war_defector_res2='{king}が帳前で降将を迎えた。',
+ ev_war_defector_res3='礼送され、両軍が{king}の古風を称えた。',
+ ev_defector_ambition='降将の野心', ev_defector_ambition_res1='兵権が回収され、禍根は除かれた。',
+ ev_defector_ambition_res2='忍耐が安穏を得たが、誰もが亀裂を見た。',
+ ev_supply_convoy='糧道の襲撃', ev_supply_convoy_res1='糧道が再開し、前線の軍心が定まった。',
+ ev_supply_convoy_res2='糧道が再襲され、前線は三日の軍糧を失った。',
+ ev_fort_rebuild='旧堡の再建', ev_fort_rebuild_res1='要塞は新しくなり、辺民は安眠した。',
+ ev_fort_rebuild_res2='要塞は崩れたまま、辺民は夜に風音を聞いた。',
+ ev_veteran_company='老兵の請願', ev_veteran_company_res1='老兵連が国境を守り、盗匪は絶えた。',
+ ev_veteran_company_res2='老兵は田里に散り、酒場に昔の勇話が増えた。',
+ ev_privateer_licence='私掠許可', ev_privateer_licence_res1='私掠船が進出し、庫金と悪名が帳入された。',
+ ev_privateer_licence_res2='海賊船は松明となり、海路が清浄になった。',
+ ev_hero_funeral='英雄の葬儀', ev_hero_funeral_res1='万民が街路で見送り、列国の使節も参列した。',
+ ev_hero_funeral_res2='老将は無名の墓に眠ったが、心には名がある。',
+ ev_water_shortage='水不足', ev_water_shortage_res1='清泉が城に入り、水不足が解消した。',
+ ev_water_shortage_res2='水が配給され、列は減ったが不満が増えた。',
+ ev_tenant_strike='小作人の抗租', ev_tenant_strike_res1='租約が改訂され、小作人が歓声を上げた。',
+ ev_tenant_strike_res2='租銀は全額入荘したが、田埂の眼差しは冷えた。',
+ ev_festival_request='祝祭の請願', ev_festival_request_res1='三日間の祝祭で、皆{king}の徳を称えた。',
+ ev_festival_request_res2='請願は婉拒され、街は{king}を吝嗇と噂した。',
+ ev_night_patrol='夜盗の横行', ev_night_patrol_res1='夜巡が配置され、盗賊が絶え商家が安心した。',
+ ev_night_patrol_res2='護院が各々で戦い、盗賊は弱点を狙った。',
+ ev_bathhouse_fad='風呂屋の流行', ev_bathhouse_fad_res1='澡堂が立ち並び、{kingdom}は清潔で聞こえた。',
+ ev_bathhouse_fad_res2='流行は去り、数軒の澡堂だけが苦撐した。',
+ ev_traveling_fair='巡遊市', ev_traveling_fair_res1='半月の市で、税金と歓声が一緒に庫に入った。',
+ ev_traveling_fair_res2='市は隣国に行き、{kingdom}の街が少し寂しくなった。',
+ ev_royal_visit='王室の来訪', ev_royal_visit_res1='賓主が楽しみ、列国に美話として伝わった。',
+ ev_royal_visit_res2='礼は整ったが、驚きはなく貴賓の印象は平淡だった。',
+ ev_hostage_request='質子の要請', ev_hostage_request_res1='質子が出発し、盟約は堅くなったが宮中の痛みは自知のみ。',
+ ev_hostage_request_res2='拒絶の辞が伝わり、盟友に間隙が生まれた。',
+ ev_border_treaty='境界の盟約', ev_border_treaty_res1='界碑が立定し、両国の辺民は械闘しなくなった。',
+ ev_border_treaty_res2='交渉が破裂し、辺境の哨所が互いに警戒した。',
+ ev_pirate_bribe='海賊の通行料', ev_pirate_bribe_res1='買路錢が出ると、{kingdom}商船は阻害なく通行した。',
+ ev_pirate_bribe_res2='海賊の数股が剿滅され、残りは恨んだ。',
+ ev_pilgrim_wave='巡礼の波', ev_pilgrim_wave_res1='巡礼者が恩を感じ、{kingdom}善名が遠くに広がった。',
+ ev_pilgrim_wave_res2='巡礼者は界の外に阻まれ、聖地の名声は他国に帰した。',
+ ev_tribute_envoy='貢使团', ev_tribute_envoy_res1='貢品が庫に入り、庇護の責も{kingdom}の頭に記された。',
+ ev_tribute_envoy_res2='貢礼が謙辞され、小国は{kingdom}を尊敬した。',
+)
+
+# ============ DE 残りイベント（全部）============
+de_events = {
+ # title
+ 'ev_tax_farm': 'Der Steuerpacht-Deal', 'ev_war_bonds': 'Kriegsanleihen',
+ 'ev_land_survey': 'Die Landvermessung', 'ev_guild_bank': 'Die Gildenbank',
+ 'ev_heir_plot': 'Die Verschwörung des Erben', 'ev_heir_plot_crushed': 'Lose Enden',
+ 'ev_concubine_rivalry': 'Die rivalisierenden Konkubinen', 'ev_royal_astrologer': 'Der Hofastrologe',
+ 'ev_hunt_accident': 'Der Jagdunfall', 'ev_old_regent': 'Der alte Regent',
+ 'ev_bastard_claim': 'Der Anspruch des Bastards', 'ev_spy_ring': 'Der Spionagering',
+ 'ev_war_defector': 'Der Überläufer', 'ev_defector_ambition': 'Der Ehrgeiz des Überläufers',
+ 'ev_supply_convoy': 'Der Konvoi-Überfall', 'ev_fort_rebuild': 'Die alte Festung',
+ 'ev_veteran_company': 'Die Veteranen-Petition', 'ev_privateer_licence': 'Der Kaperbrief',
+ 'ev_hero_funeral': 'Das Begräbnis des Helden', 'ev_water_shortage': 'Die Wasserknappheit',
+ 'ev_tenant_strike': 'Der Pächterstreik', 'ev_festival_request': 'Die Festbitten',
+ 'ev_night_patrol': 'Die Nachtdiebe', 'ev_bathhouse_fad': 'Die Badehaus-Mode',
+ 'ev_traveling_fair': 'Der Wanderjahrmarkt', 'ev_royal_visit': 'Der Königsbesuch',
+ 'ev_hostage_request': 'Die Geiselbitte', 'ev_border_treaty': 'Der Grenzvertrag',
+ 'ev_pirate_bribe': 'Der Piratenzoll', 'ev_pilgrim_wave': 'Die Pilgerwelle',
+ 'ev_tribute_envoy': 'Der Tributgesandte',
+ # results
+ 'ev_tax_farm_res1': 'Drei Jahre Steuern füllen den Tresor; Flüche die Straßen.',
+ 'ev_tax_farm_res2': 'Der Deal wird abgelehnt; die Krone behält saubere Hände.',
+ 'ev_war_bonds_res1': 'Die Anleihen liefern Vorräte; die Moral der Front steigt.',
+ 'ev_war_bonds_res2': 'Die dünne Börse erzeugt Groll im Lager.',
+ 'ev_land_survey_res1': 'Die Vermessung ist fertig; versteckte Steuern fließen in den Tresor.',
+ 'ev_land_survey_res2': 'Die Vermessung wird verschoben; die alten Bücher bleiben ein Chaos.',
+ 'ev_guild_bank_res1': 'Die Bank öffnet; die Krone kassiert jährlich.',
+ 'ev_guild_bank_res2': 'Die Krone lehnt ab und widmet sich stattdessen der Wohltätigkeit.',
+ 'ev_heir_plot_res1': 'Die Verschwörung ist mit eiserner Hand zerschlagen.',
+ 'ev_heir_plot_res2': 'Gold beruhigt den Erben — vorerst.',
+ 'ev_heir_plot_res3': '{king} beobachtet und wartet; das Netz ist gestellt.',
+ 'ev_heir_plot_crushed_res1': 'Die beschlagnahmten Güter füllen die Staatskasse.',
+ 'ev_heir_plot_crushed_res2': 'Gnade wird an jedem Hof erinnert.',
+ 'ev_concubine_rivalry_res1': 'Der Harem beruhigt sich; der Tresor fühlt sich leichter an.',
+ 'ev_concubine_rivalry_res2': 'Eiserne Regeln bringen den Harem zum Schweigen.',
+ 'ev_royal_astrologer_res1': 'Der Altar steht; alle sagen, der Himmel begünstigt {kingdom}.',
+ 'ev_royal_astrologer_res2': 'Der Astrologe ist weg; die Sterngucker hüten ihre Zunge.',
+ 'ev_hunt_accident_res1': 'Das Volk lobt {king}\'s Tugend.',
+ 'ev_hunt_accident_res2': 'Dem Gesetz gefolgt — kein Zorn, kein Applaus.',
+ 'ev_hunt_accident_res3': 'Die Geschichte ist begraben — aber das Hufgetrappel wird erinnert.',
+ 'ev_old_regent_res1': 'Der alte Mann geht unter Tränen; jeder Hof lobt {king}\'s Gnade.',
+ 'ev_old_regent_res2': 'Die Macht kehrt zur Krone zurück — und ein Groll in den Hof.',
+ 'ev_bastard_claim_res1': 'Er wird anerkannt; die Märkte summen.',
+ 'ev_bastard_claim_res2': 'Er wird vertrieben und schreit an den Toren über Unrecht.',
+ 'ev_spy_ring_res1': 'Die Ohren sind überall; {king} hört zuerst.',
+ 'ev_spy_ring_res2': 'Der Vorschlag stirbt; {king} überschreitet keine Linie.',
+ 'ev_war_defector_res1': 'Die Hinrichtung erschüttert die feindliche Armee.',
+ 'ev_war_defector_res2': '{king} begrüßt den Überläufer im Kommandozelt.',
+ 'ev_war_defector_res3': 'Mit Ehren fortgeschickt; beide Armeen loben die alte Ehre.',
+ 'ev_defector_ambition_res1': 'Sein Kommando ist gebrochen; die Gefahr endet.',
+ 'ev_defector_ambition_res2': 'Die Ruhe hält — und jeder sieht den Riss.',
+ 'ev_supply_convoy_res1': 'Die Straßen öffnen sich wieder; die Front stabilisiert sich.',
+ 'ev_supply_convoy_res2': 'Der Konvoi wird erneut getroffen; die Front hungert drei Tage.',
+ 'ev_fort_rebuild_res1': 'Die Festung steht neu; die Grenze schläft.',
+ 'ev_fort_rebuild_res2': 'Die Festung bleibt kaputt; die Grenze hört Wölfe bei Nacht.',
+ 'ev_veteran_company_res1': 'Die Veteranen halten die Grenze; das Banditentum stirbt.',
+ 'ev_veteran_company_res2': 'Die Veteranen gehen heim; die Tavernen gewinnen alte Kriegsgeschichten.',
+ 'ev_privateer_licence_res1': 'Die Kaper segeln; Gold und Verruf kommen zusammen.',
+ 'ev_privateer_licence_res2': 'Die Piratenschiffe brennen wie Fackeln; die Seewege sind sauber.',
+ 'ev_hero_funeral_res1': 'Die ganze Nation säumt die Straßen; Gesandte nehmen teil.',
+ 'ev_hero_funeral_res2': 'Der alte General schläft in einem namenlosen Grab — erinnert dennoch.',
+ 'ev_water_shortage_res1': 'Süßes Wasser erreicht die Stadt; die Knappheit endet.',
+ 'ev_water_shortage_res2': 'Rationen kürzen die Schlangen und heben den Zorn.',
+ 'ev_tenant_strike_res1': 'Die Pachten werden gesenkt; die Pächter jubeln.',
+ 'ev_tenant_strike_res2': 'Die Pachten kommen voll an — zusammen mit kalten Blicken.',
+ 'ev_festival_request_res1': 'Drei Tage Festmahl; alle sprechen gut von {king}.',
+ 'ev_festival_request_res2': 'Die Bitte wird abgelehnt; die Straßen nennen {king} geizig.',
+ 'ev_night_patrol_res1': 'Die Wache geht; Diebe verschwinden und Läden ruhen.',
+ 'ev_night_patrol_res2': 'Verstreute Wachen verlieren gegen organisierte Diebe.',
+ 'ev_bathhouse_fad_res1': 'Bäder überall; {kingdom} ist berühmt für Sauberkeit.',
+ 'ev_bathhouse_fad_res2': 'Die Mode verblasst; wenige Bäder kämpfen weiter.',
+ 'ev_traveling_fair_res1': 'Zwei Wochen Messe — Steuern und Jubel zusammen.',
+ 'ev_traveling_fair_res2': 'Die Messe zieht zum Nachbarn; die Straßen von {kingdom} wirken stiller.',
+ 'ev_royal_visit_res1': 'Ein perfekter Besuch, an jedem Hof freundlich erzählt.',
+ 'ev_royal_visit_res2': 'Korrekt, aber kalt; die Gäste reisen unbeeindruckt ab.',
+ 'ev_hostage_request_res1': 'Die Geisel reist ab; der Pakt härtet, der Palast trauert.',
+ 'ev_hostage_request_res2': 'Die Ablehnung verbreitet sich; der Verbündete kränkt sich.',
+ 'ev_border_treaty_res1': 'Die Marksteine stehen; Grenzstreitigkeiten enden.',
+ 'ev_border_treaty_res2': 'Die Gespräche fallen zusammen; die Außenposten beäugen sich.',
+ 'ev_pirate_bribe_res1': 'Der Zoll bezahlt; die Schiffe von {kingdom} segeln unberührt.',
+ 'ev_pirate_bribe_res2': 'Mehrere Piratenbanden fallen; der Rest erinnert sich.',
+ 'ev_pilgrim_wave_res1': 'Die Pilger segnen {kingdom} weit und breit.',
+ 'ev_pilgrim_wave_res2': 'Die Pilger werden abgewiesen — und der heilige Ruhm mit ihnen.',
+ 'ev_tribute_envoy_res1': 'Der Tribut ist verwahrt; die Pflicht steht bei {kingdom}.',
+ 'ev_tribute_envoy_res2': 'Der Tribut wird abgelehnt; das kleine Königreich respektiert {kingdom} umso mehr.',
+}
+tde(**de_events)
+
+# ============ マージ ============
+for lang, d in [('ja', JA), ('de', DE)]:
+    p = 'Locales/%s.json' % lang
+    existing = json.load(io.open(p, encoding='utf-8'), object_pairs_hook=collections.OrderedDict)
+    merged = 0
+    for k, v in d.items():
+        if existing.get(k) == en.get(k):
+            existing[k] = v; merged += 1
+    json.dump(existing, io.open(p, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+    io.open(p, 'a', encoding='utf-8').write('\n')
+    t2 = sum(1 for k in en if existing.get(k) != en.get(k))
+    miss = [k for k in en if existing.get(k) == en.get(k)]
+    print(lang, 'merged:', merged, 'translated:', t2, '/', len(en), '(', round(t2/len(en)*100), '%)', 'remaining:', len(miss))
