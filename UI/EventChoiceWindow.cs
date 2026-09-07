@@ -82,6 +82,14 @@ namespace EconomyMod.UI
             Show();
         }
 
+        /// <summary>年度边界：挂起事件倒计时已递增，可见时刷新（"剩余 X 年"逐年递减）。</summary>
+        public void OnYearBoundary()
+        {
+            if (!_visible) return;
+            if (DecisionEvents.PendingCount == 0) return;
+            RefreshNow();
+        }
+
         public override void RefreshNow()
         {
             if (_content == null) return;

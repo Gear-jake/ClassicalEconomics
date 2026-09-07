@@ -119,6 +119,8 @@ namespace EconomyMod
             }
             // 事件窗年度重建：常开窗口每个游戏年最多重建一次（打开时与用户操作另有触发）
             UI.EventWindow.Instance?.OnYearBoundary();
+            // 抉择小窗年度倒计时刷新：挂起事件"剩余 X 年"逐年递减（可见且有待决才重建）
+            UI.EventChoiceWindow.Instance?.OnYearBoundary();
         }
 
         // ===== 时代事件国民特质注册（EraEngine 国民加成用，替换原 cultural_awakening）=====
