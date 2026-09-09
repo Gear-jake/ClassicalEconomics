@@ -207,11 +207,19 @@ namespace EconomyMod.Core
             if (__result == null) return;
             try
             {
+                // 主写：世界 id 历史库（与存档目录解耦，读档按 id 恢复）
+                int seed = GameHelpers.ReadWorldSeed();
+                HistoryService.SaveToWorldStore(seed);
+                EventStreamService.SaveToWorldStore(seed);
+                // 兼容旧读档路径：同时写一份到存档目录（老旁挂仍可被旧逻辑读、方便排查）
                 string dir = SaveManager.folderPath(pFolder);
-                if (string.IsNullOrEmpty(dir)) return;
-                HistoryService.SaveToFile(dir);
-                EventStreamService.SaveToFile(dir);
-                UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂已写入 dir=" + dir
+                if (!string.IsNullOrEmpty(dir))
+                {
+                    HistoryService.SaveToFile(dir);
+                    EventStreamService.SaveToFile(dir);
+                }
+                UnityEngine.Debug.Log("[ClassicalEconomics] 世界库写入 seed=" + seed
+                    + " dir=" + dir
                     + " events=" + EventStreamService.Count
                     + " major=" + EventStreamService.MajorCount);
             }
@@ -225,35 +233,25 @@ namespace EconomyMod.Core
             {
                 if (World.world == null) return;
 
-                // ===== 旁挂面板恢复（世界已加载完，时机正确）=====
-                // 读档完成：先清空内存面板（显示副本），再尝试从"该存档目录"载入 txt；
-                // 有则覆盖显示，无则从零记录。存档文件夹 txt 永不被清空影响。
-                // LastLoadedDir 由 LoadPrefix（loadWorld 前缀）捕获，手动/自动/工坊天然对齐。
+                // ===== 世界 id 历史库恢复（v2.1.12，按你的方案：数据库式）=====
+                // 读档完成（世界已加载完）：先清空内存面板，再按当前世界 id 打开
+                // <persistentDataPath>\ClassicalEconomicsWorlds\ 下的历史/事件文件——
+                // 有则覆盖显示继续记录，无则从零记录。文件名为 id，天然免疫存档目录错位。
                 try
                 {
-                    string dir = LastLoadedDir;
-                    if (string.IsNullOrEmpty(dir)) dir = SaveManager.currentSavePath;
-                    if (!string.IsNullOrEmpty(dir))
-                    {
-                        HistoryService.ClearHistory();
-                        EventStreamService.Clear();
-                        HistoryService.LoadFromFile(dir);
-                        EventStreamService.LoadFromFile(dir);
-                        UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂读档恢复 dir=" + dir
-                            + " load#" + LoadCounter
-                            + " hist=" + HistoryService.GetRecent(1).Count
-                            + " events=" + EventStreamService.Count);
-                    }
-                    else
-                    {
-                        HistoryService.ClearHistory();
-                        EventStreamService.Clear();
-                        UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂读档恢复 无路径（清空，从零记录）");
-                    }
+                    int seed = GameHelpers.ReadWorldSeed();
+                    HistoryService.ClearHistory();
+                    EventStreamService.Clear();
+                    bool histOk = HistoryService.LoadFromWorldStore(seed);
+                    bool eventsOk = EventStreamService.LoadFromWorldStore(seed);
+                    UnityEngine.Debug.Log("[ClassicalEconomics] 世界库读档恢复 seed=" + seed
+                        + " load#" + LoadCounter
+                        + " hist=" + HistoryService.GetRecent(1).Count + "/" + histOk
+                        + " events=" + EventStreamService.Count + "/" + eventsOk);
                 }
                 catch (System.Exception e)
                 {
-                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 旁挂读档恢复异常: " + e.Message);
+                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 世界库读档恢复异常: " + e.Message);
                 }
 
                 // 历史：从任意王国读 rb_hist（写盘时挂认领国或第一个王国）

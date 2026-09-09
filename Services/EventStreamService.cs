@@ -392,9 +392,59 @@ namespace EconomyMod.Services
             if (_entryPool.Count < Capacity + MajorCapacity) _entryPool.Add(entry);
         }
 
-        // ===== v2.0.2 旁挂文件（诡秘之主-宿命之环同款方案）=====
+        // ===== v2.1.12 世界 id 历史库（数据与存档目录解耦）=====
+        // 按世界 id（MapBox.current_world_seed_id，每局唯一、读档不变、新世界必变）存文件：
+        //   <persistentDataPath>\ClassicalEconomicsWorlds\events_<seed>.txt
+        // 读档先清面板→按当前世界 id 打开文件→有载入/无从零；保存→按 id 覆写。
+        // 不再依赖存档目录、不扫 autosaves、不靠种子头比对（文件名本身就是 id）。
 
-        /// <summary>旁挂文件名（存档目录下）。</summary>
+        /// <summary>历史库目录名（与 saves/autosaves 平级的独立资源目录）。</summary>
+        public const string WorldStoreDirName = "ClassicalEconomicsWorlds";
+
+        /// <summary>事件文件前缀（实际文件 events_&lt;seed&gt;.txt）。</summary>
+        public const string WorldStoreFilePrefix = "events_";
+
+        /// <summary>事件文件后缀。</summary>
+        public const string WorldStoreFileSuffix = ".txt";
+
+        private static string WorldStoreDir()
+        {
+            return System.IO.Path.Combine(UnityEngine.Application.persistentDataPath, WorldStoreDirName);
+        }
+
+        /// <summary>按世界 id 写事件库（IO 失败静默）。</summary>
+        public static void SaveToWorldStore(int seed)
+        {
+            try
+            {
+                if (seed <= 0) return;
+                string dir = WorldStoreDir();
+                System.IO.Directory.CreateDirectory(dir);
+                System.IO.File.WriteAllText(
+                    System.IO.Path.Combine(dir, WorldStoreFilePrefix + seed + WorldStoreFileSuffix),
+                    Serialize());
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>按世界 id 读事件库；文件缺失返回 false（调用方按新世界从零处理）。</summary>
+        public static bool LoadFromWorldStore(int seed)
+        {
+            try
+            {
+                if (seed <= 0) return false;
+                string path = System.IO.Path.Combine(
+                    WorldStoreDir(), WorldStoreFilePrefix + seed + WorldStoreFileSuffix);
+                if (!System.IO.File.Exists(path)) return false;
+                Restore(System.IO.File.ReadAllText(path));
+                return true;
+            }
+            catch (System.Exception) { return false; }
+        }
+
+        // ===== 旧旁挂（保留：v2.1.12 前存档目录内 txt 仍可读，新逻辑不再写）=====
+
+        /// <summary>旁挂文件名（存档目录下，旧方案）。</summary>
         public const string SidecarFileName = "ClassicalEconomics_events.txt";
 
         /// <summary>旁挂世界身份头（首行）：`#CE_SEED <seed>`——恢复时校验世界种子，防跨档串数据。</summary>

@@ -130,7 +130,54 @@ namespace EconomyMod.Services
             }
         }
 
-        // ===== v2.0.2 旁挂文件（诡秘之主-宿命之环同款方案）=====
+        // ===== v2.1.12 世界 id 历史库（与存档目录解耦，同 EventStreamService）=====
+        // <persistentDataPath>\ClassicalEconomicsWorlds\history_<seed>.txt
+
+        /// <summary>历史库目录名。</summary>
+        public const string WorldStoreDirName = "ClassicalEconomicsWorlds";
+
+        /// <summary>历史文件前缀（实际文件 history_&lt;seed&gt;.txt）。</summary>
+        public const string WorldStoreFilePrefix = "history_";
+
+        /// <summary>历史文件后缀。</summary>
+        public const string WorldStoreFileSuffix = ".txt";
+
+        private static string WorldStoreDir()
+        {
+            return System.IO.Path.Combine(UnityEngine.Application.persistentDataPath, WorldStoreDirName);
+        }
+
+        /// <summary>按世界 id 写历史库（IO 失败静默）。</summary>
+        public static void SaveToWorldStore(int seed)
+        {
+            try
+            {
+                if (seed <= 0) return;
+                string dir = WorldStoreDir();
+                System.IO.Directory.CreateDirectory(dir);
+                System.IO.File.WriteAllText(
+                    System.IO.Path.Combine(dir, WorldStoreFilePrefix + seed + WorldStoreFileSuffix),
+                    Serialize());
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>按世界 id 读历史库；文件缺失返回 false（调用方按新世界从零处理）。</summary>
+        public static bool LoadFromWorldStore(int seed)
+        {
+            try
+            {
+                if (seed <= 0) return false;
+                string path = System.IO.Path.Combine(
+                    WorldStoreDir(), WorldStoreFilePrefix + seed + WorldStoreFileSuffix);
+                if (!System.IO.File.Exists(path)) return false;
+                Restore(System.IO.File.ReadAllText(path));
+                return true;
+            }
+            catch (System.Exception) { return false; }
+        }
+
+        // ===== v2.0.2 旧旁挂（保留：v2.1.12 前存档目录内 txt 仍可读，新逻辑不再写）=====
         // 不依赖王国 data 键与读档钩子时序：保存时由 NationSave 的 saveWorldToDirectory
         // Postfix 把历史写成存档目录旁的独立文件；读档/切世界时由 EconomyModMain 跟踪
         // SaveManager.currentSavePath 变化懒加载。任何 IO 异常静默吞掉（不阻断原版）。
