@@ -25,3 +25,7 @@ steam_workshop_build.vdf
 # 工作区产物（不入库）
 .omo/
 evidence/
+perf/capture-*.json
+
+# __pycache__
+__pycache__/

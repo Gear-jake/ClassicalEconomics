@@ -25,8 +25,6 @@ namespace EconomyMod.Models
         /// <summary>开局宽限期（年）：世界前 N 年不触发动荡，让经济先发展。</summary>
         public int MinUnrestStartYear = 5;
 
-        /// <summary>Mod 界面语言："zh" 简中 / "zh_tw" 繁中 / "en" English / "ru" Русский（由模组设置切换，与游戏语言解耦）。</summary>
-
         /// <summary>是否启用国家政策（高基尼王国自动尝试贫富调节，失败则统治者退位/驾崩或陷入内战）。</summary>
         public bool PolicyEnabled = true;
 

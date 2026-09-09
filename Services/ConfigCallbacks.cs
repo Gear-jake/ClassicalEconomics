@@ -17,7 +17,6 @@ namespace EconomyMod.Services
         /// 将本模组 Locales/*.json 注册到 NML 多语言系统，
         /// 使模组设置窗口中的分组/配置项标签显示中文。
         /// zh/ch/cz 均注册中文（cz 为本机当前游戏语言码），en 注册英文。
-        /// Mod 界面语言仍由 use_chinese_ui 独立控制。
         /// </summary>
         public static void RegisterLocales()
         {
@@ -51,7 +50,6 @@ namespace EconomyMod.Services
                     LM.LoadLocale("ru", ruPath); // 俄语
                 }
                 LM.ApplyLocale(false);
-                // 按模组界面语言把配置项标签注入当前 NML locale（设置窗口跟随 ui_language）
                 RegisterConfigLocale();
             }
             catch (System.Exception e)
@@ -73,6 +71,7 @@ namespace EconomyMod.Services
             "population_enabled", "population_overcrowd", "era_enabled",
             "era_duration_years", "collapse_drop_ratio", "collapse_duration_years",
             "flourish_military_ratio", "flourish_periods", "labor_enabled", "labor_wage_base",
+            "wealth_tax_enabled", "wealth_tax_ratio", "wealth_tax_line",
             "real_time_refresh", "real_time_interval", "real_time_refresh_threshold", "real_time_refresh_budget", "money_velocity", "inflation_bubble_boost",
             "disaster_enabled", "disaster_wealth_loss", "disaster_mine_bonus", "banking_enabled",
             "credit_rate", "default_rate_depression", "crisis_contagion_threshold",
@@ -90,7 +89,7 @@ namespace EconomyMod.Services
         };
 
         /// <summary>
-        /// 按模组界面语言（ui_language）把所有配置项标签注入 NML 当前 locale 字典，
+        /// 把所有配置项标签注入 NML 当前 locale 字典（设置窗口跟随游戏语言），
         /// 使设置窗口分组/配置项名称/描述显示对应语言（zh/zh_tw/en/ru）。
         /// AddToCurrentLocale 写入的是 NML 当前 locale，与游戏语言码无关，
         /// 因此无论游戏语言如何设置，设置窗口都跟随模组界面语言。
@@ -267,17 +266,6 @@ namespace EconomyMod.Services
         }
 
         // ===== NML 设置回调（TEXT 输入框的回调参数为 string，需解析后写入）=====
-
-        /// <summary>语言规范化：zh/zh_tw/en/ru，非法值回退 zh。</summary>
-        public static string NormalizeLanguage(string lang)
-        {
-            if (lang != null && lang.Trim().Equals("auto", System.StringComparison.OrdinalIgnoreCase)) return "auto";
-            switch (lang)
-            {
-                case "zh": case "zh_tw": case "en": case "ru": return lang;
-                default: return "auto"; // 空/未知 → 跟随游戏语言
-            }
-        }
 
         /// <summary>游戏本体语言变化后（模组界面永远跟随游戏语言）：刷新设置窗口标签 +
         /// 悬浮窗/内阁标题与静态文本 + 重新注入按钮 tooltip（4 语言）。</summary>

@@ -83,6 +83,9 @@ namespace EconomyMod.Core
             for (int i = 0; i < TopRich.Count; i++) ReturnEntry(TopRich[i]);
             TopRich.Clear();
             WealthyPool.Clear();
+            // 全文明缓冲每周期重建（v2.1.0 修复：此前从未清空、跨年持续追加，
+            // 导致富豪税/繁荣注币/泡沫蒸发重复处理历史单位——GDP 虚高关键原因之一）
+            AllCivPool.Clear();
 
             TradeSimulationWorker.BeginCycle();
             GameHelpers.RefreshKingdomIndex();

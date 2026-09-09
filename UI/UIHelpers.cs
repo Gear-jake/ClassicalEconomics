@@ -146,54 +146,6 @@ namespace EconomyMod.UI
             return go;
         }
 
-        /// <summary>金色装饰分隔线：细金线 + 下方细灰线（双层立体感）。</summary>
-        public static GameObject CreateGoldDivider(Transform parent)
-        {
-            var container = new GameObject("GoldDivider", typeof(RectTransform), typeof(VerticalLayoutGroup));
-            container.transform.SetParent(parent, false);
-            var crt = container.GetComponent<RectTransform>();
-            crt.sizeDelta = new Vector2(0, 3);
-            var cle = container.AddComponent<LayoutElement>();
-            cle.preferredHeight = 3;
-            cle.flexibleWidth = 1;
-            var vlg = container.GetComponent<VerticalLayoutGroup>();
-            vlg.spacing = 1;
-            vlg.childControlWidth = true; vlg.childControlHeight = false;
-            vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
-
-            var gold = new GameObject("GoldLine", typeof(RectTransform), typeof(Image));
-            gold.transform.SetParent(container.transform, false);
-            gold.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 1);
-            gold.GetComponent<Image>().color = UIStyles.DividerGold;
-            var gle = gold.AddComponent<LayoutElement>();
-            gle.preferredHeight = 1; gle.flexibleWidth = 1;
-
-            var gray = new GameObject("GrayLine", typeof(RectTransform), typeof(Image));
-            gray.transform.SetParent(container.transform, false);
-            gray.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 1);
-            gray.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.45f, 0.3f);
-            var gle2 = gray.AddComponent<LayoutElement>();
-            gle2.preferredHeight = 1; gle2.flexibleWidth = 1;
-            return container;
-        }
-
-        /// <summary>竖向装饰条（左侧色带，用于卡片/行高亮）。</summary>
-        public static GameObject CreateAccentStrip(Transform parent, float height, Color color)
-        {
-            var go = new GameObject("AccentStrip", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(parent, false);
-            var rt = go.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(3, height);
-            var img = go.GetComponent<Image>();
-            img.color = color;
-            img.raycastTarget = false;
-            var le = go.AddComponent<LayoutElement>();
-            le.preferredWidth = 3;
-            le.preferredHeight = height;
-            le.flexibleHeight = 1;
-            return go;
-        }
-
         /// <summary>面板内边框：一圈细金色描边（贴 panelRect 四边，不拦截点击）。</summary>
         public static void CreateInnerBorder(RectTransform panelRect, Color color, float thickness = 1.5f)
         {

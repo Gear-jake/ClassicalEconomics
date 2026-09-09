@@ -598,13 +598,8 @@ namespace EconomyMod.Core
             }
         }
 
-        /// <summary>当前已抽签的季度（1~4；-1=本局未抽过）。</summary>
-        public static int QuarterLast() => _lastQuarter;
-
         /// <summary>跨年复位季度序号（年份切换时由季度检测调用）。</summary>
-        public static void ResetQuarter() => _lastQuarter = -1;
-
-        /// <summary>
+        public static void ResetQuarter() => _lastQuarter = -1;        /// <summary>
         /// 季度抽签（v2.0.8）：一年 2/5/8/11 月四个触发点——玩家国一年之内可以遇到
         /// 多个待决事件（每季度最多 1 件、挂起未决时该季度跳过；11 月后留足操作时间）。
         /// 只做抽签：挂起超时/连锁结算仍走年度 EvaluateYear（节奏不被季度拆散）。

@@ -389,9 +389,6 @@ namespace EconomyMod.Core
             return true;
         }
 
-        /// <summary>取消协定（免费）。</summary>
-
-
         /// <summary>对除本国外全部王国增减外交好感（抉择事件通道；clamp 到好感上限内）。</summary>
         public static void AddGoodwillAll(int delta)
         {
