@@ -130,13 +130,13 @@ namespace EconomyMod.Services
             }
         }
 
-        // ===== v2.1.12 世界 id 历史库（与存档目录解耦，同 EventStreamService）=====
-        // <persistentDataPath>\ClassicalEconomicsWorlds\history_<seed>.txt
+        // ===== v2.1.13 世界 ID 历史库（键=存档持久 ID，同 EventStreamService）=====
+        // <persistentDataPath>\ClassicalEconomicsWorlds\history_<worldId>.txt
 
         /// <summary>历史库目录名。</summary>
         public const string WorldStoreDirName = "ClassicalEconomicsWorlds";
 
-        /// <summary>历史文件前缀（实际文件 history_&lt;seed&gt;.txt）。</summary>
+        /// <summary>历史文件前缀（实际文件 history_&lt;worldId&gt;.txt）。</summary>
         public const string WorldStoreFilePrefix = "history_";
 
         /// <summary>历史文件后缀。</summary>
@@ -147,29 +147,29 @@ namespace EconomyMod.Services
             return System.IO.Path.Combine(UnityEngine.Application.persistentDataPath, WorldStoreDirName);
         }
 
-        /// <summary>按世界 id 写历史库（IO 失败静默）。</summary>
-        public static void SaveToWorldStore(int seed)
+        /// <summary>按世界 ID 写历史库（IO 失败静默）。</summary>
+        public static void SaveToWorldStore(string worldId)
         {
             try
             {
-                if (seed <= 0) return;
+                if (string.IsNullOrEmpty(worldId)) return;
                 string dir = WorldStoreDir();
                 System.IO.Directory.CreateDirectory(dir);
                 System.IO.File.WriteAllText(
-                    System.IO.Path.Combine(dir, WorldStoreFilePrefix + seed + WorldStoreFileSuffix),
+                    System.IO.Path.Combine(dir, WorldStoreFilePrefix + worldId + WorldStoreFileSuffix),
                     Serialize());
             }
             catch (System.Exception) { }
         }
 
-        /// <summary>按世界 id 读历史库；文件缺失返回 false（调用方按新世界从零处理）。</summary>
-        public static bool LoadFromWorldStore(int seed)
+        /// <summary>按世界 ID 读历史库；文件缺失返回 false（调用方按新世界从零处理）。</summary>
+        public static bool LoadFromWorldStore(string worldId)
         {
             try
             {
-                if (seed <= 0) return false;
+                if (string.IsNullOrEmpty(worldId)) return false;
                 string path = System.IO.Path.Combine(
-                    WorldStoreDir(), WorldStoreFilePrefix + seed + WorldStoreFileSuffix);
+                    WorldStoreDir(), WorldStoreFilePrefix + worldId + WorldStoreFileSuffix);
                 if (!System.IO.File.Exists(path)) return false;
                 Restore(System.IO.File.ReadAllText(path));
                 return true;

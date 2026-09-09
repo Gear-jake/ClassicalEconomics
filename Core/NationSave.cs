@@ -207,10 +207,13 @@ namespace EconomyMod.Core
             if (__result == null) return;
             try
             {
-                // 主写：世界 id 历史库（与存档目录解耦，读档按 id 恢复）
-                int seed = GameHelpers.ReadWorldSeed();
-                HistoryService.SaveToWorldStore(seed);
-                EventStreamService.SaveToWorldStore(seed);
+                // 主写：世界 ID 历史库（ID 随存档持久，读档按它恢复）
+                string worldId = WorldIdentity.GetOrCreateWorldId();
+                if (!string.IsNullOrEmpty(worldId))
+                {
+                    HistoryService.SaveToWorldStore(worldId);
+                    EventStreamService.SaveToWorldStore(worldId);
+                }
                 // 兼容旧读档路径：同时写一份到存档目录（老旁挂仍可被旧逻辑读、方便排查）
                 string dir = SaveManager.folderPath(pFolder);
                 if (!string.IsNullOrEmpty(dir))
@@ -218,7 +221,7 @@ namespace EconomyMod.Core
                     HistoryService.SaveToFile(dir);
                     EventStreamService.SaveToFile(dir);
                 }
-                UnityEngine.Debug.Log("[ClassicalEconomics] 世界库写入 seed=" + seed
+                UnityEngine.Debug.Log("[ClassicalEconomics] 世界库写入 worldId=" + worldId
                     + " dir=" + dir
                     + " events=" + EventStreamService.Count
                     + " major=" + EventStreamService.MajorCount);
@@ -233,18 +236,22 @@ namespace EconomyMod.Core
             {
                 if (World.world == null) return;
 
-                // ===== 世界 id 历史库恢复（v2.1.12，按你的方案：数据库式）=====
-                // 读档完成（世界已加载完）：先清空内存面板，再按当前世界 id 打开
+                // ===== 世界 ID 历史库恢复（v2.1.13：存档持久 ID，见 WorldIdentity）=====
+                // 读档完成（世界已加载完）：先清空内存面板，再按当前世界 ID 打开
                 // <persistentDataPath>\ClassicalEconomicsWorlds\ 下的历史/事件文件——
-                // 有则覆盖显示继续记录，无则从零记录。文件名为 id，天然免疫存档目录错位。
+                // 有则覆盖显示继续记录，无则从零记录。ID 随存档持久，天然免疫目录错位。
                 try
                 {
-                    int seed = GameHelpers.ReadWorldSeed();
+                    string worldId = WorldIdentity.GetOrCreateWorldId();
                     HistoryService.ClearHistory();
                     EventStreamService.Clear();
-                    bool histOk = HistoryService.LoadFromWorldStore(seed);
-                    bool eventsOk = EventStreamService.LoadFromWorldStore(seed);
-                    UnityEngine.Debug.Log("[ClassicalEconomics] 世界库读档恢复 seed=" + seed
+                    bool histOk = false, eventsOk = false;
+                    if (!string.IsNullOrEmpty(worldId))
+                    {
+                        histOk = HistoryService.LoadFromWorldStore(worldId);
+                        eventsOk = EventStreamService.LoadFromWorldStore(worldId);
+                    }
+                    UnityEngine.Debug.Log("[ClassicalEconomics] 世界库读档恢复 worldId=" + worldId
                         + " load#" + LoadCounter
                         + " hist=" + HistoryService.GetRecent(1).Count + "/" + histOk
                         + " events=" + EventStreamService.Count + "/" + eventsOk);
