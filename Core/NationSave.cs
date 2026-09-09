@@ -84,6 +84,13 @@ namespace EconomyMod.Core
             try
             {
                 if (World.world == null) return;
+
+                // 世界 ID 必须在原版序列化 MapStats 之前写入 custom_data（v2.1.14 修复）：
+                // postfix 执行时原版已序列化完毕，写键不会进档 → 读档生成的 UUID 每次都变 →
+                // 世界库永远找不到文件（"加载两次"假象）。前缀写入后同局读档恒同。
+                try { WorldIdentity.GetOrCreateWorldId(); }
+                catch (System.Exception) { }
+
                 long nationId = NationEngine._nationKingdomId;
                 var nation = GameHelpers.FindKingdom(nationId);
 

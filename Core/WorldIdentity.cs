@@ -18,6 +18,9 @@ namespace EconomyMod.Core
         private static System.Reflection.FieldInfo _mapStatsField;
         private static bool _mapStatsProbed;
 
+        // 会话级缓存：读档缺键时生成后记下，防"同档连续读档/读档后未保存"期间每次生成新值
+        private static string _sessionId;
+
         private static MapStats GetMapStats()
         {
             try
@@ -36,23 +39,39 @@ namespace EconomyMod.Core
         }
 
         /// <summary>
-        /// 读取（必要时生成并写入）当前世界 ID。无世界/读取失败返回 null（调用方降级）。
-        /// 写入 custom_data_string 即随存档序列化：首次生成 UUID，同局读档恒同、新世界必新。
+        /// 读取（必要时生成并写入）当前世界 ID。
+        /// 优先级：custom_data 键（随档持久）→ 会话缓存（同会话稳定）→ 新 UUID（写入两步源）。
+        /// 保证同档读档/读档后未保存期间 ID 恒定；保存前缀会把它落进 custom_data 随档持久。
         /// </summary>
         public static string GetOrCreateWorldId()
         {
             try
             {
                 var stats = GetMapStats();
-                if (stats == null || stats.custom_data == null) return null;
-                string id;
-                if (stats.custom_data.custom_data_string.TryGetValue(Key, out id) && !string.IsNullOrEmpty(id))
-                    return id;
-                id = Guid.NewGuid().ToString("N").Substring(0, 12);
-                try { stats.custom_data.custom_data_string[Key] = id; } catch (System.Exception) { }
-                return id;
+                if (stats != null && stats.custom_data != null)
+                {
+                    string id;
+                    if (stats.custom_data.custom_data_string.TryGetValue(Key, out id) && !string.IsNullOrEmpty(id))
+                    {
+                        _sessionId = id;
+                        return id;
+                    }
+                }
+                if (!string.IsNullOrEmpty(_sessionId)) return _sessionId; // 会话缓存
+                _sessionId = Guid.NewGuid().ToString("N").Substring(0, 12);
+                if (stats != null && stats.custom_data != null)
+                {
+                    try { stats.custom_data.custom_data_string[Key] = _sessionId; } catch (System.Exception) { }
+                }
+                return _sessionId;
             }
-            catch (System.Exception) { return null; }
+            catch (System.Exception) { return _sessionId; }
+        }
+
+        /// <summary>新世界/离开世界时清会话缓存（确保新世界拿到新 ID）。</summary>
+        public static void ResetSession()
+        {
+            _sessionId = null;
         }
     }
 }

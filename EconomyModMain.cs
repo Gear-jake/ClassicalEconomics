@@ -479,7 +479,8 @@ namespace EconomyMod
                         _lastLoadCounter = curLoadCounter;
                         if (worldNow != null && !loadHappened)
                         {
-                            // 新世界（无读档调用）：清空白板从零记录
+                            // 新世界（无读档调用）：清空白板从零记录 + 重置世界 ID 会话缓存
+                            Core.WorldIdentity.ResetSession();
                             Services.HistoryService.ClearHistory();
                             Services.EventStreamService.Clear();
                             UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂新世界清空（非读档切换，从零记录）");
