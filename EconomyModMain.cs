@@ -479,8 +479,9 @@ namespace EconomyMod
                 }
                 catch (System.Exception) { }
 
-                // 季度触发点（v2.0.8）：一年 3/6/9/12 月各一次事件抽签——
-                // 玩家国一年之内可以遇到多个待决事件（3→6→9→12 各一次）。
+                // 季度触发点（v2.0.8）：一年 2/5/8/11 月各一次事件抽签——
+                // 玩家国一年之内可以遇到多个待决事件（2→5→8→11 各一次）；
+                // 11 月为最后触发点，12 月+次年 1 月留足操作时间（比 3/6/9/12 更居中）。
                 // 月份经原版 Date.getCurrentMonth()（1~12，public static）；
                 // EvaluateQuarter 自带同季度幂等，这里只负责跨年时让季度序号复位。
                 try
@@ -489,7 +490,7 @@ namespace EconomyMod
                     {
                         int month = 1;
                         try { month = Date.getCurrentMonth(); } catch (System.Exception) { }
-                        int q = month >= 12 ? 4 : month >= 9 ? 3 : month >= 6 ? 2 : month >= 3 ? 1 : 0;
+                        int q = month >= 11 ? 4 : month >= 8 ? 3 : month >= 5 ? 2 : month >= 2 ? 1 : 0;
                         if (q > 0)
                         {
                             int year = GetCurrentGameYear();
