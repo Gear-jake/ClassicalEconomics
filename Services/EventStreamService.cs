@@ -384,5 +384,36 @@ namespace EconomyMod.Services
             entry.Detail = null;
             if (_entryPool.Count < Capacity + MajorCapacity) _entryPool.Add(entry);
         }
+
+        // ===== v2.0.2 旁挂文件（诡秘之主-宿命之环同款方案）=====
+
+        /// <summary>旁挂文件名（存档目录下）。</summary>
+        public const string SidecarFileName = "ClassicalEconomics_events.txt";
+
+        /// <summary>把当前事件流写进存档目录（IO 失败静默）。</summary>
+        public static void SaveToFile(string saveDir)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(saveDir)) return;
+                System.IO.Directory.CreateDirectory(saveDir);
+                System.IO.File.WriteAllText(
+                    System.IO.Path.Combine(saveDir, SidecarFileName), Serialize());
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>从存档目录读旁挂事件流（文件缺失/坏文件静默跳过，保留内存现状）。</summary>
+        public static void LoadFromFile(string saveDir)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(saveDir)) return;
+                string path = System.IO.Path.Combine(saveDir, SidecarFileName);
+                if (!System.IO.File.Exists(path)) return;
+                Restore(System.IO.File.ReadAllText(path));
+            }
+            catch (System.Exception) { }
+        }
     }
 }

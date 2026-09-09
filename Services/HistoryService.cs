@@ -124,5 +124,39 @@ namespace EconomyMod.Services
             }
             catch (System.Exception) { ClearHistory(); }
         }
+
+        // ===== v2.0.2 旁挂文件（诡秘之主-宿命之环同款方案）=====
+        // 不依赖王国 data 键与读档钩子时序：保存时由 NationSave 的 saveWorldToDirectory
+        // Postfix 把历史写成存档目录旁的独立文件；读档/切世界时由 EconomyModMain 跟踪
+        // SaveManager.currentSavePath 变化懒加载。任何 IO 异常静默吞掉（不阻断原版）。
+
+        /// <summary>旁挂文件名（存档目录下）。</summary>
+        public const string SidecarFileName = "ClassicalEconomics_history.txt";
+
+        /// <summary>把当前历史写进存档目录（无目录/IO 失败静默）。</summary>
+        public static void SaveToFile(string saveDir)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(saveDir)) return;
+                System.IO.Directory.CreateDirectory(saveDir);
+                System.IO.File.WriteAllText(
+                    System.IO.Path.Combine(saveDir, SidecarFileName), Serialize());
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>从存档目录读旁挂历史（文件缺失/坏文件静默跳过，保留内存现状）。</summary>
+        public static void LoadFromFile(string saveDir)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(saveDir)) return;
+                string path = System.IO.Path.Combine(saveDir, SidecarFileName);
+                if (!System.IO.File.Exists(path)) return;
+                Restore(System.IO.File.ReadAllText(path));
+            }
+            catch (System.Exception) { }
+        }
     }
 }

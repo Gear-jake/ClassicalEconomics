@@ -359,6 +359,7 @@ namespace EconomyMod
         private class EconomyTickRunner : MonoBehaviour
         {
             private int _lastCollectedYear = -1;
+            private string _sidecarLoadedDir; // 已加载旁挂文件的存档目录（目录变化即重载）
             private float _yearCheckTimer;   // 反射读取年份的节流计时（年份粒度为年，无需每帧）
 
             /// <summary>读档恢复后对齐年份基线（订阅 OnSaveLoaded；读档年份可能首帧仍为 0/1）。</summary>
@@ -460,6 +461,22 @@ namespace EconomyMod
                 _yearCheckTimer += Time.deltaTime;
                 if (_yearCheckTimer < 0.5f) return;
                 _yearCheckTimer = 0f;
+
+                // 旁挂文件懒加载（诡秘之主-宿命之环同款）：跟踪当前存档目录，
+                // 目录变化（切存档/切世界/新游戏）即从旁挂文件恢复历史与事件流。
+                try
+                {
+                    string saveDir = !string.IsNullOrEmpty(SaveManager.currentSavePath)
+                        ? SaveManager.currentSavePath
+                        : UnityEngine.Application.persistentDataPath;
+                    if (!string.Equals(_sidecarLoadedDir, saveDir, System.StringComparison.Ordinal))
+                    {
+                        _sidecarLoadedDir = saveDir;
+                        Services.HistoryService.LoadFromFile(saveDir);
+                        Services.EventStreamService.LoadFromFile(saveDir);
+                    }
+                }
+                catch (System.Exception) { }
 
                 // auto 语言模式：游戏本体语言变化 → 全 UI 刷新（0.5s 轮询，开销可忽略）
                 try

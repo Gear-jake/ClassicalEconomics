@@ -40,6 +40,7 @@ namespace EconomyMod.Core
                 var harmony = new Harmony(HarmonyId);
                 harmony.Patch(save, prefix: new HarmonyMethod(typeof(NationSave), nameof(SavePrefix)));
                 harmony.Patch(load, postfix: new HarmonyMethod(typeof(NationSave), nameof(LoadPostfix)));
+                harmony.Patch(save, postfix: new HarmonyMethod(typeof(NationSave), nameof(SavePostfixSidecar)));
                 UnityEngine.Debug.Log("[ClassicalEconomics] 中央银行家存档补丁已安装（saveWorldToDirectory/loadWorld）");
             }
             catch (System.Exception e)
@@ -162,6 +163,25 @@ namespace EconomyMod.Core
                     try { nation.data.set(key, value ?? ""); }
                     catch (System.Exception) { }
                 });
+            }
+            catch (System.Exception) { }
+        }
+
+        /// <summary>
+        /// 保存后把历史/事件流写成存档目录旁挂文件（诡秘之主-宿命之环同款方案）：
+        /// 不依赖王国 data 键能否被原版序列化，也不依赖读档钩子时序——原版保存成功后
+        /// （__result != null）直接落盘到真实存档目录；读档侧由 EconomyModMain 跟踪
+        /// SaveManager.currentSavePath 变化懒加载。任何异常吞掉，绝不阻断原版保存。
+        /// </summary>
+        private static void SavePostfixSidecar(string pFolder, SavedMap __result)
+        {
+            if (__result == null) return;
+            try
+            {
+                string dir = SaveManager.folderPath(pFolder);
+                if (string.IsNullOrEmpty(dir)) return;
+                HistoryService.SaveToFile(dir);
+                EventStreamService.SaveToFile(dir);
             }
             catch (System.Exception) { }
         }
