@@ -833,7 +833,7 @@ namespace EconomyMod.UI
             AddLine(UIHelpers.Lf("cycle_detail",
                 EconomyCycleModulator.PhaseDuration,
                 EconomyCycleModulator.GrowthRate.ToString("+0.0%;-0.0%"),
-                EconomyCycleModulator.BubbleValue.ToString("F0")),
+                UIHelpers.FormatCompact((long)EconomyCycleModulator.BubbleValue)),
                 color: new Color(0.8f, 0.9f, 0.7f));
             AddLine("");
 
