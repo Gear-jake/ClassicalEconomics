@@ -553,6 +553,39 @@ if (World.world == null)
                 }
                 _worldReferencesCleared = false;
 
+                // ===== 世界就绪恢复（v2.1.16）：每次从无世界进入世界（含游戏启动后首开存档）=====
+                // 此处在 World.world==null 早退之后执行——世界已就绪、map_stats 可取。
+                // 世界引用变化即触发：读档/首次进入 → 按世界 ID 开库（有显示/无则从零）。
+                // 修复"先读旧存档 → 没读到为空 → 之后不再检测"的链条：不再依赖年份回退，
+                // 首次进入（_lastWorldRef 曾为 null）也覆盖。
+                try
+                {
+                    object worldNow2 = World.world;
+                    bool becameReady = !ReferenceEquals(_lastWorldRef, worldNow2)
+                        && worldNow2 != null
+                        && _lastWorldRef == null;
+                    if (becameReady)
+                    {
+                        _lastWorldRef = worldNow2;
+                        string worldId = Core.WorldIdentity.GetOrCreateWorldId();
+                        Services.HistoryService.ClearHistory();
+                        Services.EventStreamService.Clear();
+                        bool histOk = false, eventsOk = false;
+                        if (!string.IsNullOrEmpty(worldId))
+                        {
+                            histOk = Services.HistoryService.LoadFromWorldStore(worldId);
+                            eventsOk = Services.EventStreamService.LoadFromWorldStore(worldId);
+                        }
+                        UnityEngine.Debug.Log("[ClassicalEconomics] 世界库进入恢复 worldId=" + worldId
+                            + " hist=" + Services.HistoryService.GetRecent(1).Count + "/" + histOk
+                            + " events=" + Services.EventStreamService.Count + "/" + eventsOk);
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 世界库进入恢复异常: " + e.Message);
+                }
+
                 int currentYear = GetCurrentGameYear();
                 // 年份回退：可能是新地图/新游戏（年份归零），也可能是读档（存档年份 < 上次运行年份）
                 if (currentYear < _lastCollectedYear)
