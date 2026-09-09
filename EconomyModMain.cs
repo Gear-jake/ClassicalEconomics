@@ -475,6 +475,11 @@ namespace EconomyMod
                         _sidecarLoadedDir = saveDir;
                         Services.HistoryService.LoadFromFile(saveDir);
                         Services.EventStreamService.LoadFromFile(saveDir);
+                        UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂懒加载 dir=" + saveDir
+                            + " events=" + Services.EventStreamService.Count
+                            + " major=" + Services.EventStreamService.MajorCount
+                            + " loaded(" + System.IO.File.Exists(
+                                System.IO.Path.Combine(saveDir, Services.EventStreamService.SidecarFileName)) + ")");
                     }
                 }
                 catch (System.Exception) { }

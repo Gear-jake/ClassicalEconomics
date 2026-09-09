@@ -294,11 +294,11 @@ namespace EconomyMod.Services
                     if (head.Length < 2) continue;
                     if (!int.TryParse(head[0], out int major)) continue;
                     if (!int.TryParse(head[1], out int year)) continue;
+                    if (!IsKnownType(f[1])) continue; // f[1]=type（v2.1.1 修复：此前误校验 f[2]=王国名，全部条目被跳过）
                     if (!long.TryParse(f[3], NumberStyles.Integer, inv, out long val)) continue;
-                    if (!IsKnownType(f[2])) continue;
                     var e = RentEntry();
                     e.GameYear = year;
-                    e.TypeKey = f[2];
+                    e.TypeKey = f[1];
                     e.KingdomName = Unescape(f[2]);
                     e.Value = val;
                     e.Detail = Unescape(f[4]);
