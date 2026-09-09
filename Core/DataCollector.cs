@@ -30,6 +30,9 @@ namespace EconomyMod.Core
         /// </summary>
         public static readonly List<Actor> WealthyPool = new List<Actor>();
 
+        /// <summary>最近一次采集确认的文明 Actor 引用；消费者仍须实时复核存活、成员关系与财富。</summary>
+        public static readonly List<Actor> AllCivPool = new List<Actor>(4096);
+
         /// <summary>富豪税"贫困线以下"公民缓冲（收税单遍顺带收集，避免 ApplyWealthTax 再全量遍历两遍）。</summary>
         private static readonly List<Actor> _poorPool = new List<Actor>(256);
 
@@ -43,8 +46,9 @@ namespace EconomyMod.Core
         public static void ClearWorldReferences()
         {
             for (int i = 0; i < TopRich.Count; i++) ReturnEntry(TopRich[i]);
-TopRich.Clear();
+            TopRich.Clear();
             WealthyPool.Clear();
+            AllCivPool.Clear();
             _poorPool.Clear();
             _richPool.Clear();
         }
@@ -87,6 +91,7 @@ TopRich.Clear();
                 ? World.world.units.units_only_alive : null;
             if (aliveList != null)
             {
+                PerfCounters.MarkFullActorScan(aliveList.Count);
                 int processed = 0;
                 foreach (var actor in aliveList)
                 {
@@ -94,6 +99,7 @@ TopRich.Clear();
                         continue;
                     if (!GameHelpers.IsCivilizedActor(actor))
                         continue;
+                    AllCivPool.Add(actor);
 
                     float wealth;
                     if (!GameHelpers.TryGetWealth(actor, out wealth))
@@ -173,17 +179,13 @@ TopRich.Clear();
             const float MaxRatio = 0.5f;      // 单人单次扣税上限占其财富比例（内部固定）
             float poorLine = avg * PoorLineMult;
 
-            var aliveList = World.world != null && World.world.units != null
-                ? World.world.units.units_only_alive : null;
-            if (aliveList == null) return;
-
-            // 第一遍（唯一全量遍历）：同时收集贫困线以下与税线以上两个缓冲。
+            // 第一遍：只遍历最近一次主线程采集确认的文明引用；财富仍在本阶段实时读取。
             // 因 taxLine ≥ avg > poorLine = avg × 0.8，两池互斥，单遍分类与原两遍分类逐位一致。
             var poor = _poorPool;
             var rich = _richPool;
             poor.Clear();
             rich.Clear();
-            foreach (var actor in aliveList)
+            foreach (var actor in AllCivPool)
             {
                 if (actor == null || !actor.isAlive()) continue;
                 if (!GameHelpers.IsCivilizedActor(actor)) continue;
@@ -308,6 +310,7 @@ if (_entryPool.Count < 16) _entryPool.Add(e);
             int shrunk = 0;
             shrunk += TrimList(TopRich);
             shrunk += TrimList(WealthyPool);
+            shrunk += TrimList(AllCivPool);
             shrunk += TrimList(_poorPool);
             shrunk += TrimList(_richPool);
             shrunk += TrimList(_entryPool);

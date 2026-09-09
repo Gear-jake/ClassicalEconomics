@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using EconomyMod.Core;
 using EconomyMod.Models;
 using UnityEngine;
 using UnityEngine.UI;
@@ -136,6 +137,7 @@ namespace EconomyMod.UI
 
         protected virtual void ClearContent()
         {
+            PerfCounters.AddUiDestroyed(_lines.Count);
             foreach (var go in _lines) Destroy(go);
             _lines.Clear();
         }
@@ -144,11 +146,13 @@ namespace EconomyMod.UI
         {
             var go = UIHelpers.CreateText(text, _content.transform, Fs(size), color, _gameFont, Fs(22f));
             _lines.Add(go);
+            PerfCounters.AddUiCreated(1);
         }
 
         protected void AddDivider(Color color)
         {
             _lines.Add(UIHelpers.CreateDivider(_content.transform, color));
+            PerfCounters.AddUiCreated(1);
         }
     }
 }

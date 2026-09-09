@@ -141,6 +141,8 @@ namespace EconomyMod.Core
             public int Style = -1; // -1 = 未掷（0 是合法风格，不能作哨兵）
             public System.Collections.Generic.List<string> ActiveTraits = new System.Collections.Generic.List<string>(); // 已施加的法典国民特质
             public int LastEvalYear = -9999;
+            public bool TraitsDirty = true;
+            public int LastTraitMemberCount = -1;
 
 
             public int MutexCooldownYear = -9999; // AI 做互斥切换后的冷却
@@ -279,6 +281,7 @@ namespace EconomyMod.Core
                 }
             }
             st.LawLevels[i] = level;
+            st.TraitsDirty = true;
             RecomputeMods(kingdom.data.id, st);
             UpdateMemberTraits(kingdom, kingdom.data.id, st); // 玩家改法即时同步国民特质
             return true;
@@ -311,6 +314,7 @@ namespace EconomyMod.Core
                 }
             }
             st.PolicyLevels[i] = level;
+            st.TraitsDirty = true;
             RecomputeMods(kingdom.data.id, st);
             UpdateMemberTraits(kingdom, kingdom.data.id, st);
             return true;
@@ -403,10 +407,11 @@ namespace EconomyMod.Core
                     var st = Get(kid);
                     if (st.Style < 0) st.Style = RollStyle(kingdom);
                     RecomputeMods(kid, st);
-                    UpdateMemberTraits(kingdom, kid, st); // 法典加成落到国民特质（年度同步一次）
                     // AI 决策（玩家国豁免）必须写在 LastEvalYear 之前：TickNation 用它防重入
                     if (NationEngine.NationKingdomId != kid)
                         LawAi.TickNation(kingdom, st, year);
+                    // AI 可能改变法律/国策；在 AI 决策完成后统一同步一次国民特质。
+                    UpdateMemberTraits(kingdom, kid, st); // 法典加成落到国民特质（年度同步一次）
                     st.LastEvalYear = year;
                 }
             }
@@ -676,6 +681,8 @@ namespace EconomyMod.Core
             try
             {
                 if (kingdom == null || kingdom.units == null) return;
+                int memberCount = kingdom.units.Count;
+                if (!st.TraitsDirty && st.LastTraitMemberCount == memberCount) return;
                 var target = new List<string>();
                 if (GetLawLevel(kid, LawEducation) >= 3) target.Add(LawTraitEdu);
                 if (GetLawLevel(kid, LawHealthcare) >= 3) target.Add(LawTraitWelfare);
@@ -696,6 +703,8 @@ namespace EconomyMod.Core
                     AddMemberTrait(kingdom, t);
                     st.ActiveTraits.Add(t);
                 }
+                st.LastTraitMemberCount = memberCount;
+                st.TraitsDirty = false;
             }
             catch (System.Exception) { }
         }

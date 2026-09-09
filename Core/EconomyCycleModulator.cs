@@ -261,11 +261,10 @@ namespace EconomyMod.Core
             int victims = 0;
             float totalEvaporated = 0f;
             Actor bubbleVictim = null;
-            var aliveList = World.world != null && World.world.units != null
-                ? World.world.units.units_only_alive : null;
-            if (aliveList != null)
+            var actors = DataCollector.AllCivPool;
+            if (actors != null)
             {
-                foreach (var actor in aliveList)
+                foreach (var actor in actors)
                 {
                     if (actor == null || !actor.isAlive()) continue;
                     if (!GameHelpers.IsCivilizedActor(actor)) continue;
@@ -346,11 +345,10 @@ namespace EconomyMod.Core
         /// <summary>向全体存活开智文明单位注入 coinsPerActor 枚硬币，返回受影响的单位数。</summary>
         private static int InjectCoinsToAllCiv(int coinsPerActor)
         {
-            var aliveList = World.world != null && World.world.units != null
-                ? World.world.units.units_only_alive : null;
-            if (aliveList == null) return 0;
+            var actors = DataCollector.AllCivPool;
+            if (actors == null) return 0;
             int count = 0;
-            foreach (var actor in aliveList)
+            foreach (var actor in actors)
             {
                 if (actor == null || !actor.isAlive()) continue;
                 if (!GameHelpers.IsCivilizedActor(actor)) continue;

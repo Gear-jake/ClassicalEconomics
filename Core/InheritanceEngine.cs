@@ -164,6 +164,7 @@ namespace EconomyMod.Core
         /// </summary>
         private static void CompleteWindow(List<Actor> aliveList)
         {
+            PerfCounters.MarkFullActorScan(aliveList.Count);
             // 补扫：窗口期间被游标跳过或新出现的存活单位，避免被误判为死亡
             foreach (var actor in aliveList)
             {

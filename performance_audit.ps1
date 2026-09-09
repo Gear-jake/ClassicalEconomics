@@ -65,7 +65,7 @@ Assert-SourcePattern 'Core\GameHelpers.cs' 'public static bool IsCivilizedActor\
     'Civilized-actor eligibility is not defined by city-or-kingdom membership.'
 Assert-SourcePattern 'Core\DataCollector.cs' 'private static void ReturnEntry\(RichEntryData e\).*e\.Name = null;.*e\.Kingdom = null;.*e\.Wealth = 0f;.*e\.Id = 0L;.*_entryPool\.Add\(e\);' `
     'Rich-entry pool still retains old-world names and values.'
-Assert-SourcePattern 'Core\DataCollector.cs' 'poor\.Clear\(\).*rich\.Clear\(\).*foreach \(var actor in aliveList\).*if \(w < poorLine\) poor\.Add\(actor\);.*else if \(w > taxLine\) rich\.Add\(actor\);.*if \(poor\.Count == 0\) return;.*long totalTax = 0;.*foreach \(var actor in rich\).*actor\.addMoney\(-charged\)' `
+    Assert-SourcePattern 'Core\DataCollector.cs' 'poor\.Clear\(\).*rich\.Clear\(\).*foreach \(var actor in AllCivPool\).*if \(w < poorLine\) poor\.Add\(actor\);.*else if \(w > taxLine\) rich\.Add\(actor\);.*if \(poor\.Count == 0\) return;.*long totalTax = 0;.*foreach \(var actor in rich\).*actor\.addMoney\(-charged\)' `
     'Wealth tax can still deduct funds before any recipient exists.'
 Assert-SourcePattern 'EconomyModMain.cs' 'InheritanceEngine\.ClearWorldReferences\(\).*SpendingEngine\.Reset\(\)' `
     'Main-menu cleanup is missing inheritance or spending world-reference release.'

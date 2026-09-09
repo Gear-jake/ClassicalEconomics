@@ -15,6 +15,17 @@ Assert-True ($eng -match 'internal class AiBank') 'BankEngine must define the AI
 Assert-True ($eng -notmatch 'Actor\s+\w+;') 'BankEngine ledger records must not retain Actor references (bounded-memory invariant)'
 Assert-True ($eng -match 'MaxPending|_borrowerPool') 'BankEngine must reuse scratch buffers'
 
+# ===== 1b. 年度性能：到期贷款 O(N+L) 索引 + EvaluatePlayer 临时集合复用 =====
+Assert-True ($eng -match 'Dictionary<long, Actor>\s+_actorById') 'CollectDue must use a reusable actor-id index'
+Assert-True ($eng -match '_actorById\.TryGetValue\(ln\.ActorId') 'CollectDue must resolve each borrower by O(1) actor-id lookup'
+Assert-True ($eng -notmatch 'private static long CollectDue[\s\S]*?foreach \(var a in units\)') 'CollectDue must not scan kingdom.units once per due loan'
+foreach ($pool in @('_citySnapshotPool', '_seenCityIds', '_deadCityIds')) {
+    Assert-True ($eng -match [regex]::Escape($pool)) "EvaluatePlayer must reuse scratch buffer $pool"
+}
+Assert-True ($eng -notmatch 'SnapshotCities\(kingdom, new List<City>') 'EvaluatePlayer must not allocate a city snapshot list each year'
+Assert-True ($eng -notmatch 'var seen = new HashSet<long>') 'EvaluatePlayer must not allocate the seen-city set each year'
+Assert-True ($eng -notmatch 'var deadCities = new List<long>') 'EvaluatePlayer must not allocate the dead-city list each year'
+
 # ===== 2. 年度生命周期四步齐全 =====
 foreach ($step in @('EvaluatePlayer', 'CollectDue', 'EvaluateAi', 'CollectCommerceTax')) {
     Assert-True ($eng -match [regex]::Escape("static long EvaluatePlayer") -or $eng -match "static long $step" -or $eng -match $step) "BankEngine must implement $step"

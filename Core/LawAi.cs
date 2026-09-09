@@ -65,6 +65,7 @@ namespace EconomyMod.Core
                 }
 
                 state.LawLevels[i] = suggest;
+                state.TraitsDirty = true;
                 majorChanges++;
                 if (key == LawEngine.LawConscription || key == LawEngine.LawStandingArmy
                     || key == LawEngine.LawMilitarism || key == LawEngine.LawPacifism)
@@ -89,6 +90,7 @@ namespace EconomyMod.Core
                         if (cost > 0 && !CollectAIFunds(kingdom, cost)) continue;
                     }
                     state.PolicyLevels[i] = want;
+                    state.TraitsDirty = true;
                     majorChanges++;
                     break;
                 }

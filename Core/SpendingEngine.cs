@@ -598,6 +598,7 @@ bool log = UnrestConfig.Instance.LogToWorldLog;
                 foreach (var a in crafter.kingdom.units)
                     if (a != null && a.isAlive() && GameHelpers.IsCivilizedActor(a)) _equipTargetPool.Add(a);
             }
+            PerfCounters.AddFindEquipTarget(_equipTargetPool.Count);
             if (_equipTargetPool.Count == 0) return null;
             return _equipTargetPool[_rng.Next(_equipTargetPool.Count)];
         }

@@ -52,6 +52,10 @@ namespace EconomyMod.Core
         }
 
         private static readonly Dictionary<long, CityLedger> _playerLedgers = new Dictionary<long, CityLedger>(16);
+        private static readonly List<City> _citySnapshotPool = new List<City>(8);
+        private static readonly HashSet<long> _seenCityIds = new HashSet<long>();
+        private static readonly List<long> _deadCityIds = new List<long>();
+        private static readonly Dictionary<long, Actor> _actorById = new Dictionary<long, Actor>(256);
 
         // ===== AI 简化池 =====
         internal class AiBank
@@ -224,8 +228,21 @@ namespace EconomyMod.Core
             var stats = NationEngine.NationStats();
             float avg = stats?.AvgWealth ?? 0f;
 
-            var cities = NationEngine.SnapshotCities(kingdom, new List<City>(8));
-            var seen = new HashSet<long>();
+            var cities = NationEngine.SnapshotCities(kingdom, _citySnapshotPool);
+            var seen = _seenCityIds;
+            seen.Clear();
+            _actorById.Clear();
+            if (kingdom.units != null)
+            {
+                foreach (var actor in kingdom.units)
+                {
+                    if (actor == null) continue;
+                    long actorId;
+                    try { actorId = actor.id; }
+                    catch (System.Exception) { continue; }
+                    if (actorId != 0L) _actorById[actorId] = actor;
+                }
+            }
             // 1) 存款 + 重建/更新账本（城市消失则账本一并移除，余额随城灭——与其他世界资产同规则）
             foreach (var city in cities)
             {
@@ -251,7 +268,8 @@ namespace EconomyMod.Core
                 }
             }
             // 移除已消失城市的账本
-            var deadCities = new List<long>();
+            var deadCities = _deadCityIds;
+            deadCities.Clear();
             foreach (var kv in _playerLedgers)
                 if (!seen.Contains(kv.Key)) deadCities.Add(kv.Key);
             foreach (var cid in deadCities) _playerLedgers.Remove(cid);
@@ -341,6 +359,10 @@ namespace EconomyMod.Core
                     ledger.Reserves -= refunded;
                 }
             }
+            _citySnapshotPool.Clear();
+            _seenCityIds.Clear();
+            _deadCityIds.Clear();
+            _actorById.Clear();
             return netGrowth;
         }
 
@@ -348,7 +370,6 @@ namespace EconomyMod.Core
         private static long CollectDue(CityLedger ledger, Kingdom kingdom, int year)
         {
             long collected = 0;
-            var units = kingdom != null && kingdom.units != null ? kingdom.units : null;
             for (int i = ledger.Loans.Count - 1; i >= 0; i--)
             {
                 var ln = ledger.Loans[i];
@@ -356,26 +377,22 @@ namespace EconomyMod.Core
                 _lastDueCount++;
                 long owe = ln.Principal + ln.Principal * ln.RatePermille / 1000;
                 long got = 0;
-                if (units != null)
+                Actor borrower = null;
+                if (_actorById.TryGetValue(ln.ActorId, out borrower) && borrower != null)
                 {
-                    foreach (var a in units)
+                    try
                     {
-                        if (a == null) continue;
-                        long aid;
-                        try { aid = a.id; } catch (System.Exception) { continue; }
-                        if (aid != ln.ActorId) continue;
-                        if (!a.isAlive()) break;
-                        float w;
-                        if (GameHelpers.TryGetWealth(a, out w))
+                        if (borrower.isAlive())
                         {
-                            long payable = System.Math.Min(owe, (long)System.Math.Max(0f, w * 0.5f));
-                            if (payable > 0)
+                            float w;
+                            if (GameHelpers.TryGetWealth(borrower, out w))
                             {
-                                if (AddMoneySafe(a, -payable)) got = payable;
+                                long payable = System.Math.Min(owe, (long)System.Math.Max(0f, w * 0.5f));
+                                if (payable > 0 && AddMoneySafe(borrower, -payable)) got = payable;
                             }
                         }
-                        break;
                     }
+                    catch (System.Exception) { }
                 }
                 if (got >= owe)
                 {
@@ -570,6 +587,10 @@ namespace EconomyMod.Core
         public static void ClearWorldReferences()
         {
             _borrowerPool.Clear();
+            _citySnapshotPool.Clear();
+            _seenCityIds.Clear();
+            _deadCityIds.Clear();
+            _actorById.Clear();
         }
 
         // ===== 商业税（ NationEngine.RunAnnual 调用，返回本年商业税入金库）=====

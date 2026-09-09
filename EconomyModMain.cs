@@ -348,22 +348,43 @@ namespace EconomyMod
         /// 年份（map_stats.get_year()）变更时触发一次采集（主线程仅采集纯数据，
         /// 统计在后台线程计算），结果就绪后消费并执行周期收尾。
         /// </summary>
+
+        /// <summary>
+        /// 读档恢复完成事件：NationSave.LoadPostfix 在恢复历史/事件流/法典后触发；
+        /// 年份驱动器订阅它把年份基线对齐，防止 Tick 把"读档年份小于上一局年份"
+        /// 误判为新地图而 ResetAllEngines 清掉刚恢复的状态。
+        /// </summary>
+        public static System.Action OnSaveLoaded;
+
         private class EconomyTickRunner : MonoBehaviour
         {
             private int _lastCollectedYear = -1;
             private float _yearCheckTimer;   // 反射读取年份的节流计时（年份粒度为年，无需每帧）
+
+            /// <summary>读档恢复后对齐年份基线（订阅 OnSaveLoaded；读档年份可能首帧仍为 0/1）。</summary>
+            private void AlignYearAfterLoad()
+            {
+                try { _lastCollectedYear = EconomyModMain.GetCurrentGameYear(); }
+                catch (System.Exception) { }
+            }
             private float _realtimeTimer;    // 实时刷新节流计时（配置开启时按秒轻量刷新 HUD 数据）
             private bool _cyclePending;      // 后台统计进行中/待消费
             private int _pendingYear = -1;   // 提交周期对应的游戏年份，避免后台耗时跨年后错标快照
             private bool _optimeGuardChecked; // 首帧执行一次 Optime 兼容兜底安装
             private bool _worldReferencesCleared;
+            // 快捷键解析缓存：配置字符串每帧不变，避免每帧 Enum.TryParse 字符串解析
+            private static string _cachedHotkeyName;
+            private static UnityEngine.KeyCode _cachedHotkey;
+            private static bool _cachedHotkeyValid;
 
             private void Update()
             {
+                PerfCounters.SampleFrame(Time.deltaTime);
                 // Optime 兼容兜底：首帧安装（此时所有模组已加载，能可靠检测到 Optime）
                 if (!_optimeGuardChecked)
                 {
                     _optimeGuardChecked = true;
+                    OnSaveLoaded += AlignYearAfterLoad; // 读档恢复后对齐年份基线（防误判新地图清历史）
                     Services.OptimeCompatibility.TryInstall();
                     KingdomWindowIntegration.TryInstall(); // 中央银行家：原版界面入口（手动补丁，幂等）;
                     LawSave.TryInstall(); // 法典：存档持久化（手动补丁，幂等）
@@ -378,11 +399,13 @@ namespace EconomyMod
                     string keyName = hotkeyCfg.NationClaimHotkey;
                     if (!string.IsNullOrWhiteSpace(keyName))
                     {
-                        UnityEngine.KeyCode key;
-                        if (System.Enum.TryParse(keyName, true, out key))
+                        // 仅在配置值变化时重新解析，热路径只做一次 ordinal 字符串比较
+                        if (!string.Equals(keyName, _cachedHotkeyName, System.StringComparison.Ordinal))
                         {
-                            if (UnityEngine.Input.GetKeyDown(key)) KingdomWindowIntegration.TryHotkeyOpen();
+                            _cachedHotkeyName = keyName;
+                            _cachedHotkeyValid = System.Enum.TryParse(keyName, true, out _cachedHotkey);
                         }
+                        if (_cachedHotkeyValid && UnityEngine.Input.GetKeyDown(_cachedHotkey)) KingdomWindowIntegration.TryHotkeyOpen();
                     }
                 }
                 catch (System.Exception) { }
@@ -521,6 +544,7 @@ private bool RunOneCycle(int year)
 
             private void FinishCycle()
             {
+                PerfCounters.MarkFinishCycle();
 int year = _pendingYear >= 0 ? _pendingYear : GetCurrentGameYear();
                 _pendingYear = -1;
                 // 启动分帧收尾管线：全部经济阶段按帧预算推进（超预算兜底削减顺序见下），

@@ -27,17 +27,20 @@ namespace EconomyMod.Core
             _installed = true;
             try
             {
-                var save = AccessTools.Method(typeof(MapBox), "saveSave");
-                var load = AccessTools.Method(typeof(MapBox), "loadSave");
+                // WorldBox 0.51.2 真实存档 API：保存=SaveManager.saveWorldToDirectory(public static)，
+                // 读档=SaveManager.loadWorld()（无参实例方法，手动/自动/工坊读档的唯一入口）。
+                // 旧的 MapBox.saveSave/loadSave 在 0.51.2 已不存在——钩子从未安装过。
+                var save = AccessTools.Method(typeof(SaveManager), "saveWorldToDirectory");
+                var load = AccessTools.Method(typeof(SaveManager), "loadWorld", new System.Type[0]);
                 if (save == null || load == null)
                 {
-                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 中央银行家存档：MapBox saveSave/loadSave 未找到，回退本局记忆");
+                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 中央银行家存档：SaveManager.saveWorldToDirectory/loadWorld 未找到，回退本局记忆");
                     return;
                 }
                 var harmony = new Harmony(HarmonyId);
                 harmony.Patch(save, prefix: new HarmonyMethod(typeof(NationSave), nameof(SavePrefix)));
                 harmony.Patch(load, postfix: new HarmonyMethod(typeof(NationSave), nameof(LoadPostfix)));
-                UnityEngine.Debug.Log("[ClassicalEconomics] 中央银行家存档补丁已安装（saveSave/loadSave）");
+                UnityEngine.Debug.Log("[ClassicalEconomics] 中央银行家存档补丁已安装（saveWorldToDirectory/loadWorld）");
             }
             catch (System.Exception e)
             {
@@ -207,6 +210,14 @@ namespace EconomyMod.Core
 
                     RestoreNation(k);
                     return; // 只有一个认领国
+                }
+
+                // 读档恢复完成后触发年份基线对齐：防止 Tick 把读档年份误判为"新地图"
+                // 而触发 ResetAllEngines 清掉刚恢复的历史/事件流/法典。
+                var loaded = EconomyModMain.OnSaveLoaded;
+                if (loaded != null)
+                {
+                    try { loaded(); } catch (System.Exception) { }
                 }
             }
             catch (System.Exception)

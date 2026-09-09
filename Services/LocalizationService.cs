@@ -20,10 +20,26 @@ namespace EconomyMod.Services
         private static Dictionary<string, string> _ja = new Dictionary<string, string>();
         private static Dictionary<string, string> _de = new Dictionary<string, string>();
         private static bool _loaded;
+        private static string _localeDirectory;
+        private static bool _zhLoaded;
+        private static bool _zhTwLoaded;
+        private static bool _enLoaded;
+        private static bool _ruLoaded;
+        private static bool _jaLoaded;
+        private static bool _deLoaded;
         private static string _lastGameLanguage; // auto 模式的游戏语言变化检测基线
+        private static string _cachedCurrentLanguage;
+        private static bool _languageCached;
 
         /// <summary>Mod 界面语言（v1.5.4：永远跟随游戏本体语言，不再有独立设置项）。"zh" / "zh_tw" / "en" / "ru"。</summary>
-        public static string CurrentLanguage => ResolveModLanguage(GetGameLanguage());
+        public static string CurrentLanguage
+        {
+            get
+            {
+                if (!_languageCached) RefreshLanguageCache(GetGameLanguage());
+                return _cachedCurrentLanguage;
+            }
+        }
 
         /// <summary>是否为中文系界面（简/繁）。</summary>
         public static bool IsChinese => CurrentLanguage == "zh" || CurrentLanguage == "zh_tw";
@@ -36,7 +52,14 @@ namespace EconomyMod.Services
             if (cur == _lastGameLanguage) return false;
             bool firstProbe = _lastGameLanguage == null;
             _lastGameLanguage = cur;
+            RefreshLanguageCache(cur);
             return !firstProbe;
+        }
+
+        private static void RefreshLanguageCache(string gameLanguage)
+        {
+            _cachedCurrentLanguage = ResolveModLanguage(gameLanguage);
+            _languageCached = true;
         }
 
         public static string GetGameLanguage()
@@ -121,14 +144,59 @@ namespace EconomyMod.Services
                 if (main == null || decl == null) return;
                 string dir = main.GetLocaleFilesDirectory(decl);
                 if (string.IsNullOrEmpty(dir)) return;
-                _zh = LoadFile(System.IO.Path.Combine(dir, "ch.json"), _zh);
-                _zhTw = LoadFile(System.IO.Path.Combine(dir, "zh_tw.json"), _zhTw);
-                _en = LoadFile(System.IO.Path.Combine(dir, "en.json"), _en);
-                _ru = LoadFile(System.IO.Path.Combine(dir, "ru.json"), _ru);
-                _ja = LoadFile(System.IO.Path.Combine(dir, "ja.json"), _ja);
-                _de = LoadFile(System.IO.Path.Combine(dir, "de.json"), _de);
+                _localeDirectory = dir;
             }
             catch (System.Exception) { }
+        }
+
+        private static void EnsureLanguageLoaded(string lang)
+        {
+            if (string.IsNullOrEmpty(_localeDirectory)) return;
+            switch (lang)
+            {
+                case "zh":
+                    if (!_zhLoaded)
+                    {
+                        _zh = LoadFile(System.IO.Path.Combine(_localeDirectory, "ch.json"), _zh);
+                        _zhLoaded = true;
+                    }
+                    break;
+                case "zh_tw":
+                    if (!_zhTwLoaded)
+                    {
+                        _zhTw = LoadFile(System.IO.Path.Combine(_localeDirectory, "zh_tw.json"), _zhTw);
+                        _zhTwLoaded = true;
+                    }
+                    break;
+                case "en":
+                    if (!_enLoaded)
+                    {
+                        _en = LoadFile(System.IO.Path.Combine(_localeDirectory, "en.json"), _en);
+                        _enLoaded = true;
+                    }
+                    break;
+                case "ru":
+                    if (!_ruLoaded)
+                    {
+                        _ru = LoadFile(System.IO.Path.Combine(_localeDirectory, "ru.json"), _ru);
+                        _ruLoaded = true;
+                    }
+                    break;
+                case "ja":
+                    if (!_jaLoaded)
+                    {
+                        _ja = LoadFile(System.IO.Path.Combine(_localeDirectory, "ja.json"), _ja);
+                        _jaLoaded = true;
+                    }
+                    break;
+                case "de":
+                    if (!_deLoaded)
+                    {
+                        _de = LoadFile(System.IO.Path.Combine(_localeDirectory, "de.json"), _de);
+                        _deLoaded = true;
+                    }
+                    break;
+            }
         }
 
         private static Dictionary<string, string> LoadFile(string path, Dictionary<string, string> fallback)
@@ -152,11 +220,20 @@ namespace EconomyMod.Services
             string lang = CurrentLanguage;
             string v;
             // 当前语言
+            EnsureLanguageLoaded(lang);
             if (TryGet(lang, key, out v)) return v;
             // 回退英文
-            if (lang != "en" && TryGet("en", key, out v)) return v;
+            if (lang != "en")
+            {
+                EnsureLanguageLoaded("en");
+                if (TryGet("en", key, out v)) return v;
+            }
             // 回退简中
-            if (lang != "zh" && TryGet("zh", key, out v)) return v;
+            if (lang != "zh")
+            {
+                EnsureLanguageLoaded("zh");
+                if (TryGet("zh", key, out v)) return v;
+            }
             return key;
         }
 

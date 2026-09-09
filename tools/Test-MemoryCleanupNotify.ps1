@@ -126,7 +126,7 @@ $ownerFiles = @{
     'ReplaceDamageForTrim' = $trackerText; 'ReplacePrevHealthForTrim' = $trackerText; 'ReplaceInactiveScansForTrim' = $trackerText
 }
 $productSources = @(Get-ChildItem -LiteralPath $Root -Filter '*.cs' -File -Recurse | Where-Object {
-    $_.FullName -notmatch '[\\/](bin|obj|evidence|tools)[\\/]'
+    $_.FullName -notmatch '[\\/](bin|obj|evidence|tools|release)[\\/]'
 })
 foreach ($name in $replaceNames) {
     Assert-True ($ownerFiles[$name] -match ('\b' + $name + '\b')) "owner file missing replace method $name"

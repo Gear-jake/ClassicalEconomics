@@ -62,8 +62,8 @@ Assert ($engine -match 'if \(level > cur\).*TrySpend|if \(level > cur\)') 'law u
 Assert ($save -match 'rb_law_law_') 'save must write rb_law_law_* keys'
 Assert ($save -match 'rb_law_policy_') 'save must write rb_law_policy_* keys'
 Assert ($save -match 'rb_law_style') 'save must write rb_law_style'
-Assert ($save -match 'saveSave') 'save must patch MapBox.saveSave'
-Assert ($save -match 'loadSave') 'save must patch MapBox.loadSave'
+Assert ($save -match 'saveWorldToDirectory') 'save must patch SaveManager.saveWorldToDirectory'
+Assert ($save -match 'loadWorld') 'save must patch SaveManager.loadWorld'
 Assert ($main -match 'LawSave\.TryInstall') 'main must install codex save patch'
 
 # 5) 事件分级与 UI

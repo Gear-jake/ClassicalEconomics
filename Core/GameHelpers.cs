@@ -288,32 +288,50 @@ namespace EconomyMod.Core
 
         /// <summary>将 kingdoms 拷贝到复用的静态缓冲，返回该缓冲；不分配新对象。</summary>
         private static readonly List<Kingdom> _kingdomSnapshot = new List<Kingdom>();
+        private static object _kingdomSnapshotWorld;
+        private static object _kingdomSnapshotSource;
+        private static int _kingdomSnapshotCount = -1;
+        private static bool _kingdomSnapshotValid;
 
         /// <summary>进入无世界状态时解除复用缓冲对旧世界对象的引用。</summary>
         public static void ClearWorldReferences()
         {
             _kingdomSnapshot.Clear();
+            _kingdomSnapshotWorld = null;
+            _kingdomSnapshotSource = null;
+            _kingdomSnapshotCount = -1;
+            _kingdomSnapshotValid = false;
             ClearKingdomIndex();
             _redistRich.Clear();
             _redistPoor.Clear();
+        }
+
+        /// <summary>使年度 kingdoms 快照失效；下一次读取时重建列表与索引。</summary>
+        public static void InvalidateKingdomSnapshot()
+        {
+            _kingdomSnapshotValid = false;
         }
 
         /// <summary>获取 kingdoms 列表的复用快照（每年评估时使用，避免 GC 分配）。</summary>
         public static List<Kingdom> KingdomSnapshot()
         {
             var list = _kingdomSnapshot;
-            list.Clear();
-            _kingdomById.Clear();
-
             var world = World.world;
             var kingdoms = world != null ? world.kingdoms : null;
             if (kingdoms == null)
             {
-                _kingdomIndexWorld = null;
-                _kingdomIndexSource = null;
-                _kingdomIndexCount = -1;
+                ClearWorldReferences();
                 return list;
             }
+
+            if (_kingdomSnapshotValid
+                && ReferenceEquals(_kingdomSnapshotWorld, world)
+                && ReferenceEquals(_kingdomSnapshotSource, kingdoms)
+                && _kingdomSnapshotCount == kingdoms.Count)
+                return list;
+
+            list.Clear();
+            _kingdomById.Clear();
 
             foreach (var kingdom in kingdoms)
             {
@@ -324,6 +342,10 @@ namespace EconomyMod.Core
             _kingdomIndexWorld = world;
             _kingdomIndexSource = kingdoms;
             _kingdomIndexCount = kingdoms.Count;
+            _kingdomSnapshotWorld = world;
+            _kingdomSnapshotSource = kingdoms;
+            _kingdomSnapshotCount = kingdoms.Count;
+            _kingdomSnapshotValid = true;
             return list;
         }
 

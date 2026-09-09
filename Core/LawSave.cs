@@ -23,17 +23,18 @@ namespace EconomyMod.Core
             _installed = true;
             try
             {
-                var save = AccessTools.Method(typeof(MapBox), "saveSave");
-                var load = AccessTools.Method(typeof(MapBox), "loadSave");
+                // WorldBox 0.51.2 真实存档 API（同 NationSave）：MapBox.saveSave/loadSave 已不存在。
+                var save = AccessTools.Method(typeof(SaveManager), "saveWorldToDirectory");
+                var load = AccessTools.Method(typeof(SaveManager), "loadWorld", new System.Type[0]);
                 if (save == null || load == null)
                 {
-                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 法典存档：MapBox saveSave/loadSave 未找到，回退本局记忆");
+                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 法典存档：SaveManager.saveWorldToDirectory/loadWorld 未找到，回退本局记忆");
                     return;
                 }
                 var harmony = new Harmony(HarmonyId);
                 harmony.Patch(save, prefix: new HarmonyMethod(typeof(LawSave), nameof(SavePrefix)));
                 harmony.Patch(load, postfix: new HarmonyMethod(typeof(LawSave), nameof(LoadPostfix)));
-                UnityEngine.Debug.Log("[ClassicalEconomics] 法典存档补丁已安装（saveSave/loadSave）");
+                UnityEngine.Debug.Log("[ClassicalEconomics] 法典存档补丁已安装（saveWorldToDirectory/loadWorld）");
             }
             catch (System.Exception e)
             {

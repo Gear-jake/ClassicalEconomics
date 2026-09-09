@@ -85,6 +85,8 @@ namespace EconomyMod.Core
         // ===== 运行时状态 =====
 
         private static List<EventDef> _defs = new List<EventDef>(16);
+        // id 索引：与 _defs 同生同清（仅 Load() 填充/清异常；Reset 保留），FindDef O(1)。
+        private static readonly Dictionary<string, EventDef> _defsById = new Dictionary<string, EventDef>(64);
         private static bool _loadWarned;
         private static readonly List<PendingEvent> _pending = new List<PendingEvent>(8);
         private const int MaxPending = 8;
@@ -100,6 +102,7 @@ namespace EconomyMod.Core
         private static bool _poolBuilt;
         private static int _worldSeed = 1;                          // 失败降级 1（确定性优先）
         private static readonly Dictionary<string, float> _familyBias = new Dictionary<string, float>(8);
+        private static readonly Dictionary<long, bool> _warCache = new Dictionary<long, bool>(32);
         private const float PoolRetainRatio = 0.68f;                // 单事件保留率
         private const float FamilyBiasMin = 0.65f, FamilyBiasMax = 1.4f;
 
@@ -203,12 +206,14 @@ namespace EconomyMod.Core
                     if (d.fallback < 0 || d.fallback >= d.options.Count) d.fallback = 0;
                     if (d.cooldownYears < 0) d.cooldownYears = 0;
                     _defs.Add(d);
+                    if (!_defsById.ContainsKey(d.id)) _defsById.Add(d.id, d); // 重复 id 取首个，与原线性扫描一致
                 }
                 Debug.Log($"[ClassicalEconomics] 抉择事件系统已加载 {_defs.Count} 个事件");
             }
             catch (System.Exception e)
             {
                 _defs.Clear();
+                _defsById.Clear();
                 WarnOnce("events.json 加载失败（" + e.Message + "），抉择事件系统以空池运行");
             }
         }
@@ -424,18 +429,30 @@ namespace EconomyMod.Core
         private static bool IsAtWar(Kingdom k)
         {
             if (k == null) return false;
+            long kingdomId = k.data != null ? k.data.id : 0L;
+            if (kingdomId != 0L && _warCache.TryGetValue(kingdomId, out bool cached))
+                return cached;
+
+            bool atWar = false;
             try
             {
                 var kingdoms = World.world != null ? World.world.kingdoms : null;
-                if (kingdoms == null) return false;
-                foreach (var o in kingdoms)
+                if (kingdoms != null)
                 {
-                    if (o == null || o == k) continue;
-                    if (k.isEnemy(o)) return true;
+                    foreach (var o in kingdoms)
+                    {
+                        if (o == null || o == k) continue;
+                        if (k.isEnemy(o))
+                        {
+                            atWar = true;
+                            break;
+                        }
+                    }
                 }
             }
             catch (System.Exception) { }
-            return false;
+            if (kingdomId != 0L) _warCache[kingdomId] = atWar;
+            return atWar;
         }
 
         private static bool ConditionsOk(EventDef d, Kingdom k, KingdomStats stats, int year, bool isPlayer)
@@ -483,6 +500,8 @@ namespace EconomyMod.Core
             if (_defs.Count == 0) return;
             var cfg = UnrestConfig.Instance;
             if (cfg == null || !cfg.NationPlayEnabled) return;
+
+            _warCache.Clear();
 
             // 0. 每局事件池惰性构建（世界种子此时已就绪；同 seed 跨读档稳定）
             BuildWorldPool();
@@ -1009,9 +1028,9 @@ namespace EconomyMod.Core
 
         private static EventDef FindDef(string id)
         {
-            for (int i = 0; i < _defs.Count; i++)
-                if (_defs[i].id == id) return _defs[i];
-            return null;
+            if (id == null) return null;
+            EventDef d;
+            return _defsById.TryGetValue(id, out d) ? d : null;
         }
     }
 }

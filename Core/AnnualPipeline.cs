@@ -55,7 +55,9 @@ namespace EconomyMod.Core
             _windowStartTicks = Stopwatch.GetTimestamp();
             _windowExtended = false;
             _reduced = false;
+            GameHelpers.InvalidateKingdomSnapshot();
             PerfDiagnostics.BeginYear(year);
+            PerfCounters.BeginYear(year);
         }
 
         /// <summary>
@@ -98,14 +100,17 @@ namespace EconomyMod.Core
             {
                 if (_cursor != AnnualStage.Snapshot && ElapsedMs(frameStart) >= budgetMs)
                     break; // 帧预算耗尽，剩余阶段下一帧继续
+                long stageStart = PerfCounters.IsEnabled ? Stopwatch.GetTimestamp() : 0L;
                 PerfDiagnostics.BeginStage();
                 RunStage(_cursor);
                 PerfDiagnostics.EndStage(PerfDiagnostics.IsEnabled ? _cursor.ToString() : null);
+                PerfCounters.EndStage(stageStart, budgetMs);
                 _cursor = (AnnualStage)((int)_cursor + 1);
             }
             if (_cursor == AnnualStage.Done)
             {
                 PerfDiagnostics.EndYear();
+                PerfCounters.EndYear();
             }
         }
 

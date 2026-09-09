@@ -44,6 +44,7 @@ namespace EconomyMod.Core
         private static readonly Dictionary<long, int> _startYears = new Dictionary<long, int>();         // 王国 id → 事件起始年
         private static readonly Dictionary<long, float> _prevAvg = new Dictionary<long, float>();       // 王国 id → 上一周期人均财富
         private static readonly Dictionary<long, int> _flourishStreak = new Dictionary<long, int>();    // 强盛期防抖连续期数
+        private static readonly Dictionary<long, int> _lastTraitSyncCount = new Dictionary<long, int>(); // 王国 id → 上次时代特质同步时成员数
 
         // ===== 复用缓冲（避免 GC）=====
         private static readonly List<long> _expired = new List<long>();
@@ -58,6 +59,7 @@ namespace EconomyMod.Core
             if (kingdom == null || kingdom.data == null) return;
             long kid = kingdom.data.id;
             if (_kingdomTrait.ContainsKey(kid)) return; // 已有事件，不重复触发
+            _lastTraitSyncCount.Remove(kid); // 新时代事件当年必须同步国民特质
             _kingdomTrait[kid] = kingdomTrait;
             _startYears[kid] = year;
             // M2 时代事件经济深度：触发时施加对应经济效果（财政盈余/救济重建/军费扩张）
@@ -276,6 +278,7 @@ namespace EconomyMod.Core
                 _flourishStreak.Remove(id);
                 _kingdomTrait.Remove(id);
                 _startYears.Remove(id);
+                _lastTraitSyncCount.Remove(id);
             }
             }
             finally
@@ -335,6 +338,7 @@ namespace EconomyMod.Core
                         var k = GameHelpers.FindKingdom(kid);
                         if (k != null) RemoveActorTraitFromMembers(k, KingdomToActor[trait]);
                     }
+                    _lastTraitSyncCount.Remove(kid);
                     _kingdomTrait.Remove(kid);
                     _startYears.Remove(kid);
                 }
@@ -346,7 +350,15 @@ namespace EconomyMod.Core
             {
                 var k = GameHelpers.FindKingdom(kv.Key);
                 if (k == null) continue;
+                int memberCount;
+                try { memberCount = k.units != null ? k.units.Count : 0; }
+                catch (System.Exception) { memberCount = -1; }
+                if (memberCount >= 0
+                    && _lastTraitSyncCount.TryGetValue(kv.Key, out int lastCount)
+                    && lastCount == memberCount)
+                    continue;
                 AddActorTraitToMembers(k, KingdomToActor[kv.Value]);
+                if (memberCount >= 0) _lastTraitSyncCount[kv.Key] = memberCount;
             }
             }
             finally
@@ -370,6 +382,7 @@ namespace EconomyMod.Core
             _startYears.Clear();
             _prevAvg.Clear();
             _flourishStreak.Clear();
+            _lastTraitSyncCount.Clear();
         }
 
         // ===== 内部辅助 =====

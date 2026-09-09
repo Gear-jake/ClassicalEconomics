@@ -20,10 +20,10 @@ if (-not $region.Success) {
 }
 $body = $region.Groups['body'].Value
 
-# 2) Exactly ONE aliveList traversal in the whole tax method (fused collect pass).
-$aliveCount = [regex]::Matches($body, 'foreach \(var actor in aliveList\)').Count
-if ($aliveCount -ne 1) {
-    Write-Host "WEALTH_TAX_FUSED_PASS_RED: ApplyWealthTax must traverse aliveList exactly once (found $aliveCount); fusion incomplete"
+# 2) Tax consumes the retained civilized-actor pool; it must not reacquire the full world list.
+$poolCount = [regex]::Matches($body, 'foreach \(var actor in AllCivPool\)').Count
+if ($poolCount -ne 1) {
+    Write-Host "WEALTH_TAX_FUSED_PASS_RED: ApplyWealthTax must traverse AllCivPool exactly once (found $poolCount); targeted pass incomplete"
     exit 1
 }
 

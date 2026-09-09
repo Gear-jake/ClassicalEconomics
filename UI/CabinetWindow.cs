@@ -155,6 +155,7 @@ namespace EconomyMod.UI
         private void DoRefreshNow()
         {
             // 整页彻底重建：销毁当前页所有子物体（防止 ChartCard 等因注册遗漏累积成黑块）
+            PerfCounters.AddUiDestroyed(CurPage.transform.childCount);
             for (int i = CurPage.transform.childCount - 1; i >= 0; i--)
                 Destroy(CurPage.transform.GetChild(i).gameObject);
             CurLines.Clear();
