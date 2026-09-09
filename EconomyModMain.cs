@@ -361,6 +361,7 @@ namespace EconomyMod
             private int _lastCollectedYear = -1;
             private string _sidecarLoadedDir; // 已加载旁挂文件的存档目录（目录变化即重载）
             private int _lastQuarterYear = -1; // 最近已触发季度检测的年份（跨年重置季度序号）
+            private object _lastWorldRef;      // 上次见到的 World.world 引用（引用变化=新世界/读档）
             private float _yearCheckTimer;   // 反射读取年份的节流计时（年份粒度为年，无需每帧）
 
             /// <summary>读档恢复后对齐年份基线（订阅 OnSaveLoaded；读档年份可能首帧仍为 0/1）。</summary>
@@ -463,23 +464,35 @@ namespace EconomyMod
                 if (_yearCheckTimer < 0.5f) return;
                 _yearCheckTimer = 0f;
 
-                // 旁挂文件懒加载（诡秘之主-宿命之环同款）：跟踪当前存档目录，
-                // 目录变化（切存档/切世界/新游戏）即从旁挂文件恢复历史与事件流。
+                // 旁挂文件状态机（v2.1.4 重构）：世界引用变化（新世界/读档）即视为"面板语境切换"——
+                // 先清空内存历史与事件流，再按当前存档目录尝试恢复；无旁挂则从零开始记录。
+                // （旧实现只比对目录字符串，开新世界时 currentSavePath 仍是旧档路径而不触发，
+                //   导致旧世界数据残留在新世界面板——你截图中的"第 178 年混入第 8 年"。）
                 try
                 {
+                    object worldNow = World.world;
+                    bool worldChanged = !ReferenceEquals(_lastWorldRef, worldNow);
                     string saveDir = !string.IsNullOrEmpty(SaveManager.currentSavePath)
                         ? SaveManager.currentSavePath
                         : UnityEngine.Application.persistentDataPath;
-                    if (!string.Equals(_sidecarLoadedDir, saveDir, System.StringComparison.Ordinal))
+                    bool dirChanged = !string.Equals(_sidecarLoadedDir, saveDir, System.StringComparison.Ordinal);
+                    if (worldChanged || dirChanged)
                     {
+                        _lastWorldRef = worldNow;
                         _sidecarLoadedDir = saveDir;
-                        Services.HistoryService.LoadFromFile(saveDir);
-                        Services.EventStreamService.LoadFromFile(saveDir);
-                        UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂懒加载 dir=" + saveDir
-                            + " events=" + Services.EventStreamService.Count
-                            + " major=" + Services.EventStreamService.MajorCount
-                            + " loaded(" + System.IO.File.Exists(
-                                System.IO.Path.Combine(saveDir, Services.EventStreamService.SidecarFileName)) + ")");
+                        if (worldNow != null)
+                        {
+                            // 语境切换：清空白板，再按种子校验恢复该存档自己的数据
+                            Services.HistoryService.ClearHistory();
+                            Services.EventStreamService.Clear();
+                            Services.HistoryService.LoadFromFile(saveDir);
+                            Services.EventStreamService.LoadFromFile(saveDir);
+                            UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂语境切换 worldChanged=" + worldChanged
+                                + " dir=" + saveDir
+                                + " hist=" + Services.HistoryService.GetRecent(1).Count
+                                + " events=" + Services.EventStreamService.Count
+                                + " major=" + Services.EventStreamService.MajorCount);
+                        }
                     }
                 }
                 catch (System.Exception) { }
