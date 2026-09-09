@@ -381,6 +381,31 @@ namespace EconomyMod
             private static bool _cachedHotkeyValid;
 
             /// <summary>
+            /// 旁挂文件多路径搜索：先试主目录（手动槽 currentSavePath），无则扫
+            /// autosaves 根下全部子目录（<epoch> 数字目录），返回第一个种子匹配的目录。
+            /// 找不到返回 null（调用方按全新世界处理）。
+            /// </summary>
+            private static string FindSidecarDir(string mainDir, int curSeed)
+            {
+                try
+                {
+                    if (HaveSidecarSeed(mainDir, curSeed)) return mainDir;
+                    // autosaves 根：persistentDataPath\autosaves\<epoch>\
+                    string autoRoot = System.IO.Path.Combine(
+                        UnityEngine.Application.persistentDataPath, "autosaves");
+                    if (System.IO.Directory.Exists(autoRoot))
+                    {
+                        foreach (var sub in System.IO.Directory.GetDirectories(autoRoot))
+                        {
+                            if (HaveSidecarSeed(sub, curSeed)) return sub;
+                        }
+                    }
+                }
+                catch (System.Exception) { }
+                return null;
+            }
+
+            /// <summary>
             /// 旁挂文件的种子头是否与当前世界一致（读头第一行 `#CE_SEED <n>`）。
             /// 无旁挂/旧格式无头/读失败均返回 false——表示"无法确认归属"，不加载也不清空。
             /// </summary>
@@ -487,7 +512,8 @@ namespace EconomyMod
 
                 // 旁挂文件状态机（v2.1.4 重构）：世界引用变化（新世界/读档）即视为"面板语境切换"——
                 // 先清空内存历史与事件流，再按当前存档目录尝试恢复；无旁挂则从零开始记录。
-                // v2.1.5：只有当"上下文真的切换了"（新世界种子/引用变化）才清空；同种子读档保留内存。
+                // v2.1.7：恢复端多路径搜索——手动存档写 currentSavePath 目录，自动存档写
+                // autosaves/<epoch> 目录；先试 currentSavePath，无旁挂再扫 autosaves 全部子目录。
                 try
                 {
                     object worldNow = World.world;
@@ -502,28 +528,24 @@ namespace EconomyMod
                         _sidecarLoadedDir = saveDir;
                         if (worldNow != null)
                         {
-                            // 语境切换：按种子校验决定——同种子读档→内存本就正确，无需清；
-                            // 种子不同/无旁挂→清空白板从零记录
                             int curSeed = Core.GameHelpers.ReadWorldSeed();
-                            bool haveSidecar = false;
-                            string sidePath = System.IO.Path.Combine(saveDir, Services.EventStreamService.SidecarFileName);
-                            try { haveSidecar = System.IO.File.Exists(sidePath); } catch (System.Exception) { }
-                            if (!haveSidecar || HaveSidecarSeed(saveDir, curSeed))
+                            // 多路径搜索：主目录 + autosaves 全部子目录（种子匹配才视为归属）
+                            string foundDir = FindSidecarDir(saveDir, curSeed);
+                            if (foundDir != null)
                             {
-                                if (haveSidecar)
-                                {
-                                    // 同种子存档：加载（不清——读档内存含当前世界数据）
-                                    Services.HistoryService.LoadFromFile(saveDir);
-                                    Services.EventStreamService.LoadFromFile(saveDir);
-                                }
-                                else
-                                {
-                                    // 全新世界（无旁挂）：清空白板从零记录
-                                    Services.HistoryService.ClearHistory();
-                                    Services.EventStreamService.Clear();
-                                }
-                                UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂语境切换 worldChanged=" + worldChanged
-                                    + " dir=" + saveDir + " sidecar=" + haveSidecar + " seed=" + curSeed);
+                                // 找到同种子旁挂：加载（不清——读档内存含当前世界数据）
+                                Services.HistoryService.LoadFromFile(foundDir);
+                                Services.EventStreamService.LoadFromFile(foundDir);
+                                UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂恢复路径=" + foundDir
+                                    + " (main=" + saveDir + ") seed=" + curSeed);
+                            }
+                            else
+                            {
+                                // 无匹配旁挂（全新世界）：清空白板从零记录
+                                Services.HistoryService.ClearHistory();
+                                Services.EventStreamService.Clear();
+                                UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂全新世界 dir=" + saveDir
+                                    + " seed=" + curSeed + "（无匹配旁挂，从零记录）");
                             }
                         }
                     }
