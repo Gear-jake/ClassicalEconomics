@@ -27,6 +27,9 @@ namespace EconomyMod.Core
         /// </summary>
         public static string LastLoadedDir { get; private set; }
 
+        /// <summary>读档发生计数器：LoadPrefix 每次读档自增；懒加载对比它区分"读档 vs 新世界"。</summary>
+        public static int LoadCounter { get; private set; }
+
         /// <summary>幂等安装；由 EconomyTickRunner 首帧调用。</summary>
         public static void TryInstall()
         {
@@ -59,14 +62,18 @@ namespace EconomyMod.Core
             }
         }
 
-        /// <summary>读档前缀：记录实际路径（手动槽/自动槽/工坊），供旁挂恢复端定位。</summary>
+        /// <summary>读档前缀：记录实际路径（手动槽/自动槽/工坊）+ 递增读档计数，供旁挂恢复端区分读档/新世界。</summary>
         private static void LoadPrefix(string pPath)
         {
             try
             {
                 if (string.IsNullOrEmpty(pPath)) return;
                 string dir = SaveManager.folderPath(pPath);
-                if (!string.IsNullOrEmpty(dir)) LastLoadedDir = dir;
+                if (!string.IsNullOrEmpty(dir))
+                {
+                    LastLoadedDir = dir;
+                    LoadCounter++;
+                }
             }
             catch (System.Exception) { }
         }
