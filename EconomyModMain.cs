@@ -465,26 +465,27 @@ namespace EconomyMod
                 if (_yearCheckTimer < 0.5f) return;
                 _yearCheckTimer = 0f;
 
-                // 旁挂文件状态机（v2.1.9 重构）：以"世界引用变化 + 读档计数"联合判定——
+                // 旁挂文件状态机（v2.1.10 重构）：以"世界引用变化 + 读档计数"联合判定——
                 // loadWorld 被调用（NationSave.LoadCounter 递增）=读档：从 LastLoadedDir 恢复；
-                // 世界引用变化但计数未变=新世界：清空白板从零记录（不再扫 autosaves——种子撞车误恢复）。
+                // 世界引用变化但计数未变=新世界：清空白板从零记录。
+                // 修复：dirChanged 只更新目录（读档期间 LastLoadedDir 先变、世界后变，若此刻消费
+                // 计数会把读档误判为"已处理"，随后世界变化时被当成新世界清空——正是"加载两次才显示"）。
                 try
                 {
                     object worldNow = World.world;
                     bool worldChanged = !ReferenceEquals(_lastWorldRef, worldNow);
-                    bool loadHappened = Core.NationSave.LoadCounter != _lastLoadCounter;
                     int curLoadCounter = Core.NationSave.LoadCounter;
+                    bool loadHappened = curLoadCounter != _lastLoadCounter;
                     string saveDir = !string.IsNullOrEmpty(Core.NationSave.LastLoadedDir)
                         ? Core.NationSave.LastLoadedDir
                         : !string.IsNullOrEmpty(SaveManager.currentSavePath)
                             ? SaveManager.currentSavePath
                             : UnityEngine.Application.persistentDataPath;
                     bool dirChanged = !string.Equals(_sidecarLoadedDir, saveDir, System.StringComparison.Ordinal);
-                    if (worldChanged || dirChanged)
+                    if (worldChanged)
                     {
                         _lastWorldRef = worldNow;
-                        _sidecarLoadedDir = saveDir;
-                        _lastLoadCounter = curLoadCounter;
+                        _lastLoadCounter = curLoadCounter; // 仅在"世界真正切换"时消费计数
                         if (worldNow != null)
                         {
                             if (loadHappened)
@@ -506,6 +507,12 @@ namespace EconomyMod
                                     + "（非读档切换，从零记录）");
                             }
                         }
+                    }
+                    else if (dirChanged)
+                    {
+                        // 目录先变（读档进行中）：只更新目录引用，不消费计数、不动内存——
+                        // 等 worldChanged 出现时再按"计数是否递增"判定读档/新世界
+                        _sidecarLoadedDir = saveDir;
                     }
                 }
                 catch (System.Exception) { }
