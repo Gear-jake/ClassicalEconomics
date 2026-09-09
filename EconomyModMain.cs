@@ -512,15 +512,17 @@ namespace EconomyMod
 
                 // 旁挂文件状态机（v2.1.4 重构）：世界引用变化（新世界/读档）即视为"面板语境切换"——
                 // 先清空内存历史与事件流，再按当前存档目录尝试恢复；无旁挂则从零开始记录。
-                // v2.1.7：恢复端多路径搜索——手动存档写 currentSavePath 目录，自动存档写
-                // autosaves/<epoch> 目录；先试 currentSavePath，无旁挂再扫 autosaves 全部子目录。
+                // v2.1.8：恢复目录优先取"实际读档路径"（LoadPrefix 捕获，手动/自动/工坊天然对齐），
+                // 再用 currentSavePath 兜底；均无则让 FindSidecarDir 自动扫描 autosaves。
                 try
                 {
                     object worldNow = World.world;
                     bool worldChanged = !ReferenceEquals(_lastWorldRef, worldNow);
-                    string saveDir = !string.IsNullOrEmpty(SaveManager.currentSavePath)
-                        ? SaveManager.currentSavePath
-                        : UnityEngine.Application.persistentDataPath;
+                    string saveDir = !string.IsNullOrEmpty(Core.NationSave.LastLoadedDir)
+                        ? Core.NationSave.LastLoadedDir
+                        : !string.IsNullOrEmpty(SaveManager.currentSavePath)
+                            ? SaveManager.currentSavePath
+                            : UnityEngine.Application.persistentDataPath;
                     bool dirChanged = !string.Equals(_sidecarLoadedDir, saveDir, System.StringComparison.Ordinal);
                     if (worldChanged || dirChanged)
                     {
@@ -529,7 +531,7 @@ namespace EconomyMod
                         if (worldNow != null)
                         {
                             int curSeed = Core.GameHelpers.ReadWorldSeed();
-                            // 多路径搜索：主目录 + autosaves 全部子目录（种子匹配才视为归属）
+                            // 多路径搜索：主目录（读档捕获）+ autosaves 全部子目录（种子匹配才视为归属）
                             string foundDir = FindSidecarDir(saveDir, curSeed);
                             if (foundDir != null)
                             {

@@ -20,6 +20,13 @@ namespace EconomyMod.Core
         private static bool _installed;
         private static bool _loadWarned;
 
+        /// <summary>
+        /// 最近一次读档的实际路径（补丁 SaveManager.loadWorld(string,bool) 前缀捕获）。
+        /// 手动槽= saves\saveN，自动槽= autosaves\&lt;epoch&gt;，工坊= main_path——
+        /// 旁挂恢复端用它优先定位（读哪个存档就找哪个目录，与保存端 pFolder 天然对齐）。
+        /// </summary>
+        public static string LastLoadedDir { get; private set; }
+
         /// <summary>幂等安装；由 EconomyTickRunner 首帧调用。</summary>
         public static void TryInstall()
         {
@@ -31,22 +38,37 @@ namespace EconomyMod.Core
                 // 读档=SaveManager.loadWorld()（无参实例方法，手动/自动/工坊读档的唯一入口）。
                 // 旧的 MapBox.saveSave/loadSave 在 0.51.2 已不存在——钩子从未安装过。
                 var save = AccessTools.Method(typeof(SaveManager), "saveWorldToDirectory");
-                var load = AccessTools.Method(typeof(SaveManager), "loadWorld", new System.Type[0]);
-                if (save == null || load == null)
+                var loadNoArg = AccessTools.Method(typeof(SaveManager), "loadWorld", new System.Type[0]);
+                var loadWithArg = AccessTools.Method(typeof(SaveManager), "loadWorld", new System.Type[] { typeof(string), typeof(bool) });
+                if (save == null || loadNoArg == null || loadWithArg == null)
                 {
                     UnityEngine.Debug.LogWarning("[ClassicalEconomics] 中央银行家存档：SaveManager.saveWorldToDirectory/loadWorld 未找到，回退本局记忆");
                     return;
                 }
                 var harmony = new Harmony(HarmonyId);
                 harmony.Patch(save, prefix: new HarmonyMethod(typeof(NationSave), nameof(SavePrefix)));
-                harmony.Patch(load, postfix: new HarmonyMethod(typeof(NationSave), nameof(LoadPostfix)));
+                harmony.Patch(loadNoArg, postfix: new HarmonyMethod(typeof(NationSave), nameof(LoadPostfix)));
                 harmony.Patch(save, postfix: new HarmonyMethod(typeof(NationSave), nameof(SavePostfixSidecar)));
+                // 读档路径捕获：带参重载前缀记录 pPath（无参版内部最终调它）
+                harmony.Patch(loadWithArg, prefix: new HarmonyMethod(typeof(NationSave), nameof(LoadPrefix)));
                 UnityEngine.Debug.Log("[ClassicalEconomics] 中央银行家存档补丁已安装（saveWorldToDirectory/loadWorld）");
             }
             catch (System.Exception e)
             {
                 UnityEngine.Debug.LogWarning("[ClassicalEconomics] 中央银行家存档补丁安装失败: " + e.Message);
             }
+        }
+
+        /// <summary>读档前缀：记录实际路径（手动槽/自动槽/工坊），供旁挂恢复端定位。</summary>
+        private static void LoadPrefix(string pPath)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(pPath)) return;
+                string dir = SaveManager.folderPath(pPath);
+                if (!string.IsNullOrEmpty(dir)) LastLoadedDir = dir;
+            }
+            catch (System.Exception) { }
         }
 
         /// <summary>写盘前把内存状态同步进认领国 data（未认领则跳过）。</summary>
