@@ -317,7 +317,12 @@ namespace EconomyMod.Services
                 }
                 unchecked { Version++; }
             }
-            catch (System.Exception) { }
+            catch (System.Exception e)
+            {
+                // 恢复解析失败不能静默：数据存在但恢复为空是"历史不显示"的常见原因
+                UnityEngine.Debug.LogWarning("[ClassicalEconomics] 旁挂事件流恢复解析失败: " + e.Message
+                    + " (bytes=" + (data != null ? data.Length : 0) + ")");
+            }
         }
 
         /// <summary>某类型累计发生次数（历史总数，环形覆盖不减）。</summary>
@@ -402,9 +407,13 @@ namespace EconomyMod.Services
             {
                 if (string.IsNullOrEmpty(saveDir)) return;
                 System.IO.Directory.CreateDirectory(saveDir);
+                string data = Serialize();
                 System.IO.File.WriteAllText(
                     System.IO.Path.Combine(saveDir, SidecarFileName),
-                    SidecarSeedPrefix + EconomyMod.Core.GameHelpers.ReadWorldSeed() + "\n" + Serialize());
+                    SidecarSeedPrefix + EconomyMod.Core.GameHelpers.ReadWorldSeed() + "\n" + data);
+                UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂写入 dir=" + saveDir
+                    + " bytes=" + data.Length
+                    + " count=" + _count + " major=" + _majorCount);
             }
             catch (System.Exception) { }
         }
@@ -427,7 +436,11 @@ namespace EconomyMod.Services
                 int seed;
                 if (!int.TryParse(head.Substring(SidecarSeedPrefix.Length), out seed)) return;
                 if (seed != EconomyMod.Core.GameHelpers.ReadWorldSeed()) return; // 世界不符：拒绝恢复
-                Restore(nl >= 0 ? content.Substring(nl + 1) : "");
+                string body = nl >= 0 ? content.Substring(nl + 1) : "";
+                Restore(body);
+                UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂恢复 dir=" + saveDir
+                    + " bytes=" + body.Length
+                    + " count=" + _count + " major=" + _majorCount);
             }
             catch (System.Exception) { }
         }

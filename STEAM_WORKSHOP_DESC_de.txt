@@ -1,5 +1,5 @@
 [h1]Klassische Ökonomie Classical Economics[/h1]
-[b]Makroökonomie- und Staatsführung-Simulationsmod für WorldBox ｜ Aktuelle Version 2.1.5[/b]
+[b]Makroökonomie- und Staatsführung-Simulationsmod für WorldBox ｜ Aktuelle Version 2.1.6[/b]
 [b]Kompatibel mit:[/b]WorldBox 0.51.2+ (erfordert NeoModLoader / NML)
 
 Bringt vollwertige Makroökonomie und **Staatsführung** in WorldBox. Alle zivilisationsfähigen Rassen (einschließlich Feuer-/Frostdämonen und Aliens) nehmen am Wirtschaftssystem teil — übernimm ein Land oder beobachte, wie KI-Königreiche selbst regieren.

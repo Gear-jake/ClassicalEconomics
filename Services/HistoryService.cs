@@ -122,7 +122,12 @@ namespace EconomyMod.Services
                     AppendSnapshot(snap);
                 }
             }
-            catch (System.Exception) { ClearHistory(); }
+            catch (System.Exception e)
+            {
+                ClearHistory();
+                UnityEngine.Debug.LogWarning("[ClassicalEconomics] 旁挂历史恢复解析失败: " + e.Message
+                    + " (bytes=" + (data != null ? data.Length : 0) + ")");
+            }
         }
 
         // ===== v2.0.2 旁挂文件（诡秘之主-宿命之环同款方案）=====
