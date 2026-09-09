@@ -359,7 +359,6 @@ namespace EconomyMod
         private class EconomyTickRunner : MonoBehaviour
         {
             private int _lastCollectedYear = -1;
-            private string _sidecarLoadedDir; // 已加载旁挂文件的存档目录（目录变化即重载）
             private int _lastQuarterYear = -1; // 最近已触发季度检测的年份（跨年重置季度序号）
             private object _lastWorldRef;      // 上次见到的 World.world 引用（引用变化=新世界/读档）
             private int _lastLoadCounter;      // 上次见到的 NationSave.LoadCounter（变化=本次是读档）
@@ -465,54 +464,26 @@ namespace EconomyMod
                 if (_yearCheckTimer < 0.5f) return;
                 _yearCheckTimer = 0f;
 
-                // 旁挂文件状态机（v2.1.10 重构）：以"世界引用变化 + 读档计数"联合判定——
-                // loadWorld 被调用（NationSave.LoadCounter 递增）=读档：从 LastLoadedDir 恢复；
-                // 世界引用变化但计数未变=新世界：清空白板从零记录。
-                // 修复：dirChanged 只更新目录（读档期间 LastLoadedDir 先变、世界后变，若此刻消费
-                // 计数会把读档误判为"已处理"，随后世界变化时被当成新世界清空——正是"加载两次才显示"）。
+                // 旁挂文件状态机（v2.1.11 简化）：恢复已由 NationSave.LoadPostfix 在读档完成时执行
+                // （世界已加载、路径已捕获，一次性到位）；这里只兜"新世界没有读档"的场景——
+                // 世界引用变化但 NationSave.LoadCounter 未变 → 清空白板从零记录。
                 try
                 {
                     object worldNow = World.world;
                     bool worldChanged = !ReferenceEquals(_lastWorldRef, worldNow);
                     int curLoadCounter = Core.NationSave.LoadCounter;
                     bool loadHappened = curLoadCounter != _lastLoadCounter;
-                    string saveDir = !string.IsNullOrEmpty(Core.NationSave.LastLoadedDir)
-                        ? Core.NationSave.LastLoadedDir
-                        : !string.IsNullOrEmpty(SaveManager.currentSavePath)
-                            ? SaveManager.currentSavePath
-                            : UnityEngine.Application.persistentDataPath;
-                    bool dirChanged = !string.Equals(_sidecarLoadedDir, saveDir, System.StringComparison.Ordinal);
                     if (worldChanged)
                     {
                         _lastWorldRef = worldNow;
-                        _lastLoadCounter = curLoadCounter; // 仅在"世界真正切换"时消费计数
-                        if (worldNow != null)
+                        _lastLoadCounter = curLoadCounter;
+                        if (worldNow != null && !loadHappened)
                         {
-                            if (loadHappened)
-                            {
-                                // 读档：从读档路径恢复（种子校验仍把关）
-                                Services.HistoryService.LoadFromFile(saveDir);
-                                Services.EventStreamService.LoadFromFile(saveDir);
-                                UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂读档恢复 dir=" + saveDir
-                                    + " load#" + curLoadCounter
-                                    + " hist=" + Services.HistoryService.GetRecent(1).Count
-                                    + " events=" + Services.EventStreamService.Count);
-                            }
-                            else
-                            {
-                                // 新世界（无读档调用）：清空白板从零记录
-                                Services.HistoryService.ClearHistory();
-                                Services.EventStreamService.Clear();
-                                UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂新世界清空 dir=" + saveDir
-                                    + "（非读档切换，从零记录）");
-                            }
+                            // 新世界（无读档调用）：清空白板从零记录
+                            Services.HistoryService.ClearHistory();
+                            Services.EventStreamService.Clear();
+                            UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂新世界清空（非读档切换，从零记录）");
                         }
-                    }
-                    else if (dirChanged)
-                    {
-                        // 目录先变（读档进行中）：只更新目录引用，不消费计数、不动内存——
-                        // 等 worldChanged 出现时再按"计数是否递增"判定读档/新世界
-                        _sidecarLoadedDir = saveDir;
                     }
                 }
                 catch (System.Exception) { }

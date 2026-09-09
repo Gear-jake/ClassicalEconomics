@@ -225,6 +225,37 @@ namespace EconomyMod.Core
             {
                 if (World.world == null) return;
 
+                // ===== 旁挂面板恢复（世界已加载完，时机正确）=====
+                // 读档完成：先清空内存面板（显示副本），再尝试从"该存档目录"载入 txt；
+                // 有则覆盖显示，无则从零记录。存档文件夹 txt 永不被清空影响。
+                // LastLoadedDir 由 LoadPrefix（loadWorld 前缀）捕获，手动/自动/工坊天然对齐。
+                try
+                {
+                    string dir = LastLoadedDir;
+                    if (string.IsNullOrEmpty(dir)) dir = SaveManager.currentSavePath;
+                    if (!string.IsNullOrEmpty(dir))
+                    {
+                        HistoryService.ClearHistory();
+                        EventStreamService.Clear();
+                        HistoryService.LoadFromFile(dir);
+                        EventStreamService.LoadFromFile(dir);
+                        UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂读档恢复 dir=" + dir
+                            + " load#" + LoadCounter
+                            + " hist=" + HistoryService.GetRecent(1).Count
+                            + " events=" + EventStreamService.Count);
+                    }
+                    else
+                    {
+                        HistoryService.ClearHistory();
+                        EventStreamService.Clear();
+                        UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂读档恢复 无路径（清空，从零记录）");
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 旁挂读档恢复异常: " + e.Message);
+                }
+
                 // 历史：从任意王国读 rb_hist（写盘时挂认领国或第一个王国）
                 string hist = ReadAnyKingdomKey("rb_hist");
                 if (hist != null) HistoryService.Restore(hist);
