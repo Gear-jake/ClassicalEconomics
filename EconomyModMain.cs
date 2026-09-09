@@ -380,6 +380,27 @@ namespace EconomyMod
             private static UnityEngine.KeyCode _cachedHotkey;
             private static bool _cachedHotkeyValid;
 
+            /// <summary>
+            /// 旁挂文件的种子头是否与当前世界一致（读头第一行 `#CE_SEED <n>`）。
+            /// 无旁挂/旧格式无头/读失败均返回 false——表示"无法确认归属"，不加载也不清空。
+            /// </summary>
+            private static bool HaveSidecarSeed(string saveDir, int curSeed)
+            {
+                try
+                {
+                    string path = System.IO.Path.Combine(saveDir, Services.EventStreamService.SidecarFileName);
+                    if (!System.IO.File.Exists(path)) return false;
+                    string content = System.IO.File.ReadAllText(path);
+                    int nl = content.IndexOf('\n');
+                    string head = nl >= 0 ? content.Substring(0, nl) : content;
+                    const string prefix = "#CE_SEED ";
+                    if (!head.StartsWith(prefix, System.StringComparison.Ordinal)) return false;
+                    int seed;
+                    return int.TryParse(head.Substring(prefix.Length), out seed) && seed == curSeed;
+                }
+                catch (System.Exception) { return false; }
+            }
+
             private void Update()
             {
                 PerfCounters.SampleFrame(Time.deltaTime);
@@ -466,8 +487,7 @@ namespace EconomyMod
 
                 // 旁挂文件状态机（v2.1.4 重构）：世界引用变化（新世界/读档）即视为"面板语境切换"——
                 // 先清空内存历史与事件流，再按当前存档目录尝试恢复；无旁挂则从零开始记录。
-                // （旧实现只比对目录字符串，开新世界时 currentSavePath 仍是旧档路径而不触发，
-                //   导致旧世界数据残留在新世界面板——你截图中的"第 178 年混入第 8 年"。）
+                // v2.1.5：只有当"上下文真的切换了"（新世界种子/引用变化）才清空；同种子读档保留内存。
                 try
                 {
                     object worldNow = World.world;
@@ -482,16 +502,29 @@ namespace EconomyMod
                         _sidecarLoadedDir = saveDir;
                         if (worldNow != null)
                         {
-                            // 语境切换：清空白板，再按种子校验恢复该存档自己的数据
-                            Services.HistoryService.ClearHistory();
-                            Services.EventStreamService.Clear();
-                            Services.HistoryService.LoadFromFile(saveDir);
-                            Services.EventStreamService.LoadFromFile(saveDir);
-                            UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂语境切换 worldChanged=" + worldChanged
-                                + " dir=" + saveDir
-                                + " hist=" + Services.HistoryService.GetRecent(1).Count
-                                + " events=" + Services.EventStreamService.Count
-                                + " major=" + Services.EventStreamService.MajorCount);
+                            // 语境切换：按种子校验决定——同种子读档→内存本就正确，无需清；
+                            // 种子不同/无旁挂→清空白板从零记录
+                            int curSeed = Core.GameHelpers.ReadWorldSeed();
+                            bool haveSidecar = false;
+                            string sidePath = System.IO.Path.Combine(saveDir, Services.EventStreamService.SidecarFileName);
+                            try { haveSidecar = System.IO.File.Exists(sidePath); } catch (System.Exception) { }
+                            if (!haveSidecar || HaveSidecarSeed(saveDir, curSeed))
+                            {
+                                if (haveSidecar)
+                                {
+                                    // 同种子存档：加载（不清——读档内存含当前世界数据）
+                                    Services.HistoryService.LoadFromFile(saveDir);
+                                    Services.EventStreamService.LoadFromFile(saveDir);
+                                }
+                                else
+                                {
+                                    // 全新世界（无旁挂）：清空白板从零记录
+                                    Services.HistoryService.ClearHistory();
+                                    Services.EventStreamService.Clear();
+                                }
+                                UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂语境切换 worldChanged=" + worldChanged
+                                    + " dir=" + saveDir + " sidecar=" + haveSidecar + " seed=" + curSeed);
+                            }
                         }
                     }
                 }

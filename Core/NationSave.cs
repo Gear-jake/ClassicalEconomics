@@ -182,6 +182,9 @@ namespace EconomyMod.Core
                 if (string.IsNullOrEmpty(dir)) return;
                 HistoryService.SaveToFile(dir);
                 EventStreamService.SaveToFile(dir);
+                UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂已写入 dir=" + dir
+                    + " events=" + EventStreamService.Count
+                    + " major=" + EventStreamService.MajorCount);
             }
             catch (System.Exception) { }
         }
