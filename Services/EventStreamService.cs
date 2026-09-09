@@ -248,11 +248,34 @@ namespace EconomyMod.Services
               .Append(Escape(e.Detail)).Append(';');
         }
 
-        /// <summary>字段转义：'~' → '~~'、';' → '~s'、'|' → '~p'（防破坏分隔符）。</summary>
+        /// <summary>
+        /// 字段转义：'~' → '~~'、';' → '~s'、'|' → '~p'（防破坏分隔符）。
+        /// W3-C：单遍字符扫描替代 3× string.Replace——先探测是否需要转义（无特殊字符
+        /// 零分配直接返回），需要时单遍拼接（存档路径每年一次，IO 仍同步）。
+        /// </summary>
         private static string Escape(string s)
         {
             if (string.IsNullOrEmpty(s)) return "";
-            return s.Replace("~", "~~").Replace(";", "~s").Replace("|", "~p");
+            bool needs = false;
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+                if (c == '~' || c == ';' || c == '|') { needs = true; break; }
+            }
+            if (!needs) return s;
+            var sb = new StringBuilder(s.Length + 8);
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+                switch (c)
+                {
+                    case '~': sb.Append("~~"); break;
+                    case ';': sb.Append("~s"); break;
+                    case '|': sb.Append("~p"); break;
+                    default: sb.Append(c); break;
+                }
+            }
+            return sb.ToString();
         }
 
         /// <summary>与 Escape 互逆。</summary>
