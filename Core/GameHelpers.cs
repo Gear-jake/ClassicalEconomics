@@ -698,5 +698,27 @@ namespace EconomyMod.Core
                 else edge = richest ? Mathf.Min(edge, wi) : Mathf.Max(edge, wi);
             }
         }
+
+        /// <summary>
+        /// 当前世界种子（MapBox.current_world_seed_id，静态 int；新地图递增、读档同局不变）。
+        /// 供旁挂存档绑定世界身份校验用；失败回退 1（同 DecisionEvents.ReadWorldSeed）。
+        /// </summary>
+        public static int ReadWorldSeed()
+        {
+            try
+            {
+                var t = typeof(MapBox);
+                var f = t.GetField("current_world_seed_id",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static
+                    | System.Reflection.BindingFlags.NonPublic);
+                if (f != null)
+                {
+                    int s = System.Convert.ToInt32(f.GetValue(null));
+                    if (s != 0) return s;
+                }
+            }
+            catch (System.Exception) { }
+            return 1;
+        }
     }
 }

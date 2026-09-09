@@ -392,6 +392,9 @@ namespace EconomyMod.Services
         /// <summary>旁挂文件名（存档目录下）。</summary>
         public const string SidecarFileName = "ClassicalEconomics_events.txt";
 
+        /// <summary>旁挂世界身份头（首行）：`#CE_SEED <seed>`——恢复时校验世界种子，防跨档串数据。</summary>
+        private const string SidecarSeedPrefix = "#CE_SEED ";
+
         /// <summary>把当前事件流写进存档目录（IO 失败静默）。</summary>
         public static void SaveToFile(string saveDir)
         {
@@ -400,12 +403,16 @@ namespace EconomyMod.Services
                 if (string.IsNullOrEmpty(saveDir)) return;
                 System.IO.Directory.CreateDirectory(saveDir);
                 System.IO.File.WriteAllText(
-                    System.IO.Path.Combine(saveDir, SidecarFileName), Serialize());
+                    System.IO.Path.Combine(saveDir, SidecarFileName),
+                    SidecarSeedPrefix + EconomyMod.Core.GameHelpers.ReadWorldSeed() + "\n" + Serialize());
             }
             catch (System.Exception) { }
         }
 
-        /// <summary>从存档目录读旁挂事件流（文件缺失/坏文件静默跳过，保留内存现状）。</summary>
+        /// <summary>
+        /// 从存档目录读旁挂事件流：校验世界种子（`#CE_SEED <n>` 首行）与当前世界一致才恢复；
+        /// 文件缺失/种子不符/旧格式（无头）静默跳过，保留内存现状——防跨档串数据（v2.1.3）。
+        /// </summary>
         public static void LoadFromFile(string saveDir)
         {
             try
@@ -413,7 +420,14 @@ namespace EconomyMod.Services
                 if (string.IsNullOrEmpty(saveDir)) return;
                 string path = System.IO.Path.Combine(saveDir, SidecarFileName);
                 if (!System.IO.File.Exists(path)) return;
-                Restore(System.IO.File.ReadAllText(path));
+                string content = System.IO.File.ReadAllText(path);
+                int nl = content.IndexOf('\n');
+                string head = nl >= 0 ? content.Substring(0, nl) : content;
+                if (!head.StartsWith(SidecarSeedPrefix, System.StringComparison.Ordinal)) return; // 旧格式无头
+                int seed;
+                if (!int.TryParse(head.Substring(SidecarSeedPrefix.Length), out seed)) return;
+                if (seed != EconomyMod.Core.GameHelpers.ReadWorldSeed()) return; // 世界不符：拒绝恢复
+                Restore(nl >= 0 ? content.Substring(nl + 1) : "");
             }
             catch (System.Exception) { }
         }
