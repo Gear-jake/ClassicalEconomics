@@ -269,7 +269,7 @@ namespace EconomyMod.UI
             // 宏观指标摘要（最新快照）
             var lastSnap = snaps[snaps.Count - 1];
             AddLine(UIHelpers.Lf("chart_macro",
-                    lastSnap.TotalProduction.ToString("F0"),
+                    UIHelpers.FormatCompact((long)lastSnap.TotalProduction),
                     lastSnap.PriceIndex.ToString("F2"),
                     lastSnap.AliveActorCount),
                 color: new Color(0.7f, 0.85f, 1f));
@@ -386,7 +386,7 @@ namespace EconomyMod.UI
             }
 
             long last = snaps[snaps.Count - 1].GlobalGDP;
-            AddLine(UIHelpers.Lf("chart_summary", maxVal.ToString("F0"), last.ToString("F0")),
+            AddLine(UIHelpers.Lf("chart_summary", UIHelpers.FormatCompact((long)maxVal), UIHelpers.FormatCompact(last)),
                 color: new Color(0.7f, 0.85f, 1f));
         }
 
@@ -569,14 +569,14 @@ namespace EconomyMod.UI
             var sb = new System.Text.StringBuilder(96);
             sb.Append("<b>").Append(UIHelpers.Lf("chart_year", snaps[idx].GameYear)).Append("</b>\n");
             sb.Append("<color=#FFD95A>").Append(UIHelpers.L("chart_global")).Append(" ")
-              .Append(snaps[idx].GlobalGDP.ToString("F0")).Append("</color>");
+              .Append(UIHelpers.FormatCompact(snaps[idx].GlobalGDP)).Append("</color>");
             foreach (var s in seriesList)
             {
                 if (s == null) continue;
                 float v = idx < s.Values.Count ? s.Values[idx] : float.NaN;
                 if (float.IsNaN(v)) continue; // 不在榜不显示
                 sb.Append('\n').Append("<color=#").Append(ColorUtility.ToHtmlStringRGB(s.Color))
-                  .Append(">■ ").Append(s.Name).Append(" ").Append(v.ToString("F0")).Append("</color>");
+                  .Append(">■ ").Append(s.Name).Append(" ").Append(UIHelpers.FormatCompact((long)v)).Append("</color>");
             }
             return sb.ToString();
         }
@@ -790,7 +790,7 @@ namespace EconomyMod.UI
                     if (!float.IsNaN(s.Values[i])) { last = s.Values[i]; break; }
                 }
                 bool inRank = !float.IsNaN(last);
-                string valueStr = inRank ? last.ToString("F0")
+                string valueStr = inRank ? UIHelpers.FormatCompact((long)last)
                     : (s.Values.Count > 0 ? UIHelpers.L("chart_dropped") : "");
                 var vGo = UIHelpers.CreateText(valueStr, row.transform, Fs(10f),
                     inRank ? new Color(0.95f, 0.85f, 0.5f) : new Color(0.55f, 0.55f, 0.6f),
@@ -841,10 +841,10 @@ namespace EconomyMod.UI
             // 不显示人口：配合人口倍数类模组时单位数会被放大，数字失真且出戏（v0.94 移除）
             var stats = new (string, string, Color)[]
             {
-                ("GDP", EconomyEngine.GlobalGDP.ToString("F0"), UIStyles.Gold),
+                ("GDP", UIHelpers.FormatCompact((long)EconomyEngine.GlobalGDP), UIStyles.Gold),
                 (UIHelpers.L("col_avg"), EconomyEngine.AvgWealth.ToString("F1"), UIStyles.Info),
                 (UIHelpers.L("col_gini"), EconomyEngine.GiniCoefficient.ToString("F3"), GiniColor(EconomyEngine.GiniCoefficient)),
-                (UIHelpers.L("stat_bubble"), EconomyCycleModulator.BubbleValue.ToString("F0"), UIStyles.Warning)
+                (UIHelpers.L("stat_bubble"), UIHelpers.FormatCompact((long)EconomyCycleModulator.BubbleValue), UIStyles.Warning)
             };
             _lines.Add(UIComponents.CreateStatGrid(_content.transform, stats, _gameFont, contentW, Fs(1f)));
 
@@ -885,7 +885,7 @@ namespace EconomyMod.UI
             foreach (var k in top)
             {
                 _lines.Add(UIComponents.CreateKingdomRow(_content.transform, rank, k.KingdomName,
-                    k.GDP.ToString("F0"), k.AvgWealth.ToString("F1"), k.GiniCoefficient.ToString("F2"),
+                    UIHelpers.FormatCompact(k.GDP), k.AvgWealth.ToString("F1"), k.GiniCoefficient.ToString("F2"),
                     _gameFont, contentW, rank == 1, Fs(1f)));
                 rank++;
             }
@@ -1002,7 +1002,7 @@ namespace EconomyMod.UI
                 _lines.Add(row);
 
                 var rowName = UIHelpers.CreateText(
-                    UIHelpers.Lf("picker_kingdom", rank, name, gdp.ToString("F0")),
+                    UIHelpers.Lf("picker_kingdom", rank, name, UIHelpers.FormatCompact(gdp)),
                     row.transform, 12f, UIStyles.TextPrimary, _gameFont, 22f);
                 rowName.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.5f);
                 rowName.GetComponent<RectTransform>().anchorMax = new Vector2(0, 0.5f);

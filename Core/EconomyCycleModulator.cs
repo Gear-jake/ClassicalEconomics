@@ -149,10 +149,12 @@ namespace EconomyMod.Core
             {
                 case EconomyPhase.Boom:
                     // 繁荣结束：贫富差距越危险线持续 N 期（泡沫破裂）、泡沫超阈值、或繁荣超绝对上限
-                    // 泡沫阈值自适应：大图用绝对值 BubbleThreshold，小图用 GDP 的 10%（避免小图永不破裂）
+                    // 阈值平滑动态缩放（v2.0.5）：固定绝对值 -> 大图繁荣极短、小图繁荣极长；
+                    // 改为 BubbleThreshold 与 GDP 的调和比例——两种世界规模下繁荣期长度趋同，
+                    // 出现经济增长点时总量能连续复利上涨而不被瞬时阈值打断。
                     float gdp = EconomyEngine.GlobalGDP;
                     float bubbleThreshold = gdp > cfg.BubbleThreshold
-                        ? cfg.BubbleThreshold
+                        ? Mathf.Max(cfg.BubbleThreshold, gdp * (cfg.BubbleThreshold / (cfg.BubbleThreshold + gdp)))
                         : gdp * 0.1f;
                     bool bubbleExceeded = bubbleThreshold > 0f && BubbleValue >= bubbleThreshold;
                     if (_highGiniStreak >= cfg.CycleGiniPeriods ||

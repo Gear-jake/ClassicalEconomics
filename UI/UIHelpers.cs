@@ -375,5 +375,18 @@ namespace EconomyMod.UI
             try { return string.Format(L(key), args); }
             catch (System.Exception) { return key; }
         }
+
+        /// <summary>
+        /// 紧凑金额格式（经济总量显示）：≥1e6 → "x.xxM"，≥1e4 → "x.xk"，其余 N0——
+        /// 防止千万级 GDP/财富把卡片文本挤出 UI。金额类（金库/政绩）仍走 NationEngine.FormatGold。
+        /// </summary>
+        public static string FormatCompact(long v)
+        {
+            if (v >= 1000000L)
+                return (v / 1000000.0).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "M";
+            if (v >= 10000L)
+                return (v / 1000.0).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "k";
+            return v.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+        }
     }
 }
