@@ -45,7 +45,7 @@ namespace EconomyMod.Models
         public int CycleGiniPeriods = 2;
 
         /// <summary>繁荣期每期注入硬币占 GDP 比例（信用扩张）。</summary>
-        public float BoomStimulusRatio = 0.03f;
+        public float BoomStimulusRatio = 0.015f; // 繁荣刺激比例：v2.0.4 从 3% 下调到 1.5%（长局复利翻倍过快）
 
         /// <summary>繁荣期泡沫累积系数（注入量 × 系数计入泡沫值）。</summary>
         public float BoomBubbleFactor = 0.15f;

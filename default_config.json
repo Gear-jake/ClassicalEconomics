@@ -63,7 +63,7 @@
     {
       "Id": "boom_stimulus_ratio",
       "Type": "TEXT",
-      "TextVal": "0.03",
+      "TextVal": "0.015",
       "Callback": "EconomyConfigCallbacks:OnBoomStimulusChanged"
     },
     {

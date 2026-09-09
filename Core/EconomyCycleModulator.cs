@@ -257,7 +257,7 @@ namespace EconomyMod.Core
         private static void TriggerBubbleBurst()
         {
             float gdp = EconomyEngine.GlobalGDP;
-            float crashRatio = gdp > 0f ? Mathf.Min(BubbleValue / gdp, 0.5f) : 0f;
+            float crashRatio = gdp > 0f ? Mathf.Min(BubbleValue / gdp, 0.8f) : 0f; // 破灭蒸发上限 v2.0.4 从 50% 收紧到 80%（破灭更彻底，抑制高位滞胀）
             int victims = 0;
             float totalEvaporated = 0f;
             Actor bubbleVictim = null;
