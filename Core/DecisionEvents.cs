@@ -94,6 +94,10 @@ namespace EconomyMod.Core
         private static int _lastGlobalYear = int.MinValue;
         private static bool _popupQueued;
 
+        // ===== 季度抽签（v2.0.8）：一年 3/6/9/12 月四个触发点 =====
+        // 每年最多额外 3 次（年度 EvaluateYear 已含一次；3 月边界跳过当年首次）
+        private static int _lastQuarter = -1;      // 上次抽签的季度（1~4；0/未抽=待初始化）
+
         // ===== 每局事件池（v1.7.0 种子化）=====
         // 每局按世界种子（MapBox.current_world_seed_id）确定性筛池，同 seed 同池：
         // 链/变体组为整体启用，单事件保留率 68%，每族保底，onlyPlayer 保底。
@@ -233,6 +237,7 @@ namespace EconomyMod.Core
             _chains.Clear();
             _lastGlobalYear = int.MinValue;
             _popupQueued = false;
+            _lastQuarter = -1;
             _activeIds.Clear();
             _familyBias.Clear();
             _poolBuilt = false;
@@ -591,6 +596,92 @@ namespace EconomyMod.Core
                 else aiSpawnedThisYear++;
                 _readyYear[picked.id] = year + System.Math.Max(0, picked.cooldownYears);
             }
+        }
+
+        /// <summary>当前已抽签的季度（1~4；-1=本局未抽过）。</summary>
+        public static int QuarterLast() => _lastQuarter;
+
+        /// <summary>跨年复位季度序号（年份切换时由季度检测调用）。</summary>
+        public static void ResetQuarter() => _lastQuarter = -1;
+
+        /// <summary>
+        /// 季度抽签（v2.0.8）：一年 3/6/9/12 月四个触发点——玩家国一年之内可以遇到
+        /// 多个待决事件（每季度最多 1 件、挂起未决时该季度跳过）。
+        /// 只做抽签：挂起超时/连锁结算仍走年度 EvaluateYear（节奏不被季度拆散）。
+        /// 季度概率 = 年概率 × 1/4；AI 国同此折减（列国故事不刷屏）。
+        /// </summary>
+        public static void EvaluateQuarter(int year, int quarter)
+        {
+            if (_defs.Count == 0) return;
+            var cfg = UnrestConfig.Instance;
+            if (cfg == null || !cfg.NationPlayEnabled) return;
+            if (quarter < 1 || quarter > 4) return;
+            if (quarter == _lastQuarter) return; // 本季度已抽过
+            _lastQuarter = quarter;
+
+            try
+            {
+                BuildWorldPool();
+                _warCache.Clear();
+
+                bool playerBlocked = _lastGlobalYear != int.MinValue
+                    && year - _lastGlobalYear < System.Math.Max(1, cfg.EventCooldownYears);
+
+                var kingdomList = GameHelpers.KingdomSnapshot();
+                if (kingdomList == null) return;
+                long playerId = NationEngine.NationKingdomId;
+                int aiSpawnedThisQuarter = 0;
+                const int MaxAiPerQuarter = 1; // 每季度 AI 列国最多 1 件（4 季度 ≈ 旧年度 2 件的上限感）
+
+                for (int ki = 0; ki < kingdomList.Count; ki++)
+                {
+                    var k = kingdomList[ki];
+                    if (k == null || k.data == null) continue;
+                    long kid = k.data.id;
+                    if (kid == 0) continue;
+                    bool isPlayer = kid == playerId;
+                    if (isPlayer && playerBlocked) continue;
+                    if (!isPlayer && aiSpawnedThisQuarter >= MaxAiPerQuarter) continue;
+                    // 玩家国本季度已有挂起未决 → 不再压入（防小窗堆积）；AI 国无挂起概念
+                    if (isPlayer && _pending.Count > 0) continue;
+
+                    float chance = (isPlayer ? cfg.EventChancePlayer : cfg.EventChanceAi) * 0.25f;
+                    if (chance <= 0f) continue;
+                    if (Random.value > chance) continue;
+
+                    EconomyMod.Models.KingdomStats stats;
+                    EconomyEngine.KingdomStats.TryGetValue(kid, out stats);
+                    EventDef picked = null;
+                    float totalWeight = 0f;
+                    _candidatePool.Clear();
+                    for (int di = 0; di < _defs.Count; di++)
+                    {
+                        var d = _defs[di];
+                        if (!PoolActive(d)) continue;
+                        if (d.onlyPlayer && !isPlayer) continue;
+                        if (year < ReadyYearOf(d)) continue;
+                        if (!ConditionsOk(d, k, stats, year, isPlayer)) continue;
+                        _candidatePool.Add(d);
+                        totalWeight += OptionWeight(d);
+                    }
+                    if (totalWeight > 0f)
+                    {
+                        float roll = Random.value * totalWeight;
+                        for (int ci = 0; ci < _candidatePool.Count; ci++)
+                        {
+                            roll -= OptionWeight(_candidatePool[ci]);
+                            if (roll <= 0f) { picked = _candidatePool[ci]; break; }
+                        }
+                        if (picked == null && _candidatePool.Count > 0) picked = _candidatePool[_candidatePool.Count - 1];
+                    }
+                    if (picked == null) continue;
+                    SpawnFor(picked, k, isPlayer, year, false);
+                    if (isPlayer) _lastGlobalYear = year;
+                    else aiSpawnedThisQuarter++;
+                    _readyYear[picked.id] = year + System.Math.Max(0, picked.cooldownYears);
+                }
+            }
+            catch (System.Exception) { }
         }
 
         /// <summary>把事件送达目标国：玩家国入挂起池+弹窗排队，AI 国按国性立即决策。</summary>

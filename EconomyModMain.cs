@@ -360,6 +360,7 @@ namespace EconomyMod
         {
             private int _lastCollectedYear = -1;
             private string _sidecarLoadedDir; // 已加载旁挂文件的存档目录（目录变化即重载）
+            private int _lastQuarterYear = -1; // 最近已触发季度检测的年份（跨年重置季度序号）
             private float _yearCheckTimer;   // 反射读取年份的节流计时（年份粒度为年，无需每帧）
 
             /// <summary>读档恢复后对齐年份基线（订阅 OnSaveLoaded；读档年份可能首帧仍为 0/1）。</summary>
@@ -474,6 +475,31 @@ namespace EconomyMod
                         _sidecarLoadedDir = saveDir;
                         Services.HistoryService.LoadFromFile(saveDir);
                         Services.EventStreamService.LoadFromFile(saveDir);
+                    }
+                }
+                catch (System.Exception) { }
+
+                // 季度触发点（v2.0.8）：一年 3/6/9/12 月各一次事件抽签——
+                // 玩家国一年之内可以遇到多个待决事件（3→6→9→12 各一次）。
+                // 月份经原版 Date.getCurrentMonth()（1~12，public static）；
+                // EvaluateQuarter 自带同季度幂等，这里只负责跨年时让季度序号复位。
+                try
+                {
+                    if (World.world != null && !AnnualPipeline.IsSettling)
+                    {
+                        int month = 1;
+                        try { month = Date.getCurrentMonth(); } catch (System.Exception) { }
+                        int q = month >= 12 ? 4 : month >= 9 ? 3 : month >= 6 ? 2 : month >= 3 ? 1 : 0;
+                        if (q > 0)
+                        {
+                            int year = GetCurrentGameYear();
+                            if (year != _lastQuarterYear)
+                            {
+                                _lastQuarterYear = year;
+                                DecisionEvents.ResetQuarter();
+                            }
+                            DecisionEvents.EvaluateQuarter(year, q);
+                        }
                     }
                 }
                 catch (System.Exception) { }
