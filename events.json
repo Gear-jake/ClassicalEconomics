@@ -6254,6 +6254,121 @@
           "goodwillAll": 1
         }
       ]
+    },
+    {
+      "id": "armament_race",
+      "family": "military",
+      "minYear": 4,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 14,
+      "options": [
+        {
+          "key": "opt1",
+          "upgradeBuildings": 3,
+          "treasuryGdpRatio": -0.01
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "levy_muster",
+      "family": "military",
+      "minYear": 4,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 14,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.012,
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "great_war_unleashed",
+      "family": "military",
+      "minYear": 5,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 20,
+      "options": [
+        {
+          "key": "opt1",
+          "declareWarTarget": 2,
+          "treasuryGdpRatio": -0.015
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "postwar_decay",
+      "family": "civil",
+      "minYear": 6,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "poorReliefRatio": 0.15,
+          "treasuryGdpRatio": -0.008
+        },
+        {
+          "key": "opt2",
+          "citizenWealthRatio": -0.3,
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "reconstruction_begin",
+      "family": "civil",
+      "minYear": 6,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 14,
+      "options": [
+        {
+          "key": "opt1",
+          "upgradeBuildings": 4,
+          "treasuryGdpRatio": -0.01
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
+    },
+    {
+      "id": "renewal_spring",
+      "family": "civil",
+      "minYear": 7,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 16,
+      "options": [
+        {
+          "key": "opt1",
+          "citizenWealthRatio": 0.4,
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": 0.006
+        }
+      ]
     }
   ]
 }

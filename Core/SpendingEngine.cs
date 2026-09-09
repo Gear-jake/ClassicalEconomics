@@ -523,9 +523,19 @@ bool log = UnrestConfig.Instance.LogToWorldLog;
             if (actor == null || actor.kingdom == null || _weakPool.Count == 0) return 0;
             int rolls = 0;
             int success = 0;
+            // 锻造失败率（v2.0.6）：低概率烧毁（材料已成交不退），保证军械投入有真实消耗
+            const float craftFailRate = 0.12f;
+            int failures = 0;
             while (budget >= WeakTierPrice && rolls < maxRolls)
             {
                 rolls++;
+                // 失败判定：锻炉走火/淬火不当 → 材料作废，无装备入账
+                if (_rng.NextDouble() < craftFailRate)
+                {
+                    failures++;
+                    budget = Mathf.Max(0, budget - WeakTierPrice);
+                    continue;
+                }
                 int tier = RollTier(budget);
                 int price = tier == 2 ? StrongTierPrice : tier == 1 ? MidTierPrice : WeakTierPrice;
                 if (budget < price) break;
@@ -535,6 +545,8 @@ bool log = UnrestConfig.Instance.LogToWorldLog;
                 if (asset == null) continue;
                 if (GenerateAndEquip(actor, asset)) success++;
             }
+            if (failures > 0)
+                GameHelpers.Log($"[ClassicalEconomics] 打造军械：{failures} 件锻件烧毁（材料已耗，无装备入账）");
             return success;
         }
 
