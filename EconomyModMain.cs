@@ -563,7 +563,8 @@ if (World.world == null)
                     TradeSimulationWorker.Reset(); // 在途后台周期无条件丢弃（世界数据已失效）
                     if (currentYear <= 1)
                     {
-                        // 新地图/新游戏：年份归零，全部状态重置
+                        // 新地图/新游戏：年份归零，全部状态重置 + 世界 ID 会话缓存重置
+                        Core.WorldIdentity.ResetSession();
                         ResetAllEngines();
                         Debug.Log("[ClassicalEconomics] 检测到新地图/新游戏，历史已清空，周期从 #1 重新开始");
                     }
@@ -572,6 +573,27 @@ if (World.world == null)
                         // 读档：保留历史快照/周期/时代/动荡状态，仅重建失效引用并继续运行
                         InheritanceEngine.Reset();
                         Debug.Log($"[ClassicalEconomics] 检测到读档（年份 {currentYear}），保留历史与周期状态，继续运行");
+                        // ===== 世界库恢复（时机正确：世界已就绪、map_stats 可取）=====
+                        try
+                        {
+                            string worldId = Core.WorldIdentity.GetOrCreateWorldId();
+                            Services.HistoryService.ClearHistory();
+                            Services.EventStreamService.Clear();
+                            bool histOk = false, eventsOk = false;
+                            if (!string.IsNullOrEmpty(worldId))
+                            {
+                                histOk = Services.HistoryService.LoadFromWorldStore(worldId);
+                                eventsOk = Services.EventStreamService.LoadFromWorldStore(worldId);
+                            }
+                            UnityEngine.Debug.Log("[ClassicalEconomics] 世界库读档恢复 worldId=" + worldId
+                                + " year=" + currentYear
+                                + " hist=" + Services.HistoryService.GetRecent(1).Count + "/" + histOk
+                                + " events=" + Services.EventStreamService.Count + "/" + eventsOk);
+                        }
+                        catch (System.Exception e)
+                        {
+                            UnityEngine.Debug.LogWarning("[ClassicalEconomics] 世界库读档恢复异常: " + e.Message);
+                        }
                     }
                 }
                 if (currentYear != _lastCollectedYear)

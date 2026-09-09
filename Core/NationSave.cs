@@ -243,30 +243,9 @@ namespace EconomyMod.Core
             {
                 if (World.world == null) return;
 
-                // ===== 世界 ID 历史库恢复（v2.1.13：存档持久 ID，见 WorldIdentity）=====
-                // 读档完成（世界已加载完）：先清空内存面板，再按当前世界 ID 打开
-                // <persistentDataPath>\ClassicalEconomicsWorlds\ 下的历史/事件文件——
-                // 有则覆盖显示继续记录，无则从零记录。ID 随存档持久，天然免疫目录错位。
-                try
-                {
-                    string worldId = WorldIdentity.GetOrCreateWorldId();
-                    HistoryService.ClearHistory();
-                    EventStreamService.Clear();
-                    bool histOk = false, eventsOk = false;
-                    if (!string.IsNullOrEmpty(worldId))
-                    {
-                        histOk = HistoryService.LoadFromWorldStore(worldId);
-                        eventsOk = EventStreamService.LoadFromWorldStore(worldId);
-                    }
-                    UnityEngine.Debug.Log("[ClassicalEconomics] 世界库读档恢复 worldId=" + worldId
-                        + " load#" + LoadCounter
-                        + " hist=" + HistoryService.GetRecent(1).Count + "/" + histOk
-                        + " events=" + EventStreamService.Count + "/" + eventsOk);
-                }
-                catch (System.Exception e)
-                {
-                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 世界库读档恢复异常: " + e.Message);
-                }
+                // 注意：世界库恢复不在这里——无参 loadWorld 的 postfix 执行时机太早
+                // （SmoothLoader 尚未真正加载完，World.world.map_stats 拿不到，worldId 为空）。
+                // 世界库恢复在 EconomyTickRunner 的"检测到读档（年份 N）"分支（世界已就绪）。
 
                 // 历史：从任意王国读 rb_hist（写盘时挂认领国或第一个王国）
                 string hist = ReadAnyKingdomKey("rb_hist");
