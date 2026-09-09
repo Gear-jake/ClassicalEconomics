@@ -1,7 +1,7 @@
 (Primechanie: tekst transliterirovan latinitsey, tak kak Steam Workskop khranit tolko ASCII. V samom mode polnaya russkaya lokalizatsiya.)
 
 [h1]Klassicheskaya ekonomika[/h1]
-[b]Mod makroekonomiki i gosudarstvennogo upravleniya dlya WorldBox | Versiya 2.0.6[/b]
+[b]Mod makroekonomiki i gosudarstvennogo upravleniya dlya WorldBox | Versiya 2.0.7[/b]
 [b]Trebuetsya:[/b] WorldBox 0.51.2+ i NeoModLoader (NML)
 
 Dobavlyaet polnuyu makroekonomicheskuyu i **gosudarstvennuyu** simulyatsiyu. Lyubaya rasa, sposobnaya osnovat korolevstvo (ognennye/ledyanye demony, prisheltsy...), uchastvuet v ekonomike; igrayte za svoe gosudarstvo ili nablyudayte, kak korolevstva AI upravlyayut soboy sami.

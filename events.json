@@ -6369,6 +6369,202 @@
           "treasuryGdpRatio": 0.006
         }
       ]
+    },
+    {
+      "id": "dynasty_peak",
+      "family": "court",
+      "minYear": 3,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 18,
+      "chainNext": "dynasty_crisis",
+      "chainDelay": 2,
+      "options": [
+        {
+          "key": "opt1",
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": 0.008
+        }
+      ]
+    },
+    {
+      "id": "dynasty_crisis",
+      "family": "court",
+      "minYear": 5,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 0,
+      "chainNext": "dynasty_fall",
+      "chainDelay": 3,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "treasuryGdpRatio": -0.01
+        }
+      ]
+    },
+    {
+      "id": "dynasty_fall",
+      "family": "disaster",
+      "minYear": 8,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 0,
+      "chainNext": "dynasty_rise",
+      "chainDelay": 2,
+      "options": [
+        {
+          "key": "opt1",
+          "citizenWealthRatio": -0.4
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "dynasty_rise",
+      "family": "civil",
+      "minYear": 10,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "citizenWealthRatio": 0.5,
+          "goodwillAll": 2
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "realm_birth",
+      "family": "civil",
+      "minYear": 4,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 20,
+      "chainNext": "realm_growth",
+      "chainDelay": 4,
+      "options": [
+        {
+          "key": "opt1",
+          "upgradeBuildings": 3,
+          "goodwillAll": 1
+        },
+        {
+          "key": "opt2"
+        }
+      ]
+    },
+    {
+      "id": "realm_growth",
+      "family": "finance",
+      "minYear": 8,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 0,
+      "chainNext": "realm_storm",
+      "chainDelay": 4,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": 0.012
+        },
+        {
+          "key": "opt2",
+          "unrest": true
+        }
+      ]
+    },
+    {
+      "id": "realm_storm",
+      "family": "military",
+      "minYear": 12,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 0,
+      "chainNext": "realm_ruin",
+      "chainDelay": 4,
+      "options": [
+        {
+          "key": "opt1",
+          "declareWarTarget": 2,
+          "treasuryGdpRatio": -0.015
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "realm_ruin",
+      "family": "disaster",
+      "minYear": 16,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 0,
+      "chainNext": "realm_rebirth",
+      "chainDelay": 4,
+      "options": [
+        {
+          "key": "opt1",
+          "unrest": true
+        },
+        {
+          "key": "opt2",
+          "citizenWealthRatio": -0.3
+        }
+      ]
+    },
+    {
+      "id": "realm_rebirth",
+      "family": "civil",
+      "minYear": 20,
+      "timeoutYears": 2,
+      "fallback": 1,
+      "cooldownYears": 0,
+      "options": [
+        {
+          "key": "opt1",
+          "upgradeBuildings": 4,
+          "citizenWealthRatio": 0.4
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 2
+        }
+      ]
+    },
+    {
+      "id": "court_verdict",
+      "family": "court",
+      "minYear": 2,
+      "timeoutYears": 1,
+      "fallback": 1,
+      "cooldownYears": 8,
+      "options": [
+        {
+          "key": "opt1",
+          "treasuryGdpRatio": -0.006
+        },
+        {
+          "key": "opt2",
+          "goodwillAll": 1
+        }
+      ]
     }
   ]
 }
