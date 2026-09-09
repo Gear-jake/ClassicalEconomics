@@ -288,18 +288,20 @@ namespace EconomyMod.Services
                 {
                     if (string.IsNullOrEmpty(entries[i])) continue;
                     string[] f = entries[i].Split('|');
-                    // 6 字段：major|year|type|kingdom|value|detail
+                    // 5 字段：major:year | type | kingdom | value | detail（major 与 year 用 ':' 连接）
                     if (f.Length < 5) continue;
-                    if (!int.TryParse(f[0], out int major)) continue;
-                    if (!int.TryParse(f[1], out int year)) continue;
-                    if (!long.TryParse(f[4], NumberStyles.Integer, inv, out long val)) continue;
+                    string[] head = f[0].Split(':');
+                    if (head.Length < 2) continue;
+                    if (!int.TryParse(head[0], out int major)) continue;
+                    if (!int.TryParse(head[1], out int year)) continue;
+                    if (!long.TryParse(f[3], NumberStyles.Integer, inv, out long val)) continue;
                     if (!IsKnownType(f[2])) continue;
                     var e = RentEntry();
                     e.GameYear = year;
                     e.TypeKey = f[2];
-                    e.KingdomName = Unescape(f[3]);
+                    e.KingdomName = Unescape(f[2]);
                     e.Value = val;
-                    e.Detail = f.Length > 5 ? Unescape(f[5]) : null;
+                    e.Detail = Unescape(f[4]);
                     if (major == 1)
                     {
                         _majorEvents[_majorHead] = e;
