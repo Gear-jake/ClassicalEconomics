@@ -42,10 +42,10 @@ for name in sorted(os.listdir(ROOT)):
     if name.startswith('STEAM_WORKSHOP_DESC_') and name.endswith('.txt'):
         entries.append((os.path.join(ROOT, name), name))
 
-# 运行资源
+# 运行资源（arcname 必须带顶层目录名：GameResources/ Icons/ Locales/，游戏按此路径加载）
 for folder in ('GameResources', 'Icons', 'Locales'):
     for full, rel in iter_files(os.path.join(ROOT, folder)):
-        entries.append((full, rel))
+        entries.append((full, '{0}/{1}'.format(folder, rel)))
 
 # 源码与文档（Source/ 前缀，保持 2.1.8 发布包结构）
 entries.append((os.path.join(ROOT, 'EconomyModMain.cs'), 'Source/EconomyModMain.cs'))
