@@ -47,8 +47,9 @@ namespace EconomyMod
             Debug.Log("[ClassicalEconomics] === 热重载完成 ===");
         }
 
-        /// <summary>重置全部经济引擎状态（热重载 / 新地图共用序列）。</summary>
-        private static void ResetAllEngines()
+        /// <summary>重置全部经济引擎状态（热重载 / 新地图共用序列）。
+        /// internal：由 NationSave.LoadWorldReady（新世界锚点）调用。</summary>
+        internal static void ResetAllEngines()
         {
             TradeSimulationWorker.Reset();
             EconomyEngine.ResetCycle();
@@ -360,14 +361,18 @@ namespace EconomyMod
         {
             private int _lastCollectedYear = -1;
             private int _lastQuarterYear = -1; // 最近已触发季度检测的年份（跨年重置季度序号）
-            private object _lastWorldRef;      // 上次见到的 World.world 引用（引用变化=新世界/读档）
-            private int _lastLoadCounter;      // 上次见到的 NationSave.LoadCounter（变化=本次是读档）
             private float _yearCheckTimer;   // 反射读取年份的节流计时（年份粒度为年，无需每帧）
 
-            /// <summary>读档恢复后对齐年份基线（订阅 OnSaveLoaded；读档年份可能首帧仍为 0/1）。</summary>
+            /// <summary>读档恢复后对齐年份基线（订阅 OnSaveLoaded；读档年份可能首帧仍为 0/1）。
+            /// 仅年份已就绪（&gt;1）时覆盖：未就绪的 0/1 不覆盖，让年份回退分支的世界 ID
+            /// 判定兜住，避免把读档误判成"新地图"而清掉刚恢复的历史。</summary>
             private void AlignYearAfterLoad()
             {
-                try { _lastCollectedYear = EconomyModMain.GetCurrentGameYear(); }
+                try
+                {
+                    int y = EconomyModMain.GetCurrentGameYear();
+                    if (y > 1) _lastCollectedYear = y;
+                }
                 catch (System.Exception) { }
             }
             private float _realtimeTimer;    // 实时刷新节流计时（配置开启时按秒轻量刷新 HUD 数据）
@@ -464,30 +469,10 @@ namespace EconomyMod
                 if (_yearCheckTimer < 0.5f) return;
                 _yearCheckTimer = 0f;
 
-                // 旁挂文件状态机（v2.1.11 简化）：恢复已由 NationSave.LoadPostfix 在读档完成时执行
-                // （世界已加载、路径已捕获，一次性到位）；这里只兜"新世界没有读档"的场景——
-                // 世界引用变化但 NationSave.LoadCounter 未变 → 清空白板从零记录。
-                try
-                {
-                    object worldNow = World.world;
-                    bool worldChanged = !ReferenceEquals(_lastWorldRef, worldNow);
-                    int curLoadCounter = Core.NationSave.LoadCounter;
-                    bool loadHappened = curLoadCounter != _lastLoadCounter;
-                    if (worldChanged)
-                    {
-                        _lastWorldRef = worldNow;
-                        _lastLoadCounter = curLoadCounter;
-                        if (worldNow != null && !loadHappened)
-                        {
-                            // 新世界（无读档调用）：清空白板从零记录 + 重置世界 ID 会话缓存
-                            Core.WorldIdentity.ResetSession();
-                            Services.HistoryService.ClearHistory();
-                            Services.EventStreamService.Clear();
-                            UnityEngine.Debug.Log("[ClassicalEconomics] 旁挂新世界清空（非读档切换，从零记录）");
-                        }
-                    }
-                }
-                catch (System.Exception) { }
+                // 世界就绪后的恢复/清空已由 NationSave.LoadWorldReady 统一处理：
+                // 挂载 MapBox.finishingUpLoading postfix（SmoothLoader 最后一帧，读档与新世界
+                // 两条路径都会走到，此时世界数据完整）——读档按世界 ID 开库恢复，新世界从零
+                // 记录。这里不再需要旁挂状态机与世界就绪分支（旧实现多触发点互相打架）。
 
                 // 季度触发点（v2.0.8）：一年 2/5/8/11 月各一次事件抽签——
                 // 玩家国一年之内可以遇到多个待决事件（2→5→8→11 各一次）；
@@ -553,80 +538,29 @@ if (World.world == null)
                 }
                 _worldReferencesCleared = false;
 
-                // ===== 世界就绪恢复（v2.1.16）：每次从无世界进入世界（含游戏启动后首开存档）=====
-                // 此处在 World.world==null 早退之后执行——世界已就绪、map_stats 可取。
-                // 世界引用变化即触发：读档/首次进入 → 按世界 ID 开库（有显示/无则从零）。
-                // 修复"先读旧存档 → 没读到为空 → 之后不再检测"的链条：不再依赖年份回退，
-                // 首次进入（_lastWorldRef 曾为 null）也覆盖。
-                try
-                {
-                    object worldNow2 = World.world;
-                    bool becameReady = !ReferenceEquals(_lastWorldRef, worldNow2)
-                        && worldNow2 != null
-                        && _lastWorldRef == null;
-                    if (becameReady)
-                    {
-                        _lastWorldRef = worldNow2;
-                        string worldId = Core.WorldIdentity.GetOrCreateWorldId();
-                        Services.HistoryService.ClearHistory();
-                        Services.EventStreamService.Clear();
-                        bool histOk = false, eventsOk = false;
-                        if (!string.IsNullOrEmpty(worldId))
-                        {
-                            histOk = Services.HistoryService.LoadFromWorldStore(worldId);
-                            eventsOk = Services.EventStreamService.LoadFromWorldStore(worldId);
-                        }
-                        UnityEngine.Debug.Log("[ClassicalEconomics] 世界库进入恢复 worldId=" + worldId
-                            + " hist=" + Services.HistoryService.GetRecent(1).Count + "/" + histOk
-                            + " events=" + Services.EventStreamService.Count + "/" + eventsOk);
-                    }
-                }
-                catch (System.Exception e)
-                {
-                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 世界库进入恢复异常: " + e.Message);
-                }
-
                 int currentYear = GetCurrentGameYear();
-                // 年份回退：可能是新地图/新游戏（年份归零），也可能是读档（存档年份 < 上次运行年份）
+                // 年份回退：可能是新地图/新游戏（年份归零），也可能是读档（存档年份 < 上次运行年份）。
+                // 历史/事件流的清空与恢复已由 NationSave.LoadWorldReady（MapBox.finishingUpLoading
+                // postfix，世界就绪锚点）统一完成；这里只保留引擎生命周期管理，不再动历史数据。
                 if (currentYear < _lastCollectedYear)
                 {
                     _lastCollectedYear = currentYear;
                     _cyclePending = false;
                     AnnualPipeline.Abort(); // 世界数据已失效，终止在途分帧收尾
                     TradeSimulationWorker.Reset(); // 在途后台周期无条件丢弃（世界数据已失效）
-                    if (currentYear <= 1)
+                    if (currentYear <= 1 && Core.WorldIdentity.PeekWorldId() == null)
                     {
-                        // 新地图/新游戏：年份归零，全部状态重置 + 世界 ID 会话缓存重置
+                        // 新地图/新游戏兜底：世界就绪锚点未及处理时引擎状态从零；
+                        // 有世界 ID 键 = 读档（年份≤1 的存档），保留刚恢复的历史不清。
                         Core.WorldIdentity.ResetSession();
                         ResetAllEngines();
-                        Debug.Log("[ClassicalEconomics] 检测到新地图/新游戏，历史已清空，周期从 #1 重新开始");
+                        Debug.Log("[ClassicalEconomics] 检测到新地图/新游戏（兜底），历史已清空，周期从 #1 重新开始");
                     }
-                    else
+                    else if (currentYear > 1)
                     {
-                        // 读档：保留历史快照/周期/时代/动荡状态，仅重建失效引用并继续运行
+                        // 读档兜底：保留历史快照/周期/时代/动荡状态，仅重建失效引用并继续运行
                         InheritanceEngine.Reset();
                         Debug.Log($"[ClassicalEconomics] 检测到读档（年份 {currentYear}），保留历史与周期状态，继续运行");
-                        // ===== 世界库恢复（时机正确：世界已就绪、map_stats 可取）=====
-                        try
-                        {
-                            string worldId = Core.WorldIdentity.GetOrCreateWorldId();
-                            Services.HistoryService.ClearHistory();
-                            Services.EventStreamService.Clear();
-                            bool histOk = false, eventsOk = false;
-                            if (!string.IsNullOrEmpty(worldId))
-                            {
-                                histOk = Services.HistoryService.LoadFromWorldStore(worldId);
-                                eventsOk = Services.EventStreamService.LoadFromWorldStore(worldId);
-                            }
-                            UnityEngine.Debug.Log("[ClassicalEconomics] 世界库读档恢复 worldId=" + worldId
-                                + " year=" + currentYear
-                                + " hist=" + Services.HistoryService.GetRecent(1).Count + "/" + histOk
-                                + " events=" + Services.EventStreamService.Count + "/" + eventsOk);
-                        }
-                        catch (System.Exception e)
-                        {
-                            UnityEngine.Debug.LogWarning("[ClassicalEconomics] 世界库读档恢复异常: " + e.Message);
-                        }
                     }
                 }
                 if (currentYear != _lastCollectedYear)

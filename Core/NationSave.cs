@@ -21,16 +21,8 @@ namespace EconomyMod.Core
         private static bool _loadWarned;
 
         /// <summary>
-        /// 最近一次读档的实际路径（补丁 SaveManager.loadWorld(string,bool) 前缀捕获）。
-        /// 手动槽= saves\saveN，自动槽= autosaves\&lt;epoch&gt;，工坊= main_path——
-        /// 旁挂恢复端用它优先定位（读哪个存档就找哪个目录，与保存端 pFolder 天然对齐）。
+        /// 幂等安装；由 EconomyTickRunner 首帧调用。
         /// </summary>
-        public static string LastLoadedDir { get; private set; }
-
-        /// <summary>读档发生计数器：LoadPrefix 每次读档自增；懒加载对比它区分"读档 vs 新世界"。</summary>
-        public static int LoadCounter { get; private set; }
-
-        /// <summary>幂等安装；由 EconomyTickRunner 首帧调用。</summary>
         public static void TryInstall()
         {
             if (_installed) return;
@@ -39,43 +31,27 @@ namespace EconomyMod.Core
             {
                 // WorldBox 0.51.2 真实存档 API：保存=SaveManager.saveWorldToDirectory(public static)，
                 // 读档=SaveManager.loadWorld()（无参实例方法，手动/自动/工坊读档的唯一入口）。
-                // 旧的 MapBox.saveSave/loadSave 在 0.51.2 已不存在——钩子从未安装过。
+                // 注意：loadWorld 的 postfix 时机太早——loadData 只把任务塞进 SmoothLoader 队列就
+                // 返回（分帧异步加载），postfix 时 map_stats/kingdoms 尚未恢复。所以读档恢复
+                // 必须挂在 MapBox.finishingUpLoading()（SmoothLoader 最后一帧"Finishing up..."，
+                // 读档与新世界两条路径都会走到，与 ActorHistory 同款锚点）。
                 var save = AccessTools.Method(typeof(SaveManager), "saveWorldToDirectory");
-                var loadNoArg = AccessTools.Method(typeof(SaveManager), "loadWorld", new System.Type[0]);
-                var loadWithArg = AccessTools.Method(typeof(SaveManager), "loadWorld", new System.Type[] { typeof(string), typeof(bool) });
-                if (save == null || loadNoArg == null || loadWithArg == null)
+                var worldReady = AccessTools.Method(typeof(MapBox), "finishingUpLoading");
+                if (save == null || worldReady == null)
                 {
-                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 中央银行家存档：SaveManager.saveWorldToDirectory/loadWorld 未找到，回退本局记忆");
+                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 中央银行家存档：SaveManager.saveWorldToDirectory/MapBox.finishingUpLoading 未找到，回退本局记忆");
                     return;
                 }
                 var harmony = new Harmony(HarmonyId);
                 harmony.Patch(save, prefix: new HarmonyMethod(typeof(NationSave), nameof(SavePrefix)));
-                harmony.Patch(loadNoArg, postfix: new HarmonyMethod(typeof(NationSave), nameof(LoadPostfix)));
                 harmony.Patch(save, postfix: new HarmonyMethod(typeof(NationSave), nameof(SavePostfixSidecar)));
-                // 读档路径捕获：带参重载前缀记录 pPath（无参版内部最终调它）
-                harmony.Patch(loadWithArg, prefix: new HarmonyMethod(typeof(NationSave), nameof(LoadPrefix)));
-                UnityEngine.Debug.Log("[ClassicalEconomics] 中央银行家存档补丁已安装（saveWorldToDirectory/loadWorld）");
+                harmony.Patch(worldReady, postfix: new HarmonyMethod(typeof(NationSave), nameof(LoadWorldReady)));
+                UnityEngine.Debug.Log("[ClassicalEconomics] 中央银行家存档补丁已安装（saveWorldToDirectory + finishingUpLoading）");
             }
             catch (System.Exception e)
             {
                 UnityEngine.Debug.LogWarning("[ClassicalEconomics] 中央银行家存档补丁安装失败: " + e.Message);
             }
-        }
-
-        /// <summary>读档前缀：记录实际路径（手动槽/自动槽/工坊）+ 递增读档计数，供旁挂恢复端区分读档/新世界。</summary>
-        private static void LoadPrefix(string pPath)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(pPath)) return;
-                string dir = SaveManager.folderPath(pPath);
-                if (!string.IsNullOrEmpty(dir))
-                {
-                    LastLoadedDir = dir;
-                    LoadCounter++;
-                }
-            }
-            catch (System.Exception) { }
         }
 
         /// <summary>写盘前把内存状态同步进认领国 data（未认领则跳过）。</summary>
@@ -85,10 +61,13 @@ namespace EconomyMod.Core
             {
                 if (World.world == null) return;
 
-                // 世界 ID 必须在原版序列化 MapStats 之前写入 custom_data（v2.1.14 修复）：
-                // postfix 执行时原版已序列化完毕，写键不会进档 → 读档生成的 UUID 每次都变 →
-                // 世界库永远找不到文件（"加载两次"假象）。前缀写入后同局读档恒同。
-                try { WorldIdentity.GetOrCreateWorldId(); }
+                // 世界 ID 必须在原版序列化 MapStats 之前写入（v2.1.14）：postfix 执行时原版已
+                // 序列化完毕，写键不会进档。双通道落盘（custom_data + 王国 data 键）见 WorldIdentity。
+                try
+                {
+                    string wid = WorldIdentity.GetOrCreateWorldId();
+                    WorldIdentity.WriteWorldId(wid);
+                }
                 catch (System.Exception) { }
 
                 long nationId = NationEngine._nationKingdomId;
@@ -204,10 +183,10 @@ namespace EconomyMod.Core
         }
 
         /// <summary>
-        /// 保存后把历史/事件流写成存档目录旁挂文件（诡秘之主-宿命之环同款方案）：
-        /// 不依赖王国 data 键能否被原版序列化，也不依赖读档钩子时序——原版保存成功后
-        /// （__result != null）直接落盘到真实存档目录；读档侧由 EconomyModMain 跟踪
-        /// SaveManager.currentSavePath 变化懒加载。任何异常吞掉，绝不阻断原版保存。
+        /// 保存后把历史/事件流写入世界 ID 历史库（fixed persistentDataPath，不随存档目录漂移——
+        /// autosaves 目录是 epoch 秒命名、手动槽是 saves/saveN，目录漂移正是"打开其他世界再回档
+        /// 找不到历史"的根源，故不再写存档目录旁挂副本）。postfix 在原版写盘完成后执行，
+        /// 只做外部文件写入，绝不阻断原版保存。
         /// </summary>
         private static void SavePostfixSidecar(string pFolder, SavedMap __result)
         {
@@ -221,39 +200,73 @@ namespace EconomyMod.Core
                     HistoryService.SaveToWorldStore(worldId);
                     EventStreamService.SaveToWorldStore(worldId);
                 }
-                // 兼容旧读档路径：同时写一份到存档目录（老旁挂仍可被旧逻辑读、方便排查）
-                string dir = SaveManager.folderPath(pFolder);
-                if (!string.IsNullOrEmpty(dir))
-                {
-                    HistoryService.SaveToFile(dir);
-                    EventStreamService.SaveToFile(dir);
-                }
                 UnityEngine.Debug.Log("[ClassicalEconomics] 世界库写入 worldId=" + worldId
-                    + " dir=" + dir
                     + " events=" + EventStreamService.Count
                     + " major=" + EventStreamService.MajorCount);
             }
             catch (System.Exception) { }
         }
 
-        /// <summary>读档后从王国 data 恢复中央银行家状态（缺失＝默认；失败回退本局记忆）。</summary>
-        private static void LoadPostfix()
+        /// <summary>
+        /// 世界就绪恢复（唯一锚点：MapBox.finishingUpLoading postfix，SmoothLoader 最后一帧
+        /// "Finishing up..."——读档与新世界两条路径都会走到，且此时 World.world / map_stats /
+        /// kingdoms / cities / units 全部就绪，相机已恢复）。
+        /// 判定：custom_data 有 ce_world_id 键 = 读档（ID 随存档反序列化回来）；
+        ///       无键 = 新世界（generateNewMap 里 new MapStats）或旧版存档首次进入。
+        /// 历史统一先清空再恢复：读档 → 按 ID 开世界库（缺文件回退王国 data 键）；
+        /// 新世界 → 从零记录（引擎全部重置；旧档升级时王国 data 键仍兜底恢复）。
+        /// </summary>
+        private static void LoadWorldReady()
         {
             try
             {
                 if (World.world == null) return;
+                UnityEngine.Debug.Log("[ClassicalEconomics] 世界就绪锚点触发（finishingUpLoading）");
 
-                // 注意：世界库恢复不在这里——无参 loadWorld 的 postfix 执行时机太早
-                // （SmoothLoader 尚未真正加载完，World.world.map_stats 拿不到，worldId 为空）。
-                // 世界库恢复在 EconomyTickRunner 的"检测到读档（年份 N）"分支（世界已就绪）。
+                // 世界已切换：强制重建王国快照/索引（缓存判定含 MapStats 对象引用，这里再显式
+                // 失效一道），确保后面的王国 data 键恢复读到的必须是本世界的王国，而不是上一局。
+                GameHelpers.InvalidateKingdomSnapshot();
+                GameHelpers.RefreshKingdomIndex();
 
-                // 历史：从任意王国读 rb_hist（写盘时挂认领国或第一个王国）
-                string hist = ReadAnyKingdomKey("rb_hist");
-                if (hist != null) HistoryService.Restore(hist);
+                string worldId = null;
+                bool freshWorld = false;
+                HistoryService.ClearHistory();
+                EventStreamService.Clear();
+                try
+                {
+                    worldId = WorldIdentity.PeekWorldId();
+                    freshWorld = string.IsNullOrEmpty(worldId);
+                    if (freshWorld)
+                    {
+                        WorldIdentity.ResetSession(); // 防会话缓存残留上一局 ID
+                        WorldIdentity.WriteWorldId(WorldIdentity.GetOrCreateWorldId()); // 生成 + 双通道写入（保存时落盘）
+                        EconomyModMain.ResetAllEngines(); // 新世界：引擎/历史/事件流从零开始
+                        // 旧档升级兼容：旧版没有世界 ID 键但王国 data 里有历史 → 兜底恢复
+                        RestoreHistAndStreamFallback(true, true);
+                        UnityEngine.Debug.Log("[ClassicalEconomics] 新世界/旧档升级进入 worldId="
+                            + WorldIdentity.PeekWorldId() + "（引擎已重置，记录从零开始）");
+                    }
+                    else
+                    {
+                        bool histOk = HistoryService.LoadFromWorldStore(worldId);
+                        bool eventsOk = EventStreamService.LoadFromWorldStore(worldId);
+                        if (!histOk || !eventsOk)
+                            RestoreHistAndStreamFallback(!histOk, !eventsOk);
+                        InheritanceEngine.Reset(); // 读档：清旧世界对象引用（扫描索引下周期自愈重建）
+                        UnityEngine.Debug.Log("[ClassicalEconomics] 读档世界库恢复 worldId=" + worldId
+                            + " hist=" + HistoryService.GetRecent(1).Count + "/" + histOk
+                            + " events=" + EventStreamService.Count + "/" + eventsOk);
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    UnityEngine.Debug.LogWarning("[ClassicalEconomics] 世界库恢复异常: " + e.Message);
+                }
 
-                // 事件流：与历史同宿主，读档恢复时间线
-                string evStream = ReadAnyKingdomKey("rb_ev_stream");
-                if (evStream != null) EventStreamService.Restore(evStream);
+                // 历史/事件流第二通道：写盘时挂认领国或第一个王国（任意王国 data 键）
+                RestoreHistAndStreamFallback(
+                    HistoryService.GetRecent(1).Count == 0,
+                    EventStreamService.Count == 0);
 
                 // 抉择事件状态（挂认领国 data，与写盘同键位）
                 string evPending = ReadAnyKingdomKey("rb_ev_pending");
@@ -272,19 +285,30 @@ namespace EconomyMod.Core
 
                 // 认领国状态：遍历王国找到写有 rb_nat_kingdom 键的数据
                 var snapshot = GameHelpers.KingdomSnapshot();
-                if (snapshot == null) return;
-                for (int i = 0; i < snapshot.Count; i++)
+                if (snapshot != null)
                 {
-                    var k = snapshot[i];
-                    if (k == null || k.data == null) continue;
-                    string kingIdStr = null;
-                    try { k.data.get("rb_nat_kingdom", out kingIdStr); }
-                    catch (System.Exception) { }
-                    if (string.IsNullOrEmpty(kingIdStr)) continue;
+                    for (int i = 0; i < snapshot.Count; i++)
+                    {
+                        var k = snapshot[i];
+                        if (k == null || k.data == null) continue;
+                        string kingIdStr = null;
+                        try { k.data.get("rb_nat_kingdom", out kingIdStr); }
+                        catch (System.Exception) { }
+                        if (string.IsNullOrEmpty(kingIdStr)) continue;
 
-                    RestoreNation(k);
-                    return; // 只有一个认领国
+                        RestoreNation(k);
+                        break; // 只有一个认领国
+                    }
                 }
+
+                // 恢复/清空完成后主动刷新 UI：数据已在内存，但可能已打开的窗口缓存了旧版本
+                // （不主动触发则显示空白，需等年度边界或用户操作才重建）。
+                try { EconomyMod.UI.EconomyUI.RefreshOverview(refreshCabinet: true); }
+                catch (System.Exception) { }
+                try { EconomyMod.UI.EventWindow.Instance?.InvalidateContent(); }
+                catch (System.Exception) { }
+                try { EconomyMod.UI.EventChoiceWindow.Instance?.OnYearBoundary(); }
+                catch (System.Exception) { }
 
                 // 读档恢复完成后触发年份基线对齐：防止 Tick 把读档年份误判为"新地图"
                 // 而触发 ResetAllEngines 清掉刚恢复的历史/事件流/法典。
@@ -300,6 +324,29 @@ namespace EconomyMod.Core
                 {
                     _loadWarned = true;
                     UnityEngine.Debug.LogWarning("[ClassicalEconomics] 中央银行家存档恢复失败，本局按默认状态运行");
+                }
+            }
+        }
+
+        /// <summary>按需从王国 data 键兜底恢复历史/事件流（世界库缺失、旧档升级或恢复失败时）。</summary>
+        private static void RestoreHistAndStreamFallback(bool tryHist, bool tryStream)
+        {
+            if (tryHist)
+            {
+                string hist = ReadAnyKingdomKey("rb_hist");
+                if (hist != null)
+                {
+                    HistoryService.Restore(hist);
+                    UnityEngine.Debug.Log("[ClassicalEconomics] 历史由王国 data 键恢复（worldstore 兜底）");
+                }
+            }
+            if (tryStream)
+            {
+                string evStream = ReadAnyKingdomKey("rb_ev_stream");
+                if (evStream != null)
+                {
+                    EventStreamService.Restore(evStream);
+                    UnityEngine.Debug.Log("[ClassicalEconomics] 事件流由王国 data 键恢复（worldstore 兜底）");
                 }
             }
         }

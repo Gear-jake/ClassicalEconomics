@@ -15,6 +15,7 @@ namespace EconomyMod.Core
         private static readonly Dictionary<long, Kingdom> _kingdomById = new Dictionary<long, Kingdom>();
         private static object _kingdomIndexWorld;
         private static object _kingdomIndexSource;
+        private static object _kingdomIndexStats;   // MapStats 对象引用（世界身份：读档/新世界替换）
         private static int _kingdomIndexCount = -1;
 
         /// <summary>解析城市所属王国：反射探测常见成员（kingdom/kingdomData/mainKingdom），全部失败返回 null。</summary>
@@ -73,7 +74,8 @@ namespace EconomyMod.Core
             bool rebuilt = false;
             if (!ReferenceEquals(_kingdomIndexWorld, world)
                 || !ReferenceEquals(_kingdomIndexSource, kingdoms)
-                || _kingdomIndexCount != kingdoms.Count)
+                || _kingdomIndexCount != kingdoms.Count
+                || !ReferenceEquals(_kingdomIndexStats, WorldIdentity.GetMapStatsRef()))
             {
                 RebuildKingdomIndex();
                 rebuilt = true;
@@ -106,6 +108,7 @@ namespace EconomyMod.Core
             {
                 _kingdomIndexWorld = null;
                 _kingdomIndexSource = null;
+                _kingdomIndexStats = null;
                 _kingdomIndexCount = -1;
                 return;
             }
@@ -117,6 +120,7 @@ namespace EconomyMod.Core
             }
             _kingdomIndexWorld = world;
             _kingdomIndexSource = kingdoms;
+            _kingdomIndexStats = WorldIdentity.GetMapStatsRef();
             _kingdomIndexCount = kingdoms.Count;
         }
 
@@ -125,6 +129,7 @@ namespace EconomyMod.Core
             _kingdomById.Clear();
             _kingdomIndexWorld = null;
             _kingdomIndexSource = null;
+            _kingdomIndexStats = null;
             _kingdomIndexCount = -1;
         }
 
@@ -290,6 +295,7 @@ namespace EconomyMod.Core
         private static readonly List<Kingdom> _kingdomSnapshot = new List<Kingdom>();
         private static object _kingdomSnapshotWorld;
         private static object _kingdomSnapshotSource;
+        private static object _kingdomSnapshotStats;   // MapStats 对象引用（世界身份：读档/新世界替换）
         private static int _kingdomSnapshotCount = -1;
         private static bool _kingdomSnapshotValid;
 
@@ -299,6 +305,7 @@ namespace EconomyMod.Core
             _kingdomSnapshot.Clear();
             _kingdomSnapshotWorld = null;
             _kingdomSnapshotSource = null;
+            _kingdomSnapshotStats = null;
             _kingdomSnapshotCount = -1;
             _kingdomSnapshotValid = false;
             ClearKingdomIndex();
@@ -327,7 +334,8 @@ namespace EconomyMod.Core
             if (_kingdomSnapshotValid
                 && ReferenceEquals(_kingdomSnapshotWorld, world)
                 && ReferenceEquals(_kingdomSnapshotSource, kingdoms)
-                && _kingdomSnapshotCount == kingdoms.Count)
+                && _kingdomSnapshotCount == kingdoms.Count
+                && ReferenceEquals(_kingdomSnapshotStats, WorldIdentity.GetMapStatsRef()))
                 return list;
 
             list.Clear();
@@ -341,9 +349,11 @@ namespace EconomyMod.Core
             }
             _kingdomIndexWorld = world;
             _kingdomIndexSource = kingdoms;
+            _kingdomIndexStats = WorldIdentity.GetMapStatsRef();
             _kingdomIndexCount = kingdoms.Count;
             _kingdomSnapshotWorld = world;
             _kingdomSnapshotSource = kingdoms;
+            _kingdomSnapshotStats = WorldIdentity.GetMapStatsRef();
             _kingdomSnapshotCount = kingdoms.Count;
             _kingdomSnapshotValid = true;
             return list;
