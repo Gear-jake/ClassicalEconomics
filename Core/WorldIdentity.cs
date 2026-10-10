@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace EconomyMod.Core
@@ -14,8 +14,9 @@ namespace EconomyMod.Core
     /// </summary>
     public static class WorldIdentity
     {
-        private const string Key = "ce_world_id";          // MapStats.custom_data 键
-        private const string KingdomKey = "rb_world_id";   // 王国 data 键（第二通道）
+        private const string Key = "ce_world_id";          // MapStats.custom_data 键（本体通道，不在 rb_ 前缀体系内）
+        // 【W3.2】王国 data 键（第二通道）统一由 SaveSchema 定义，避免同一键两处字面量
+        private const string KingdomKey = SaveSchema.WorldId;
 
         // MapBox.map_stats 为 internal 字段（编译期不可见），以反射读取 MapStats
         private static System.Reflection.FieldInfo _mapStatsField;

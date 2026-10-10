@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using EconomyMod.Core;
 using UnityEngine;
 using UnityEngine.UI;
@@ -47,14 +47,8 @@ namespace EconomyMod.UI
             var rowLe = row.AddComponent<LayoutElement>();
             rowLe.preferredWidth = width; rowLe.preferredHeight = titleH;
 
-            var accentBar = new GameObject("AccentBar", typeof(RectTransform), typeof(Image));
-            accentBar.transform.SetParent(row.transform, false);
-            var abRt = accentBar.GetComponent<RectTransform>();
-            abRt.sizeDelta = new Vector2(3, titleH);
-            accentBar.GetComponent<Image>().color = UIStyles.SectionBar;
-            accentBar.GetComponent<Image>().raycastTarget = false;
-            var abLe = accentBar.AddComponent<LayoutElement>();
-            abLe.preferredWidth = 3; abLe.preferredHeight = titleH;
+            // 【W2】移除自绘的 3px 亮金竖条：本体窗口没有这种装饰，它是最"塑料"的一处。
+            // 标题本身用金色文字已足够标识层级。
 
             // 标题文本
             var go = UIHelpers.CreateText(text, row.transform, UIStyles.SectionHeaderSize * fontScale, UIStyles.Gold,
@@ -62,14 +56,14 @@ namespace EconomyMod.UI
             var t = go.GetComponent<Text>();
             t.fontStyle = FontStyle.Bold;
             var rt = go.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(width - 9f, titleH);
+            rt.sizeDelta = new Vector2(width, titleH);
             var el = go.AddComponent<LayoutElement>();
             el.preferredHeight = titleH;
-            el.preferredWidth = width - 9f;
+            el.preferredWidth = width;
             el.flexibleWidth = 1;
 
             // 分隔线（作为容器子物体，随容器销毁）
-            var line = UIHelpers.CreateDivider(container.transform, UIStyles.GoldDeep);
+            var line = UIHelpers.CreateDivider(container.transform, UIStyles.SectionDivider);
             line.name = "SectionLine";
             var lrt = line.GetComponent<RectTransform>();
             lrt.sizeDelta = new Vector2(width, dividerH);
@@ -88,9 +82,21 @@ namespace EconomyMod.UI
             var card = new GameObject("StatCard", typeof(RectTransform), typeof(Image));
             card.transform.SetParent(parent, false);
             var img = card.GetComponent<Image>();
-            img.sprite = UIHelpers.RoundedSprite();
-            img.type = Image.Type.Sliced;
-            img.color = UIStyles.CardBg;
+            // 【W2】优先用本体内嵌面板素材（windowInnerSliced）；缺失则回退自绘圆角+深色底
+            var inner = VanillaSkin.InnerSprite;
+            if (inner != null)
+            {
+                img.sprite = inner;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+                img.pixelsPerUnitMultiplier = VanillaSkin.PanelBorderMultiplier;
+            }
+            else
+            {
+                img.sprite = UIHelpers.RoundedSprite();
+                img.type = Image.Type.Sliced;
+                img.color = UIStyles.CardBg;
+            }
             img.raycastTarget = false;
             var rt = card.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(w, h);
@@ -187,9 +193,21 @@ namespace EconomyMod.UI
             var badge = new GameObject("Badge", typeof(RectTransform), typeof(Image));
             badge.transform.SetParent(parent, false);
             var img = badge.GetComponent<Image>();
-            img.sprite = UIHelpers.RoundedSprite();
-            img.type = Image.Type.Sliced;
-            img.color = new Color(accent.r, accent.g, accent.b, 0.16f);
+            // 【W2】优先用本体内嵌面板素材（保留语义色着色）；缺失则回退自绘圆角
+            var inner = VanillaSkin.InnerSprite;
+            if (inner != null)
+            {
+                img.sprite = inner;
+                img.type = Image.Type.Sliced;
+                img.color = new Color(accent.r, accent.g, accent.b, 0.55f);
+                img.pixelsPerUnitMultiplier = VanillaSkin.PanelBorderMultiplier;
+            }
+            else
+            {
+                img.sprite = UIHelpers.RoundedSprite();
+                img.type = Image.Type.Sliced;
+                img.color = new Color(accent.r, accent.g, accent.b, 0.16f);
+            }
             img.raycastTarget = false;
             var rt = badge.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(w, h);
@@ -251,6 +269,14 @@ namespace EconomyMod.UI
             var lel = lbl.AddComponent<LayoutElement>();
             lel.preferredWidth = width - 18f;
             lel.preferredHeight = UIStyles.BodyLineHeight * fontScale;
+
+            // 【修复·错位】窄窗口下长文案（内存状态行）会换行成 2 行，而整行高度是固定的单行高
+            // → 第 2 行溢出压到下一行。改用共用助手按文本换行后的真实高度定高。
+            var txt = lbl.GetComponent<Text>();
+            txt.verticalOverflow = VerticalWrapMode.Truncate;
+            float oneLine = UIStyles.BodyLineHeight * fontScale;
+            row.GetComponent<RectTransform>().sizeDelta = new Vector2(width, oneLine);
+            UIHelpers.FitRowHeightToText(row, txt, oneLine, width);
             return row;
         }
 
@@ -295,6 +321,10 @@ namespace EconomyMod.UI
             nrt.sizeDelta = new Vector2(nameW, h);
             var nel = nameGo.AddComponent<LayoutElement>();
             nel.preferredWidth = nameW; nel.preferredHeight = h;
+            // 【布局修复】名称较长时会在 27% 宽的列内换行；行高需按换行后的真实高度回写，
+            // 否则第二行压到下一行（与事件流行同类问题）。
+            nameGo.GetComponent<Text>().verticalOverflow = VerticalWrapMode.Truncate;
+            UIHelpers.FitRowHeightToText(row, nameGo.GetComponent<Text>(), h, width);
 
             // GDP列
             var gdpGo = UIHelpers.CreateText(UIHelpers.L("col_gdp"), row.transform, 10f * fontScale,
@@ -384,6 +414,10 @@ namespace EconomyMod.UI
             nrt.sizeDelta = new Vector2(nameW, h);
             var nel = nameGo.AddComponent<LayoutElement>();
             nel.preferredWidth = nameW; nel.preferredHeight = h;
+            // 【布局修复】名称较长时会在 27% 宽的列内换行；行高需按换行后的真实高度回写，
+            // 否则第二行压到下一行（与事件流行同类问题）。
+            nameGo.GetComponent<Text>().verticalOverflow = VerticalWrapMode.Truncate;
+            UIHelpers.FitRowHeightToText(row, nameGo.GetComponent<Text>(), h, width);
 
             // GDP（右对齐）
             var gdpGo = UIHelpers.CreateText(gdp, row.transform, UIStyles.BodySize * fontScale,
@@ -444,3 +478,4 @@ namespace EconomyMod.UI
         }
     }
 }
+

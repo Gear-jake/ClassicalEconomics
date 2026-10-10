@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Root = (Split-Path -Parent $PSScriptRoot)
 )
 
@@ -71,7 +71,8 @@ Test-Anchor $main 'TradeSimulationWorker\.IsBusy\(\) \|\| AnnualPipeline\.IsSett
 Test-Anchor $main '!AnnualPipeline\.IsSettling && World\.world != null' 'Update realtime path must skip during in-flight settlement'
 Test-Anchor $main 'if \(AnnualPipeline\.IsSettling\) return false;' 'RunOneCycle must reject submissions while settlement is in flight'
 Test-Anchor $main '_pendingYear = -1;\s*AnnualPipeline\.Abort\(\)' 'World-null branch must abort the pipeline'
-Test-Anchor $main '_cyclePending = false;\s*AnnualPipeline\.Abort\(\)' 'Year-rollback branch must abort the pipeline'
+# 【W4.4】回退分支现在同时清 _rtCyclePending，故锚点后移到它之后；契约不变：回退必须中止管线。
+Test-Anchor $main '_rtCyclePending = false;\s*AnnualPipeline\.Abort\(\)' 'Year-rollback branch must abort the pipeline'
 
 # ---- green anchors: config chain ----
 

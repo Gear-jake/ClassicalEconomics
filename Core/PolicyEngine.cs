@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using EconomyMod.Models;
 using EconomyMod.Services;
@@ -21,17 +21,12 @@ namespace EconomyMod.Core
     /// </summary>
     public static class PolicyEngine
     {
-        /// <summary>基尼 ≥ 该值才考虑采取政策。</summary>
-        private const float PolicyGiniThreshold = 0.6f;
-
-        /// <summary>每年尝试政策的概率。</summary>
-        private const float AttemptChance = 0.35f;
-
         /// <summary>低基尼时的基础成功率（随基尼升高线性降到 0.35）。</summary>
         private const float BaseSuccessChance = 0.65f;
 
-        /// <summary>失败后的冷却期（年）：改革失败后 N 年内不重复尝试，避免连续换王/死王/内战。</summary>
-        private const int CooldownYears = 6;
+        // 【W1】阈值 / 尝试率 / 冷却年数改为配置驱动（原硬编码 0.6 / 0.35 / 6）：
+        //   UnrestConfig.PolicyGiniThreshold / PolicyAttemptChance / PolicyCooldownYears
+        //   新默认 0.72 / 0.15 / 15 —— 显著降低「改革失败 -> 换王」的频率。
 
         /// <summary>王国 id → 冷却到期年份（改革失败后进入；到期自动解除，保证大国仍会定期尝试改革）。</summary>
         private static readonly Dictionary<long, int> _cooldown = new Dictionary<long, int>();
@@ -55,6 +50,10 @@ namespace EconomyMod.Core
         public static void Evaluate()
         {
             var cfg = UnrestConfig.Instance;
+            // 【W1】政策隶属于社会动荡体系：动荡总开关关闭时整体停摆。
+            // 修的是社区反馈「设置里能禁的都禁了，还是会莫名一直政权更替」；
+            // 原先只查 PolicyEnabled，关掉 unrest_enabled 后政策引擎照跑。
+            if (!cfg.Enabled) return;
             if (!cfg.PolicyEnabled) return;
             if (World.world == null || World.world.kingdoms == null) return;
             int currentYear = EconomyModMain.GetCurrentGameYear();
@@ -65,11 +64,11 @@ namespace EconomyMod.Core
                 if (kingdom == null || kingdom.data == null) continue;
                 long kid = kingdom.data.id;
                 if (!EconomyEngine.KingdomStats.TryGetValue(kid, out var stats)) continue;
-                if (stats.GiniCoefficient < PolicyGiniThreshold) continue;
+                if (stats.GiniCoefficient < cfg.PolicyGiniThreshold) continue;
                 if (_cooldown.TryGetValue(kid, out int until) && currentYear < until) continue; // 冷却中：到期前不重复尝试
 
                 // 每年按概率尝试政策
-                if (Random.value > AttemptChance) continue;
+                if (Random.value > cfg.PolicyAttemptChance) continue;
 
                 // M3：按经济情境选择政策类型
                 PolicyKind kind = PickPolicyKind(stats);
@@ -87,7 +86,7 @@ namespace EconomyMod.Core
                     FailPolicy(kingdom, stats, kind);
                     // 财政失败后果轻微，不进入冷却（可每年轻试）；贫富调节失败进入冷却
                     if (kind != PolicyKind.Fiscal)
-                        _cooldown[kid] = currentYear + CooldownYears;
+                        _cooldown[kid] = currentYear + cfg.PolicyCooldownYears;
                 }
             }
 
@@ -125,8 +124,9 @@ namespace EconomyMod.Core
         {
             float baseChance = kind == PolicyKind.Fiscal ? 0.75f : BaseSuccessChance;
             // gini=阈值 → base；gini=1.0 → 0.35
+            float threshold = UnrestConfig.Instance.PolicyGiniThreshold;
             float success = Mathf.Lerp(baseChance, 0.35f,
-                Mathf.Clamp01((gini - PolicyGiniThreshold) / (1f - PolicyGiniThreshold)));
+                Mathf.Clamp01((gini - threshold) / (1f - threshold)));
             success = Mathf.Clamp01(success * RulerEngine.PolicySuccessMult(kingdomId));
             return Random.value < success;
         }
@@ -197,11 +197,34 @@ namespace EconomyMod.Core
                 return;
             }
 
-            // 贫富调节失败：严重后果（随机选择统治者退位、死亡或王国陷入内战：40% / 30% / 30%）
+            // 【W1】政权更替总开关（默认关）：关闭时改革失败只降民众支持，不改变政权。
+            // 这是社区投诉「设置里能禁的都禁了，还是会莫名一直政权更替」的根因之一 ——
+            // 原先没有任何开关能把「改革本身」与「改革失败 -> 换王」分开。
+            if (!UnrestConfig.Instance.RegimeChangeEnabled)
+            {
+                GameHelpers.NotifyLocalized("toast_policy_fail_benign", kName);
+                EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 5); // 5 = 改革未果（无政权变动）
+                if (UnrestConfig.Instance.LogToWorldLog)
+                    Debug.Log($"[ClassicalEconomics] 政策失败(无政权变动) 王国<{kName}> 基尼={stats.GiniCoefficient:F2}");
+                return;
+            }
+
+            // 贫富调节失败：严重后果降频（原 40% 退位 / 30% 驾崩 / 30% 内战
+            //   -> 现 40% 未果 / 25% 退位 / 20% 驾崩 / 15% 内战）
             float roll = Random.value;
 
-            // 1) 退位（40%）
-            if (roll < 0.4f)
+            // 0) 未果（40%）：仅表达不满，不改变政权
+            if (roll >= 0.60f)
+            {
+                GameHelpers.NotifyLocalized("toast_policy_fail_benign", kName);
+                EventStreamService.Record(EventStreamService.TypePolicyFail, kName, 5);
+                if (UnrestConfig.Instance.LogToWorldLog)
+                    Debug.Log($"[ClassicalEconomics] 政策失败(未果) 王国<{kName}> 基尼={stats.GiniCoefficient:F2}");
+                return;
+            }
+
+            // 1) 退位（25%）
+            if (roll < 0.25f)
             {
                 if (kingdom.hasKing() && GameHelpers.TryRemoveKing(kingdom))
                 {
@@ -213,8 +236,8 @@ namespace EconomyMod.Core
                 return;
             }
 
-            // 2) 驾崩（30%）
-            if (roll < 0.7f)
+            // 2) 驾崩（20%）
+            if (roll < 0.45f)
             {
                 var king = kingdom.king;
                 if (king != null && king.isAlive() && !king.hasDied())
@@ -228,9 +251,12 @@ namespace EconomyMod.Core
                 return;
             }
 
-            // 3) 内战（30%）：王国尚未在内战中 → 触发内战；已在内战或内战无法爆发（无人口/城市）→ 回退国王退位。
+            // 3) 内战（15%）：王国尚未在内战中 → 触发内战；已在内战或内战无法爆发（无人口/城市）→ 回退国王退位。
             // 注：显式拆开判断，避免原 `A || B == 0` 的短路歧义（A 为真时 B 完全不执行）。
-            bool alreadyRebelling = UnrestEngine.GetState(kingdom.data.id, out _) == 2;
+            // 【W1】尊重原版世界法则：玩家在「外交 -> 叛乱」里关掉 world_law_rebellions 时，
+            // 模组不得强行制造内战（社区反馈「禁止叛乱却仍内战」）。
+            bool alreadyRebelling = !UnrestEngine.VanillaRebellionsEnabled()
+                                  || UnrestEngine.GetState(kingdom.data.id, out _) == 2;
             if (!alreadyRebelling && UnrestEngine.TriggerCivilWar(kingdom) > 0)
             {
                 GameHelpers.NotifyLocalized("toast_policy_fail_civilwar", kName);

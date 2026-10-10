@@ -1,6 +1,6 @@
 # Classical Economics
 
-> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *2.2.0* ｜ Requires NeoModLoader (NML)
+> WorldBox macroeconomics & nation-governance simulation mod ｜ Current version *2.3.0beta* ｜ Requires NeoModLoader (NML)
 
 ## Feature Overview
 
@@ -11,6 +11,7 @@
 - Social unrest: rebellion → uprising → revolution; war plunder and dynasty monitoring
 
 **Playable Government · Central Banker**
+- **"Choose nation" button on the tab (flag icon)**: opens the nation list (sorted by GDP, up to 60 rows with GDP/population); **clicking a row claims that nation** and opens the Cabinet. The nation you play is marked ★ with a one-click "Open cabinet". Unclaimed / cooldown states are stated explicitly. It shares one rule set with the other two entries (hover + **G** on the map, or the ledger button in the vanilla kingdom window): 10-year switch cooldown, conserved founding funds
 - Hover a kingdom on the map and press **G** (rebindable): claim / open the Cabinet
 - Royal treasury: founding grant + periodic levies; policies, decrees, buildings and diplomacy spend real gold
 - 6 ongoing policies x 3 tiers with slots (coinage / state monopoly / propaganda / poor relief...), one-shot decrees (relief / festival), **vanilla building placement** (10 kinds, click the map to build)
@@ -35,7 +36,7 @@
 - Commerce: markets yield yearly commerce tax; franchise / fair-price mutually exclusive policies; 5 new events incl. caravan ambush and bank run (**78 events** total)
 
 **Decision Events**
-- **330 events** across 6 families (finance/disaster/court/military/civil/diplomacy); condition-filtered yearly draw, max one per kingdom per year; **per-run event pool**: ~68% of events activate per world seed (chains / variant groups stay whole), **variant mutex groups** (same storyline, several flavors, only some per run) and **family-bias rotation** (per-run weights 0.65~1.4 — one run is disaster-heavy, another court-heavy); every run tells a different story; **expanded effect library**: declare war / form alliance / move capital / upgrade buildings / citizen rise & ruin / world war (rare, ~1/12 probability)
+- **346 events** across 6 families (finance/disaster/court/military/civil/diplomacy); condition-filtered yearly draw, max one per kingdom per year; **per-run event pool**: ~68% of events activate per world seed (chains / variant groups stay whole), **variant mutex groups** (same storyline, several flavors, only some per run) and **family-bias rotation** (per-run weights 0.65~1.4 — one run is disaster-heavy, another court-heavy); every run tells a different story; **expanded effect library**: declare war / form alliance / move capital / upgrade buildings / citizen rise & ruin / world war (rare, ~1/12 probability)
 - **Chained storylines**: choices bear fruit across years (foreign loan → debt comes due; the heir's plot → loose ends; a defector → his ambition); **king-name immersion**: event text embeds the reigning monarch's name; court-intrigue events are exclusive to the player's kingdom
 - Player kingdom: non-modal choice window + Cabinet to-do; the cautious option runs on timeout; AI kingdoms decide by national character and land in the event feed
 - Event window rebuilt: filter chips (all/decisions/states & wars/economy) + fold by year + single-column timeline; **an always-open event window rebuilds only once per year**
@@ -43,7 +44,7 @@
 **UI & Performance**
 - The Cabinet **auto-refreshes after each yearly settlement**; **adjustable UI scale for fonts and buttons (0.8-1.6x, applies instantly from settings)**
 - Frame-budgeted yearly settlement (4 ms/frame; taxes never reduced); automatic memory cleanup; background-thread statistics with no main-thread pathfinding
-- 42 automated gates + performance audit; every gold transfer conserved
+- 48 automated gates (38 behaviour contracts + 5 cross-file consistency + 5 build tooling) + performance audit; every gold transfer conserved. See `docs/门禁分层说明.md`
 - Six-language UI (简体 / 繁體 / English / Русский), **always following the game's own language setting** (no separate option); slate-and-gold 9-slice UI
 
 ## Installation
@@ -87,6 +88,8 @@ The NML settings window adds a **Performance** group. Every key below is synchro
 | `event_chance_ai` | 0.15 | 0-1 | Yearly chance for AI kingdoms (they decide by national character) |
 | `event_cooldown_years` | 3 | 1-10 | Minimum years between any two kingdom events |
 | `ui_scale` | 1.2 | 0.8-1.6 | Overall scale of the cabinet panel font and buttons; applies immediately |
+| `pause_on_panel_open` | off | switch | Pause the game while a mod panel (cabinet / event feed / choice window) is open; time resumes when the last panel closes. **Default off.** It only takes over while the game is running and never overrides a pause you pressed yourself |
+
 
 The economy panel overview shows a memory status line: last cleanup time, freed amount, managed heap and Unity used/reserved memory (`hud_mem_cleanup` / `hud_mem_cleanup_pending` / `hud_mem_usage`; the toast text is `memory_cleanup_toast`; all are locale strings in four languages, not config keys). The managed heap is the Mono GC view shared by the mod and the game; Unity used/reserved is the native-asset view — if the managed heap stays flat while Unity used keeps rising, the growth comes from the game itself, not the mod.
 

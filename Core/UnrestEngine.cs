@@ -130,7 +130,12 @@ namespace EconomyMod.Core
                     // 暴动后基尼仍 ≥ 起义阈值持续 UprisingDelayYears 年 → 街头起义（政权崩塌：全城暴动+杀富济贫+推翻国王）
                     // 遗孤城守卫：王国只剩一座城市时不触发起义——起义推翻国王+全城暴动，会让单城国家直接灭国，
                     // 剩余城市继续保留高基尼震荡（普通暴动仍可触发，叛军可扩军复国）。
-                    else if (st.HasRebelled && !st.HasUprising && stats.GiniCoefficient >= cfg.UprisingGiniThreshold
+                    // 【W1】基尼崩溃总开关（默认关）：关闭时不会因基尼过高而「政权崩塌」（街头起义）；
+                    // 普通暴动照常触发（社会稳定依旧受损），但国王不会被推翻。
+                    // 【修复】起义会直接推翻国王 —— 必须同时满足「街头起义开关」与「政权更替总开关」。
+                    // 原实现只看 GiniCollapseEnabled，导致用户关掉"政权更替"后国王仍会被推翻。
+                    else if (cfg.GiniCollapseEnabled && cfg.RegimeChangeEnabled
+                             && st.HasRebelled && !st.HasUprising && stats.GiniCoefficient >= cfg.UprisingGiniThreshold
                              && KingdomCityCount(kingdom) >= 2)
                     {
                         if (st.UprisingStartYear < 0) st.UprisingStartYear = currentYear;
@@ -464,10 +469,23 @@ namespace EconomyMod.Core
         /// 供改革失败等场景复用；不记录"手动煽动"事件（由调用方自行记录语义）。
         /// 返回受影响城市数（0 = 无可用人口/城市，内战未爆发）。
         /// </summary>
+
+        /// <summary>【W1】原版世界法则：外交 -> 叛乱（world_law_rebellions）。
+        /// 玩家关闭它时，模组不得制造任何暴动 / 内战（社区反馈「禁止叛乱却仍内战」）。</summary>
+        internal static bool VanillaRebellionsEnabled()
+        {
+            try
+            {
+                return WorldLawLibrary.world_law_rebellions == null || WorldLawLibrary.world_law_rebellions.isEnabled();
+            }
+            catch (System.Exception) { return true; }
+        }
+
         public static int TriggerCivilWar(Kingdom kingdom)
         {
             try
             {
+            if (!VanillaRebellionsEnabled()) return 0; // 【W1】原版叛乱法则已关闭
             if (kingdom == null || kingdom.units == null || kingdom.units.Count == 0) return 0;
             if (!EconomyEngine.KingdomStats.TryGetValue(kingdom.data.id, out var stats))
             {
@@ -492,6 +510,7 @@ namespace EconomyMod.Core
         /// </summary>
         private static int TriggerAndMark(Kingdom kingdom, KingdomStats stats)
         {
+            if (!VanillaRebellionsEnabled()) return 0; // 【W1】原版叛乱法则已关闭：不强行制造暴动
             int affected = TriggerUnrest(kingdom, stats);
             if (affected > 0)
             {
@@ -668,8 +687,17 @@ namespace EconomyMod.Core
             GameHelpers.RedistributeWithinKingdom(kingdom, 3, 5, 0.25f, 3f);
 
             // 2. 对王国城市触发原生叛乱（数量随机，随贫富差距增大而增多）
+            //
+            // 【修复·政权更替开关失效】原实现无条件调用 startRebellion（原版叛乱）。
+            // 原版叛乱会**产生叛乱王国、分裂领土**，其结局可能是统治者被推翻 —— 即使用户
+            // 关掉了"政权更替"开关，政权照样会变。实机反馈："明明禁止政权动荡，但政权更替"。
+            //
+            // 现在：只有政权更替总开关（RegimeChangeEnabled）开启时才走原版叛乱路径；
+            // 关闭时退化为**非领土性**的社会震荡（国家特质 + 劫富济贫 + 通知），
+            // 兑现配置描述里"政权不会因此崩塌"的承诺。
+            bool allowRebellion = cfg.RegimeChangeEnabled;
             var cities = kingdom.cities;
-            if (cities != null)
+            if (allowRebellion && cities != null)
             {
                 var cityList = _cityPool;
                 cityList.Clear();
@@ -698,6 +726,7 @@ namespace EconomyMod.Core
             }
 
             // 3. 退路：对王国 Actor 施加原生 trait
+            //    政权更替开关关闭时，这也是主路径（不产生叛乱王国/领土分裂）
             if (affected == 0 && kingdom.units != null)
             {
                 affected = ApplyActorTraits(kingdom);

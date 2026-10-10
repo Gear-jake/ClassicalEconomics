@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$MainPath = (Join-Path (Split-Path -Parent $PSScriptRoot) 'EconomyModMain.cs'),
     [string]$ConfigPath = (Join-Path (Split-Path -Parent $PSScriptRoot) 'Models\UnrestConfig.cs')
 )
@@ -45,8 +45,14 @@ if ($main -notmatch 'DataCollector\.Collect\(applySideEffects: false, postCycle:
     Write-Host 'REALTIME_BREAKER_RED: below-threshold synchronous path must collect with the configured budget'
     exit 1
 }
-if ($main -notmatch 'TradeSimulationWorker\.ComputeAndConsumeSync\(advanceCycle: false\)') {
-    Write-Host 'REALTIME_BREAKER_RED: below-threshold synchronous path must compute and consume synchronously'
+# 【W4.4 契约换实现】实时路径从「主线程同步计算」改为「异步提交 + 后续帧消费」：
+# 契约不变：阈值下必须真的重算（用配置预算），且**不得推进周期号**。
+if ($main -notmatch 'TradeSimulationWorker\.PostCycle\(advanceCycle: false\)') {
+    Write-Host 'REALTIME_BREAKER_RED: below-threshold path must submit an async cycle without advancing the cycle index'
+    exit 1
+}
+if ($main -notmatch '_rtCyclePending') {
+    Write-Host 'REALTIME_BREAKER_RED: realtime cycle must be tracked separately from the annual _cyclePending'
     exit 1
 }
 

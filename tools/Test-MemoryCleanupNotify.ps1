@@ -43,7 +43,11 @@ $collectorText = [System.IO.File]::ReadAllText($collectorPath, $utf8)
 $trackerText = [System.IO.File]::ReadAllText($trackerPath, $utf8)
 $eraText = [System.IO.File]::ReadAllText($eraPath, $utf8)
 $mainText = [System.IO.File]::ReadAllText($mainPath, $utf8)
-$hudText = [System.IO.File]::ReadAllText($hudPath, $utf8)
+# 【W2 换锚点】EconomyHUD 已按 partial 拆成多个文件（壳/图表/概览），
+# 形状检查改为合并扫描整个 EconomyHUD*.cs 分层；契约不变：HUD 必须显示内存状态行。
+$hudFiles = @(Get-ChildItem -LiteralPath (Join-Path $Root 'UI') -Filter 'EconomyHUD*.cs' -File)
+Assert-True ($hudFiles.Count -ge 1) 'EconomyHUD layer files not found'
+$hudText = ($hudFiles | ForEach-Object { [System.IO.File]::ReadAllText($_.FullName, $utf8) }) -join "`n"
 $ucText = [System.IO.File]::ReadAllText($configCsPath, $utf8)
 $cbText = [System.IO.File]::ReadAllText($callbacksPath, $utf8)
 

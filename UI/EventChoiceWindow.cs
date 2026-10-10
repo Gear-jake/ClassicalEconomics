@@ -33,12 +33,29 @@ namespace EconomyMod.UI
         protected override Vector2 Pivot => new Vector2(0.5f, 0.5f);
         protected override Vector2 AnchoredPosition => Vector2.zero;
         protected override Vector2 Size => new Vector2(520f, 440f);
-        protected override Color BgColor => new Color(0.10f, 0.11f, 0.14f, 0.98f);
+        // ===== 报纸风（参考 World News 报纸弹窗）=====
+        // 底色走自带素材 GameResources/ui/panels/paper_9slice.png（由 tools/gen_paper_art.py 生成），
+        // 因此不再套本体石板皮肤 —— 报纸底 + 石板边框两种风格会打架。
+        protected override Color BgColor => PaperBg;
+        /// <summary>【布局修复】模态卡片应完整显示所有选项。</summary>
+        protected override bool AutoFitHeight => true;
+        protected override bool UseVanillaSkin => false;
+        protected override Sprite CustomPanelSprite => UIArt.Get("paper_9slice");
+        protected override Color TitleColor => Headline;   // 报头：暗红
+        protected override Color TitleRuleColor => new Color(0.46f, 0.10f, 0.08f, 0.65f);   // 报头分隔线
 
-        private static readonly Color Muted = new Color(0.7f, 0.7f, 0.7f);
-        private static readonly Color BtnGood = new Color(0.25f, 0.42f, 0.3f, 0.9f);
-        private static readonly Color BtnColor = new Color(0.35f, 0.35f, 0.4f, 0.85f);
-        private static readonly Color BackdropColor = new Color(0f, 0f, 0f, 0.55f);
+        // 报纸配色：暖米纸 + 墨色字 + 暗红报头
+        private static readonly Color PaperBg  = new Color(0.91f, 0.86f, 0.75f, 1f);
+        internal static readonly Color Ink      = new Color(0.20f, 0.16f, 0.11f);
+        internal static readonly Color InkSoft  = new Color(0.40f, 0.34f, 0.24f);
+        internal static readonly Color Headline = new Color(0.46f, 0.10f, 0.08f);
+        internal static readonly Color Caption  = new Color(0.44f, 0.37f, 0.26f);
+        internal static readonly Color RuleLine = new Color(0.45f, 0.38f, 0.26f, 0.55f);
+
+        private static readonly Color Muted = InkSoft;
+        private static readonly Color BtnGood = new Color(0.20f, 0.22f, 0.19f, 1f);   // 可选：近墨色
+        private static readonly Color BtnColor = new Color(0.32f, 0.30f, 0.26f, 1f);   // 不可选：灰墨
+        private static readonly Color BackdropColor = new Color(0f, 0f, 0f, 0.45f);
 
         private GameObject _backdrop;  // 全屏遮罩（拦截点击；随窗口显隐）
         private int _index;            // 当前展示的挂起事件下标（多件时循环切换）
@@ -116,13 +133,14 @@ namespace EconomyMod.UI
             float s = Scale();
 
             // 事件卡头：族别（族别色）+ 事件名 + 国名 + 当前年（多件时附计数）；{king}/{kingdom} 名字代入
+            // 报纸版式：分类小字（如 "AFFAIRS OF STATE - YEAR 1"）→ 大标题 → 正文
+            AddLine(UIHelpers.L("event_family_" + def.family).ToUpperInvariant(), Caption, 11f);
             var familyColor = FamilyColor(def.family);
-            AddLine(UIHelpers.L("event_family_" + def.family), familyColor, 12f);
             string header = pending.Count > 1
                 ? UIHelpers.Lf("event_choice_header", UIHelpers.L("ev_" + def.id), _index + 1, pending.Count)
                 : UIHelpers.L("ev_" + def.id);
             header = Core.DecisionEvents.Contextualize(header, p.KingdomId);
-            AddLine(header, UIStyles.Gold, 16f);
+            AddLine(header, Headline, 18f);   // 大标题：暗红，报纸头条
             AddLine(Core.DecisionEvents.Contextualize(
                 UIHelpers.Lf("event_choice_kingdom", p.KingdomName), p.KingdomId), Muted, 12f);
             try { AddLine(UIHelpers.Lf("event_choice_year", EconomyModMain.GetCurrentGameYear()), Muted, 11f); }
@@ -130,12 +148,12 @@ namespace EconomyMod.UI
 
             // 描述正文
             AddLine(Core.DecisionEvents.Contextualize(UIHelpers.L("ev_" + def.id + "_desc"), p.KingdomId),
-                UIStyles.TextPrimary, 13f);
+                Ink, 13f);
 
             // 剩余年
             int left = System.Math.Max(0, def.timeoutYears - p.ElapsedYears);
-            AddLine(UIHelpers.Lf("event_choice_countdown", left), UIStyles.Warning, 11f);
-            AddDivider(new Color(0.35f, 0.35f, 0.4f, 0.6f));
+            AddLine(UIHelpers.Lf("event_choice_countdown", left), Headline, 12f);   // 报纸风：暗红，与报头呼应
+            AddDivider(RuleLine);
 
             // 选项（全宽卡式按钮：选项名 + 后果摘要行）
             var stats = Core.NationEngine.NationStats();
@@ -159,6 +177,15 @@ namespace EconomyMod.UI
 
                 var btn = UIHelpers.CreateButton(optName, row.transform, -1, 34f * s, _gameFont,
                     canAfford ? BtnGood : BtnColor, 13f * s);
+                // 报纸风：选项按钮改用深色石板素材（参考图底部那种）
+                var paperBtn = UIArt.Get("paper_button_9slice");
+                if (paperBtn != null)
+                {
+                    var bi = btn.GetComponent<Image>();
+                    if (bi != null) { bi.sprite = paperBtn; bi.type = Image.Type.Sliced; bi.color = Color.white; bi.pixelsPerUnitMultiplier = 1f; }
+                    var bl = btn.GetComponentInChildren<Text>();
+                    if (bl != null) bl.color = new Color(0.96f, 0.94f, 0.88f);   // 深底上近白字
+                }
                 btn.interactable = canAfford;
                 int idx = i;
                 btn.onClick.AddListener(() =>
@@ -170,14 +197,23 @@ namespace EconomyMod.UI
                 });
                 var btnLe = btn.gameObject.AddComponent<LayoutElement>();
                 btnLe.flexibleWidth = 1f;
+                btnLe.preferredHeight = 34f * s;   // 显式行高：不让布局器猜
 
                 string optDesc = Core.DecisionEvents.Contextualize(
                     UIHelpers.L("ev_" + def.id + "_" + opt.key + "_desc"), p.KingdomId);
                 if (optDesc != "ev_" + def.id + "_" + opt.key + "_desc")
-                    UIHelpers.CreateText(optDesc, row.transform, 11f * s, UIStyles.TextSecondary, _gameFont, 16f * s);
+                {
+                    var dGo = UIHelpers.CreateText(optDesc, row.transform, 11f * s, InkSoft, _gameFont, 18f * s);
+                    var dLe = dGo.AddComponent<LayoutElement>();
+                    dLe.flexibleWidth = 1f; dLe.preferredHeight = 18f * s;
+                }
                 string summary = OptionSummary(def, i, gdp);
                 if (!string.IsNullOrEmpty(summary))
-                    UIHelpers.CreateText(summary, row.transform, 10f * s, Muted, _gameFont, 16f * s);
+                {
+                    var sGo = UIHelpers.CreateText(summary, row.transform, 10f * s, Muted, _gameFont, 16f * s);
+                    var sLe = sGo.AddComponent<LayoutElement>();
+                    sLe.flexibleWidth = 1f; sLe.preferredHeight = 16f * s;
+                }
             }
 
             // 多件切换
@@ -195,6 +231,8 @@ namespace EconomyMod.UI
                 moreLe.flexibleWidth = 1f;
                 _lines.Add(more.gameObject);
             }
+
+            FitPanelToContent();
         }
 
         /// <summary>选项费用/效果摘要（一行：花费/入库/征税/济贫/好感/动荡）。</summary>

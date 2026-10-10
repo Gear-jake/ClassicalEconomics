@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using EconomyMod.Core;
 using EconomyMod.Models;
 using EconomyMod.Services;
@@ -324,9 +324,19 @@ namespace EconomyMod
         /// 跳过工资/富豪税等年度副作用（applySideEffects=false），也不推进周期号（advanceCycle=false），
         /// 只重算统计并刷新 HUD，让经济面板数据"活"起来，不影响年度周期节奏。
         /// </summary>
-        public static void RealTimeRefresh()
+        /// <summary>
+        /// 实时轻量刷新（配置开启时按秒调用）——【W4.4 异步化】
+        ///
+        /// 原实现：主线程同步做完整统计计算（含 O(N log N) 基尼排序），每 5 秒卡一次。
+        /// 现实现：主线程只采集（读 Unity 对象 → 纯数据），统计交后台线程；
+        /// 返回 true 表示已异步提交，由 EconomyTickRunner 在后续帧 TryConsume 后**只刷 UI**。
+        ///
+        /// 与年度路径严格解耦：不推进周期号、不触发 FinishCycle/AnnualPipeline。
+        /// </summary>
+        /// <returns>是否已提交后台计算（false = 熔断 / 在途 / 未提交）。</returns>
+        public static bool RealTimeRefresh()
         {
-            // 熔断：较大地图时跳过实时全量重算（主线程同步 O(n log n) 基尼排序 + 全量采集）。
+            // 熔断：较大地图时跳过实时全量重算（采集本身仍是 O(N)）。
             // 阈值默认 2000（实测 5000 人口已出现可感卡顿，2000 更稳），并纳入配置 real_time_refresh_threshold。
             var cfg = UnrestConfig.Instance;
             var aliveList = World.world != null && World.world.units != null
@@ -334,14 +344,14 @@ namespace EconomyMod
             if (aliveList != null && aliveList.Count >= cfg.RealTimeRefreshThreshold)
             {
                 EconomyUI.RefreshOverview(); // 仅刷新UI，不重算（内阁不参与每秒重建）
-                return;
+                return false;
             }
-            // 在途周期/分帧收尾存在时跳过（同步计算会作废在途任务；年度周期收尾后自会刷新 UI，S2 防护）
-            if (TradeSimulationWorker.IsBusy() || AnnualPipeline.IsSettling) return;
-            // 阈值下保持同步全量重算；单次处理上限由 real_time_refresh_budget 预算约束（默认 2000，阈值下不截断）
+            // 在途周期/分帧收尾存在时跳过（避免与年度周期抢同一个 worker 槽位；S2 防护）
+            if (TradeSimulationWorker.IsBusy() || AnnualPipeline.IsSettling) return false;
+            // 主线程只采集；单次处理上限由 real_time_refresh_budget 预算约束
             DataCollector.Collect(applySideEffects: false, postCycle: false, maxUnits: cfg.RealTimeRefreshBudget);
-            TradeSimulationWorker.ComputeAndConsumeSync(advanceCycle: false);
-            EconomyUI.RefreshOverview(); // 实时路径：不重建内阁（防每秒整页重建 GC 抖动）
+            // 异步提交且**不推进周期号**：计算在后台线程完成，主线程不再阻塞
+            return TradeSimulationWorker.PostCycle(advanceCycle: false);
         }
 
         /// <summary>
@@ -376,7 +386,8 @@ namespace EconomyMod
                 catch (System.Exception) { }
             }
             private float _realtimeTimer;    // 实时刷新节流计时（配置开启时按秒轻量刷新 HUD 数据）
-            private bool _cyclePending;      // 后台统计进行中/待消费
+            private bool _cyclePending;      // 后台统计进行中/待消费（年度周期）
+            private bool _rtCyclePending;    // 【W4.4】实时刷新周期在途（与年度解耦，只刷 UI 不跑收尾）
             private int _pendingYear = -1;   // 提交周期对应的游戏年份，避免后台耗时跨年后错标快照
             private bool _optimeGuardChecked; // 首帧执行一次 Optime 兼容兜底安装
             private bool _worldReferencesCleared;
@@ -388,15 +399,27 @@ namespace EconomyMod
             private void Update()
             {
                 PerfCounters.SampleFrame(Time.deltaTime);
+                // 【性能诊断】测量模组自身一帧的主线程耗时 —— 直接回答"卡顿是不是模组造成的"。
+                // 诊断关闭时只多一次布尔判断；开启时开销仅两次 Stopwatch 读数。
+                if (!PerfCounters.IsEnabled)
+                {
+                    UpdateCore();
+                    return;
+                }
+                long modFrameStart = System.Diagnostics.Stopwatch.GetTimestamp();
+                try { UpdateCore(); }
+                finally { PerfCounters.SampleModFrame(PerfCounters.ElapsedMsPrecise(modFrameStart)); }
+            }
+
+            private void UpdateCore()
+            {
                 // Optime 兼容兜底：首帧安装（此时所有模组已加载，能可靠检测到 Optime）
                 if (!_optimeGuardChecked)
                 {
                     _optimeGuardChecked = true;
                     OnSaveLoaded += AlignYearAfterLoad; // 读档恢复后对齐年份基线（防误判新地图清历史）
-                    Services.OptimeCompatibility.TryInstall();
-                    KingdomWindowIntegration.TryInstall(); // 中央银行家：原版界面入口（手动补丁，幂等）;
-                    LawSave.TryInstall(); // 法典：存档持久化（手动补丁，幂等）
-                    NationSave.TryInstall(); // 中央银行家：存档持久化（手动补丁，幂等）
+                    // 【W3】4 处补丁统一由 PatchInstaller 安装（一处登记/安装/报告，清单见 docs/patches.md）
+                    PatchInstaller.InstallAll();
                 }
 
                 // 大地图快捷键（默认 G，可配置）：鼠标悬停国家 → 认领/打开内阁（RulerBox K 键同款）
@@ -431,9 +454,16 @@ namespace EconomyMod
                     _cyclePending = false;
                     FinishCycle();
                 }
-                // 自愈：后台结果已就绪但 _cyclePending 未置位（历史遗留/工具按钮路径遗漏的 PostCycle），
-                // 兜底置位走正常消费分支，避免 _posting 永久滞留导致年度周期停摆（S2）。
-                else if (!_cyclePending && TradeSimulationWorker.HasPendingResult())
+                // 【W4.4】实时刷新周期消费：只发布统计结果 + 刷 UI，
+                // **绝不**触发 FinishCycle / AnnualPipeline（年度收尾与实时刷新严格解耦）。
+                else if (!_cyclePending && _rtCyclePending && TradeSimulationWorker.TryConsume())
+                {
+                    _rtCyclePending = false;
+                    EconomyUI.RefreshOverview();
+                }
+                // 自愈：后台结果已就绪但两个标志都未置位（历史遗留/工具按钮路径遗漏的 PostCycle），
+                // 兜底置位走年度消费分支，避免 _posting 永久滞留导致年度周期停摆（S2）。
+                else if (!_cyclePending && !_rtCyclePending && TradeSimulationWorker.HasPendingResult())
                 {
                     _cyclePending = true;
                 }
@@ -453,13 +483,13 @@ namespace EconomyMod
                 var cfg = UnrestConfig.Instance;
                 // 认领国家后自动实时刷新（中央治国的"时间实时进行"体验），开关仍可强关
                 bool realtime = cfg.RealTimeRefresh || NationEngine.NationKingdomId != 0;
-                if (realtime && !_cyclePending && !AnnualPipeline.IsSettling && World.world != null)
+                if (realtime && !_cyclePending && !_rtCyclePending && !AnnualPipeline.IsSettling && World.world != null)
                 {
                     _realtimeTimer += Time.deltaTime;
                     if (_realtimeTimer >= cfg.RealTimeInterval)
                     {
                         _realtimeTimer = 0f;
-                        try { RealTimeRefresh(); }
+                        try { if (RealTimeRefresh()) _rtCyclePending = true; }
                         catch (System.Exception e) { Debug.LogWarning("[ClassicalEconomics] 实时刷新失败: " + e.Message); }
                     }
                 }
@@ -513,6 +543,7 @@ namespace EconomyMod
 if (World.world == null)
                 {
                     _cyclePending = false;
+                    _rtCyclePending = false;
                     _pendingYear = -1;
                     AnnualPipeline.Abort(); // 在途分帧收尾随世界失效立即终止（避免污染下一局）
                     if (!_worldReferencesCleared)
@@ -546,6 +577,7 @@ if (World.world == null)
                 {
                     _lastCollectedYear = currentYear;
                     _cyclePending = false;
+                    _rtCyclePending = false;
                     AnnualPipeline.Abort(); // 世界数据已失效，终止在途分帧收尾
                     TradeSimulationWorker.Reset(); // 在途后台周期无条件丢弃（世界数据已失效）
                     if (currentYear <= 1 && Core.WorldIdentity.PeekWorldId() == null)

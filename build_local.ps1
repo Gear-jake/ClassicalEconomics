@@ -1,5 +1,5 @@
-param(
-    [string]$LibsDir = (Join-Path $PSScriptRoot '..\libs'),
+﻿param(
+    [string]$LibsDir = '',
     [string]$OutputDir = (Join-Path $PSScriptRoot 'bin')
 )
 
@@ -26,6 +26,23 @@ try {
 $root = $PSScriptRoot
 $diag = Join-Path $root 'build_diag.txt'
 $errors = Join-Path $root 'errors.txt'
+
+# 依赖库目录自动定位（避免机器特定路径写进仓库）：
+#   显式 -LibsDir > 环境变量 CLASSICALECONOMICS_LIBS > 候选目录中第一个含 Assembly-CSharp.dll 的
+if ([string]::IsNullOrEmpty($LibsDir)) {
+    $libCandidates = @(
+        (Join-Path $root '..\共用游戏源码\libs'),
+        (Join-Path $root '..\libs'),
+        (Join-Path $root 'libs')
+    )
+    if (-not [string]::IsNullOrEmpty($env:CLASSICALECONOMICS_LIBS)) {
+        $libCandidates = @($env:CLASSICALECONOMICS_LIBS) + $libCandidates
+    }
+    foreach ($candidate in $libCandidates) {
+        if (Test-Path -LiteralPath (Join-Path $candidate 'Assembly-CSharp.dll') -PathType Leaf) { $LibsDir = $candidate; break }
+    }
+    if ([string]::IsNullOrEmpty($LibsDir)) { $LibsDir = $libCandidates[0] }
+}
 
 if (-not [System.IO.Path]::IsPathRooted($LibsDir)) {
     $LibsDir = Join-Path $root $LibsDir

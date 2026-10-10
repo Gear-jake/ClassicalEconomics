@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$SkipBuild
 )
 
@@ -79,8 +79,13 @@ Assert-SourcePattern 'Services\EventStreamService.cs' 'entry\.KingdomName = null
     'Event pool return does not release retained event strings.'
 Assert-SourcePattern 'EconomyModMain.cs' 'EventStreamService\.Clear\(\).*EconomyUI\.OnWorldUnavailable\(\)' `
     'World exit does not clear events and persistent UI delegates.'
-Assert-SourcePattern 'UI\EconomyHUD.cs' 'long inciteTargetId = kingdom\.data\.id.*GameHelpers\.FindKingdom\(inciteTargetId\)' `
-    'Kingdom picker listeners still risk retaining world Kingdom objects.'
+# 【W1.6 契约换实现】原断言守护「国家选择列表」的按钮闭包用 long id 捕获、点击时 FindKingdom 重解析，
+# 目的是不让 UI 闭包长期持有世界 Kingdom 对象。选择列表已在 W1.5 被两个权能（KingdomPowers）取代，
+# 契约不变：权能的点击回调必须**在回调内**解析王国并立即消费，禁止缓存 Kingdom 引用。
+Assert-SourcePattern 'Core\KingdomPowers.cs' 'private static bool OnIncite\(WorldTile pTile, string pPowerID\).*var kingdom = KingdomAt\(pTile\);.*UnrestEngine\.Incite\(kingdom\);' `
+    'Incite power must resolve the kingdom inside the click callback (no retained world references).'
+Assert-SourcePattern 'Core\KingdomPowers.cs' 'private static bool OnSuppress\(WorldTile pTile, string pPowerID\).*var kingdom = KingdomAt\(pTile\);.*UnrestEngine\.Suppress\(kingdom\);' `
+    'Suppress power must resolve the kingdom inside the click callback (no retained world references).'
 Assert-SourcePattern 'Core\DamageTracker.cs' 'MaxInactiveScans\s*=\s*10.*_damage\.Remove\(id\)' `
     'Damage histories are missing inactivity expiry.'
 Assert-SourcePattern 'Core\InheritanceEngine.cs' 'public long ParentId1.*public long ParentId2.*public long\[\] ChildIds;.*\r?\n\s*public int ChildCount;' `
@@ -97,7 +102,9 @@ Assert-SourcePattern 'Core\SpendingEngine.cs' 'RunOncePerYear\(\).*PruneExpiredC
     'Stale building cooldowns still depend on a successful action at cycle multiples.'
 Assert-SourcePattern 'Core\TradeSimulationWorker.cs' 'ClearWorldReferences\(\).*_generation\+\+.*_readyResult = null' `
     'World exit does not invalidate pending worker generations and results.'
-Assert-SourcePattern 'Core\TradeSimulationWorker.cs' 'int idx = _cycleIndex \+ 1;.*bool queued = ThreadPool\.QueueUserWorkItem.*if \(!queued\) throw new InvalidOperationException.*_cycleIndex = idx;.*return true;' `
+# 【W4.4 契约换形状】PostCycle 增加 advanceCycle 参数后，周期号改为条件推进；
+# 契约不变：① 被拒（busy）的提交在早退前不得触碰周期号；② 只有真正排入后台任务后才推进。
+Assert-SourcePattern 'Core\TradeSimulationWorker.cs' 'int idx = advanceCycle \? _cycleIndex \+ 1 : _cycleIndex;.*bool queued = ThreadPool\.QueueUserWorkItem.*if \(!queued\) throw new InvalidOperationException.*if \(advanceCycle\) _cycleIndex = idx;.*return true;' `
     'Rejected worker submission still advances the cycle index.'
 Assert-SourcePattern 'Core\EconomyCycleModulator.cs' 'if \(!_initialized\).*MoneySupply = gdp;.*CurrentCPI = 1f;.*float actualStimulus = 0f;.*actualStimulus = \(float\)count \* perActor;.*MoneySupply \+= actualStimulus;.*BubbleValue \+= actualStimulus \* cfg\.BoomBubbleFactor' `
     'CPI and bubble state do not track baseline and actual injected coins.'

@@ -82,18 +82,21 @@ namespace EconomyMod.Core
                 }
                 if (histHost != null && histHost.data != null)
                 {
-                    try { histHost.data.set("rb_hist", HistoryService.Serialize()); }
+                    try { histHost.data.set(SaveSchema.History, HistoryService.Serialize()); }
                     catch (System.Exception) { }
                     // 事件流（时间线）：与历史同宿主，读档按时间正序恢复（普通+重大+类型计数）
-                    try { histHost.data.set("rb_ev_stream", EventStreamService.Serialize()); }
+                    try { histHost.data.set(SaveSchema.EventStream, EventStreamService.Serialize()); }
                     catch (System.Exception) { }
                 }
 
                 if (nation == null || nation.data == null || nationId == 0) return;
 
-                try { nation.data.set("rb_nat_kingdom", nationId.ToString(CultureInfo.InvariantCulture)); }
+                try { nation.data.set(SaveSchema.NationKingdom, nationId.ToString(CultureInfo.InvariantCulture)); }
                 catch (System.Exception) { }
-                try { nation.data.set("rb_nat_treasury", NationEngine._treasury.ToString(CultureInfo.InvariantCulture)); }
+                try { nation.data.set(SaveSchema.NationTreasury, NationEngine._treasury.ToString(CultureInfo.InvariantCulture)); }
+                catch (System.Exception) { }
+                // 【W3.2】存档结构版本：纯追加键，旧版本读到会忽略；读档侧缺键 = 0（legacy）
+                try { nation.data.set(SaveSchema.SchemaVersion, SaveSchema.Version.ToString(CultureInfo.InvariantCulture)); }
                 catch (System.Exception) { }
 
                 // 政策槽：固定写满 MaxSlotKeys 个键——空槽写空串覆盖盘上旧值，
@@ -107,7 +110,7 @@ namespace EconomyMod.Core
                         v = string.Format(CultureInfo.InvariantCulture, "{0}:{1}:{2}:{3}",
                             (int)s.Kind, s.Tier, s.StartYear, s.TotalSpent);
                     }
-                    try { nation.data.set("rb_nat_slot_" + i, v); }
+                    try { nation.data.set(SaveSchema.NationSlot(i), v); }
                     catch (System.Exception) { }
                 }
 
@@ -117,7 +120,7 @@ namespace EconomyMod.Core
                     var sb = new StringBuilder(256);
                     foreach (var kv in NationEngine._cityBuildings)
                         sb.Append(kv.Key).Append(':').Append(kv.Value).Append(';');
-                    try { nation.data.set("rb_nat_buildings", sb.ToString()); }
+                    try { nation.data.set(SaveSchema.NationBuildings, sb.ToString()); }
                     catch (System.Exception) { }
                 }
 
@@ -143,7 +146,7 @@ namespace EconomyMod.Core
                           .Append(r.AvgAfter.ToString("F2", inv)).Append('|')
                           .Append(r.Closed ? '1' : '0').Append(';');
                     }
-                    try { nation.data.set("rb_nat_records", sb.ToString()); }
+                    try { nation.data.set(SaveSchema.NationRecords, sb.ToString()); }
                     catch (System.Exception) { }
                 }
 
@@ -153,7 +156,7 @@ namespace EconomyMod.Core
                     var sb = new StringBuilder(64);
                     foreach (var kv in NationDiplomacy._pacts)
                         sb.Append(kv.Key).Append(':').Append(kv.Value).Append(';');
-                    try { nation.data.set("rb_nat_pacts", sb.ToString()); }
+                    try { nation.data.set(SaveSchema.NationPacts, sb.ToString()); }
                     catch (System.Exception) { }
                 }
                 if (NationDiplomacy._goodwill.Count > 0)
@@ -161,7 +164,7 @@ namespace EconomyMod.Core
                     var sb = new StringBuilder(64);
                     foreach (var kv in NationDiplomacy._goodwill)
                         sb.Append(kv.Key).Append(':').Append(kv.Value).Append(';');
-                    try { nation.data.set("rb_nat_goodwill", sb.ToString()); }
+                    try { nation.data.set(SaveSchema.NationGoodwill, sb.ToString()); }
                     catch (System.Exception) { }
                 }
 
@@ -269,17 +272,17 @@ namespace EconomyMod.Core
                     EventStreamService.Count == 0);
 
                 // 抉择事件状态（挂认领国 data，与写盘同键位）
-                string evPending = ReadAnyKingdomKey("rb_ev_pending");
-                string evCooldown = ReadAnyKingdomKey("rb_ev_cooldown");
-                string evLastGlobal = ReadAnyKingdomKey("rb_ev_lastGlobal");
-                string evChains = ReadAnyKingdomKey("rb_ev_chains");
+                string evPending = ReadAnyKingdomKey(SaveSchema.EventPending);
+                string evCooldown = ReadAnyKingdomKey(SaveSchema.EventCooldown);
+                string evLastGlobal = ReadAnyKingdomKey(SaveSchema.EventLastGlobal);
+                string evChains = ReadAnyKingdomKey(SaveSchema.EventChains);
                 if (evPending != null || evCooldown != null || evChains != null)
                     DecisionEvents.Restore(evPending, evCooldown, evLastGlobal, evChains);
 
                 // 银行状态（与写盘同键位）
-                string bankSet = ReadAnyKingdomKey("rb_bank_set");
-                string bankLedger = ReadAnyKingdomKey("rb_bank_ledger");
-                string bankAi = ReadAnyKingdomKey("rb_bank_ai");
+                string bankSet = ReadAnyKingdomKey(SaveSchema.BankSettings);
+                string bankLedger = ReadAnyKingdomKey(SaveSchema.BankLedger);
+                string bankAi = ReadAnyKingdomKey(SaveSchema.BankAi);
                 if (bankSet != null || bankLedger != null || bankAi != null)
                     BankEngine.Restore(bankSet, bankLedger, bankAi);
 
@@ -292,7 +295,7 @@ namespace EconomyMod.Core
                         var k = snapshot[i];
                         if (k == null || k.data == null) continue;
                         string kingIdStr = null;
-                        try { k.data.get("rb_nat_kingdom", out kingIdStr); }
+                        try { k.data.get(SaveSchema.NationKingdom, out kingIdStr); }
                         catch (System.Exception) { }
                         if (string.IsNullOrEmpty(kingIdStr)) continue;
 
@@ -333,7 +336,7 @@ namespace EconomyMod.Core
         {
             if (tryHist)
             {
-                string hist = ReadAnyKingdomKey("rb_hist");
+                string hist = ReadAnyKingdomKey(SaveSchema.History);
                 if (hist != null)
                 {
                     HistoryService.Restore(hist);
@@ -342,7 +345,7 @@ namespace EconomyMod.Core
             }
             if (tryStream)
             {
-                string evStream = ReadAnyKingdomKey("rb_ev_stream");
+                string evStream = ReadAnyKingdomKey(SaveSchema.EventStream);
                 if (evStream != null)
                 {
                     EventStreamService.Restore(evStream);
@@ -357,7 +360,7 @@ namespace EconomyMod.Core
             string v = null;
 
             // 认领国 + 金库
-            try { data.get("rb_nat_kingdom", out v); } catch (System.Exception) { }
+            try { data.get(SaveSchema.NationKingdom, out v); } catch (System.Exception) { }
             long kid = 0;
             if (v != null && long.TryParse(v, out kid) && GameHelpers.FindKingdom(kid) != null)
             {
@@ -369,15 +372,25 @@ namespace EconomyMod.Core
                 NationEngine._nationKingdomId = 0;
                 NationEngine._nationName = null;
             }
-            try { data.get("rb_nat_treasury", out v); } catch (System.Exception) { }
+            try { data.get(SaveSchema.NationTreasury, out v); } catch (System.Exception) { }
             long treasury = 0;
             if (v != null && long.TryParse(v, out treasury)) NationEngine._treasury = treasury;
+
+            // 【W3.2】存档结构版本：缺键 = 旧档（0），当前无迁移动作，仅记录以便日后迁移
+            int schemaVersion = 0;
+            try
+            {
+                string verStr = null;
+                data.get(SaveSchema.SchemaVersion, out verStr);
+                if (!string.IsNullOrEmpty(verStr)) int.TryParse(verStr, out schemaVersion);
+            }
+            catch (System.Exception) { }
 
             // 政策槽
             NationEngine._slots.Clear();
             for (int i = 0; i < MaxSlotKeys; i++)
             {
-                try { data.get("rb_nat_slot_" + i, out v); } catch (System.Exception) { v = null; }
+                try { data.get(SaveSchema.NationSlot(i), out v); } catch (System.Exception) { v = null; }
                 if (string.IsNullOrEmpty(v)) continue;
                 string[] f = v.Split(':');
                 if (f.Length < 4) continue;
@@ -398,7 +411,7 @@ namespace EconomyMod.Core
 
             // 建筑记录
             NationEngine._cityBuildings.Clear();
-            try { data.get("rb_nat_buildings", out v); } catch (System.Exception) { v = null; }
+            try { data.get(SaveSchema.NationBuildings, out v); } catch (System.Exception) { v = null; }
             if (!string.IsNullOrEmpty(v))
             {
                 foreach (var pair in v.Split(';'))
@@ -416,7 +429,7 @@ namespace EconomyMod.Core
             NationEngine._recordHead = 0;
             NationEngine._recordCount = 0;
             for (int i = 0; i < NationEngine._records.Length; i++) NationEngine._records[i] = null;
-            try { data.get("rb_nat_records", out v); } catch (System.Exception) { v = null; }
+            try { data.get(SaveSchema.NationRecords, out v); } catch (System.Exception) { v = null; }
             if (!string.IsNullOrEmpty(v))
             {
                 var inv = CultureInfo.InvariantCulture;
@@ -462,7 +475,7 @@ namespace EconomyMod.Core
 
             // 外交协定与好感
             NationDiplomacy._pacts.Clear();
-            try { data.get("rb_nat_pacts", out v); } catch (System.Exception) { v = null; }
+            try { data.get(SaveSchema.NationPacts, out v); } catch (System.Exception) { v = null; }
             if (!string.IsNullOrEmpty(v))
             {
                 foreach (var pair in v.Split(';'))
@@ -477,7 +490,7 @@ namespace EconomyMod.Core
                 }
             }
             NationDiplomacy._goodwill.Clear();
-            try { data.get("rb_nat_goodwill", out v); } catch (System.Exception) { v = null; }
+            try { data.get(SaveSchema.NationGoodwill, out v); } catch (System.Exception) { v = null; }
             if (!string.IsNullOrEmpty(v))
             {
                 foreach (var pair in v.Split(';'))
@@ -491,7 +504,7 @@ namespace EconomyMod.Core
                 }
             }
 
-            UnityEngine.Debug.Log($"[ClassicalEconomics] 中央银行家存档已恢复：金库={NationEngine._treasury} 政策={NationEngine._slots.Count} 建筑={NationEngine._cityBuildings.Count} 政绩={NationEngine._recordCount} 协定={NationDiplomacy._pacts.Count}");
+            UnityEngine.Debug.Log($"[ClassicalEconomics] 中央银行家存档已恢复：schema=v{schemaVersion} 金库={NationEngine._treasury} 政策={NationEngine._slots.Count} 建筑={NationEngine._cityBuildings.Count} 政绩={NationEngine._recordCount} 协定={NationDiplomacy._pacts.Count}");
         }
 
         /// <summary>遍历王国 data 读取某键（用于挂载王国不确定的全局键）。</summary>

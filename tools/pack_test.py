@@ -11,7 +11,8 @@ import shutil
 import time
 import zipfile
 
-ROOT = r'E:\code\new\ClassicalEconomics'
+# 仓库根 = 本脚本上一级目录（零机器特定路径）
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STAGE = os.path.join(ROOT, 'release', 'test', '古典经济学')
 ZIP_PATH = os.path.join(ROOT, 'release', 'test', '古典经济学-test.zip')
 

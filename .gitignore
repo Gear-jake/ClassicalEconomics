@@ -29,3 +29,7 @@ perf/capture-*.json
 
 # __pycache__
 __pycache__/
+# 讨论截图与审计报告二进制（文本版 .md 保留在库里）
+docs/讨论截图/
+docs/audit-report/*.pdf
+docs/audit-report/*.docx

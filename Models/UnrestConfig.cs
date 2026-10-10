@@ -28,6 +28,25 @@ namespace EconomyMod.Models
         /// <summary>是否启用国家政策（高基尼王国自动尝试贫富调节，失败则统治者退位/驾崩或陷入内战）。</summary>
         public bool PolicyEnabled = true;
 
+        // ===== 【W1】政权更替 / 基尼崩溃 独立开关（2026-10-07 用户实测反馈）=====
+
+        /// <summary>【W1】政权更替总开关（**默认关**）：政策失败是否允许导致统治者退位 / 驾崩 / 内战。
+        /// 关闭时改革失败只降民众支持（通知），不改变政权。</summary>
+        public bool RegimeChangeEnabled = false;
+
+        /// <summary>【W1】基尼崩溃总开关（**默认关**）：基尼长期过高是否允许触发"街头起义"（政权崩塌）。
+        /// 关闭时仍会有普通暴动（社会稳定受损），但不会推翻国王。</summary>
+        public bool GiniCollapseEnabled = false;
+
+        /// <summary>【W1】政策触发阈值：基尼 ≥ 该值才考虑改革（原硬编码 0.6，现默认 0.72）。</summary>
+        public float PolicyGiniThreshold = 0.72f;
+
+        /// <summary>【W1】每年尝试改革的概率（原硬编码 0.35，现默认 0.15）。</summary>
+        public float PolicyAttemptChance = 0.15f;
+
+        /// <summary>【W1】改革失败后的冷却年数（原硬编码 6，现默认 15）。</summary>
+        public int PolicyCooldownYears = 15;
+
         // ===== 经济周期调制器（Phase 4）=====
 
         /// <summary>是否启用经济周期调制（四阶段状态机 + 泡沫 + 税率调制）。</summary>
@@ -284,6 +303,11 @@ namespace EconomyMod.Models
 
         /// <summary>打开内阁面板的快捷键（KeyCode 名，如 G；留空或无效则禁用，默认 G）。</summary>
         public string NationClaimHotkey = "G";
+
+        /// <summary>【W2.8】打开本模组面板时是否暂停游戏（**默认关**）。
+        /// 由 UI/UIPauseCoordinator 统一协调：只在"当前未被暂停"时接管，关闭最后一个可见窗口时恢复；
+        /// 玩家自己按的暂停不会被改动（本体依据见 UIPauseCoordinator 注释）。</summary>
+        public bool PauseOnPanelOpen = false;
 
         private static UnrestConfig _instance;
 

@@ -1,4 +1,4 @@
-﻿using EconomyMod.Core;
+using EconomyMod.Core;
 using UnityEngine;
 
 namespace EconomyMod.UI
@@ -13,13 +13,15 @@ namespace EconomyMod.UI
         public static readonly Color PanelBg       = new Color(0.03f, 0.04f, 0.07f, 0.96f);
         public static readonly Color CardBg        = new Color(0.08f, 0.09f, 0.14f, 0.88f);
         public static readonly Color CardBgAlt     = new Color(0.11f, 0.12f, 0.18f, 0.92f);
-        public static readonly Color TextPrimary   = new Color(0.95f, 0.95f, 0.96f);
+        // 【W2】正文色改为**取自本体窗口**（有兜底），使窗口"外框是本体、里面也是本体"。
+        public static Color TextPrimary   => VanillaSkin.BodyColor;
         public static readonly Color TextSecondary = new Color(0.70f, 0.72f, 0.78f);
         public static readonly Color TextMuted     = new Color(0.49f, 0.51f, 0.58f);
         public static readonly Color Divider       = new Color(0.23f, 0.25f, 0.31f, 0.65f);
 
         // ===== 品牌/强调（金色系）=====
-        public static readonly Color Gold        = new Color(1f, 0.85f, 0.40f);
+        // 【W2】标题金色直接取自本体窗口标题（实测 RGBA(1, 0.608, 0.11)）
+        public static Color Gold => VanillaSkin.TitleColor;
         public static readonly Color GoldDeep    = new Color(0.79f, 0.63f, 0.29f);
         // ===== 视觉丰富化（v1.6.0 UI 精致化）=====
         public static readonly Color AccentGold   = new Color(1f, 0.85f, 0.45f, 1f);   // 明金强调
@@ -29,14 +31,18 @@ namespace EconomyMod.UI
         public static readonly Color RowRank3     = new Color(0.85f, 0.6f, 0.3f, 0.1f);  // 排行第3底色
         public static readonly Color InnerBorder  = new Color(1f, 0.82f, 0.4f, 0.1f);  // 面板内边框
         public static readonly Color DividerGold  = new Color(1f, 0.8f, 0.35f, 0.35f);  // 金色分隔线
+        /// <summary>段落标题下划线：本体风格的柔和暖灰（原为亮金 GoldDeep，过于"设计感"）。</summary>
+        public static readonly Color SectionDivider = new Color(0.78f, 0.72f, 0.56f, 0.30f);
         public static readonly Color Bronze      = new Color(0.69f, 0.55f, 0.34f);
         public static readonly Color Silver      = new Color(0.75f, 0.78f, 0.83f);
 
         // ===== 经济阶段（语义色）=====
-        public static readonly Color PhaseBoom       = new Color(0.29f, 0.82f, 0.50f);
-        public static readonly Color PhaseRecession  = new Color(0.98f, 0.75f, 0.14f);
-        public static readonly Color PhaseDepression = new Color(0.97f, 0.44f, 0.44f);
-        public static readonly Color PhaseRecovery   = new Color(0.38f, 0.65f, 0.98f);
+        // 【W2.6】改为取自本体语义色（见 VanillaChartPalette）：图表色带与阶段徽章同源，
+        // 不再自造一套"设计色"。色相 = 本体 Toolbox 的 positive/neutral/negative/blue。
+        public static readonly Color PhaseBoom       = VanillaChartPalette.PhaseSolid(0);
+        public static readonly Color PhaseRecession  = VanillaChartPalette.PhaseSolid(1);
+        public static readonly Color PhaseDepression = VanillaChartPalette.PhaseSolid(2);
+        public static readonly Color PhaseRecovery   = VanillaChartPalette.PhaseSolid(3);
 
         // ===== 语义色 =====
         public static readonly Color Positive = new Color(0.20f, 0.83f, 0.60f);

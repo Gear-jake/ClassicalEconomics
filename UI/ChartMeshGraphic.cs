@@ -28,18 +28,27 @@ namespace EconomyMod.UI
         // ===== 签名 gating（数据未变不重建）=====
         private int _lastSig = int.MinValue;
 
+        /// <summary>实际重建网格的次数（SetChartData 命中新签名）。用于验证"GO 常驻后脏标记真的生效"。</summary>
+        public int RebuildCount { get; private set; }
+        /// <summary>因签名相同而跳过的次数（零顶点重建）。</summary>
+        public int SkipCount { get; private set; }
+
         // ===== 绘制参数（公共，供 HUD 初始化时设置）=====
+        // 【W2.6】配色默认值全部改由 VanillaChartPalette 提供（取自本体 Toolbox / GraphHelpers）。
         public float yAxisWidth = 44f;
         public float margin = 4f;
         public int gridLines = 4;
-        public Color gridColor = new Color(0.35f, 0.35f, 0.4f, 0.45f);
-        public Color refHighColor = new Color(1f, 0.35f, 0.3f, 0.85f);
-        public Color refLowColor = new Color(0.4f, 0.9f, 0.4f, 0.85f);
+        public Color gridColor = VanillaChartPalette.GridLine;
+        public Color refHighColor = VanillaChartPalette.RefHigh;
+        public Color refLowColor = VanillaChartPalette.RefLow;
         public float dashLen = 6f;
         public float dashGap = 4f;
         public float thickness = 2f;
         public float pointRadius = 2.5f;
         public bool softEdge = true;   // 1px 亮芯 + 2px 半透明外描边（抗锯齿观感）
+        /// <summary>面积填充上/下端不透明度：与本体 getChartInnerFillMaterial 的 0.4 → 0.1 一致。</summary>
+        public float areaAlphaTop = VanillaChartPalette.AreaAlphaTop;
+        public float areaAlphaBottom = VanillaChartPalette.AreaAlphaBottom;
 
         // ===== 每帧布局缓存（OnPopulateMesh 时更新）=====
         private float _rectW, _rectH, _plotX0, _plotW, _plotH, _range;
@@ -78,7 +87,8 @@ namespace EconomyMod.UI
             int n = vals[0].Length;
             int sig = ComputeSig(vals, colors, phases, seriesCount, vmin, vmax,
                 drawArea, drawRefs, refHigh, refLow);
-            if (sig == _lastSig) return;
+            if (sig == _lastSig) { SkipCount++; return; }
+            RebuildCount++;
 
             _seriesCount = Mathf.Max(1, seriesCount);
             _vals = new float[_seriesCount][];
@@ -181,20 +191,29 @@ namespace EconomyMod.UI
             }
         }
 
-        // ===== 绘制：主系列面积填充 =====
+        // ===== 绘制：主系列面积填充（本体同款上下渐变）=====
         private void DrawArea(VertexHelper vh)
         {
             float[] arr = _vals[0];
             Color fill = _areaColors != null && _areaColors.Length > 0 ? _areaColors[0] : _colors[0];
-            fill.a = Mathf.Clamp01(fill.a * 0.5f);
+            if (fill.a <= 0.001f) return;
+            // 【W2.6】对齐本体 HistoryDataAsset.getChartInnerFillMaterial：
+            // 同色相、上端 a=0.4 → 下端 a=0.1 的**垂直渐变**（原先是我们自造的"扁平 0.14"）。
+            Color top = fill; top.a = areaAlphaTop;
+            Color bottom = fill; bottom.a = areaAlphaBottom;
             float baseY = YAt(_vmin);
             for (int i = 0; i < _count - 1; i++)
             {
                 if (float.IsNaN(arr[i]) || float.IsNaN(arr[i + 1])) continue;
-                AddQuad(vh,
-                    new Vector2(XAt(i), baseY), new Vector2(XAt(i), YAt(arr[i])),
-                    new Vector2(XAt(i + 1), YAt(arr[i + 1])), new Vector2(XAt(i + 1), baseY),
-                    fill);
+                float x0 = XAt(i), x1 = XAt(i + 1), y0 = YAt(arr[i]), y1 = YAt(arr[i + 1]);
+                // 四个顶点各自着色：左上(x0,y0)/右上(x1,y1) 用上端色，底部两点用下端色
+                int vi = vh.currentVertCount;
+                AddVert(vh, new Vector2(x0, baseY), bottom);
+                AddVert(vh, new Vector2(x0, y0), top);
+                AddVert(vh, new Vector2(x1, y1), top);
+                AddVert(vh, new Vector2(x1, baseY), bottom);
+                vh.AddTriangle(vi, vi + 1, vi + 2);
+                vh.AddTriangle(vi, vi + 2, vi + 3);
             }
         }
 
@@ -281,17 +300,10 @@ namespace EconomyMod.UI
                 vh.AddTriangle(baseI, baseI + 1 + k, baseI + 2 + k);
         }
 
-        /// <summary>经济阶段背景色带（半透明，与纹理版一致）。</summary>
+        /// <summary>经济阶段背景色带（色相取自本体语义色，见 VanillaChartPalette.PhaseBand）。</summary>
         private static Color PhaseBand(int phase)
         {
-            switch (phase)
-            {
-                case 0: return new Color(0.1f, 0.5f, 0.2f, 0.20f);  // Boom
-                case 1: return new Color(0.5f, 0.35f, 0.1f, 0.16f); // Recession
-                case 2: return new Color(0.5f, 0.12f, 0.1f, 0.22f); // Depression
-                case 3: return new Color(0.1f, 0.3f, 0.5f, 0.16f);  // Recovery
-                default: return new Color(0f, 0f, 0f, 0f);
-            }
+            return VanillaChartPalette.PhaseBand(phase);
         }
     }
 }

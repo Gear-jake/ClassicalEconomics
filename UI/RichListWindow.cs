@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using EconomyMod.Core;
 
 namespace EconomyMod.UI
@@ -33,6 +33,11 @@ namespace EconomyMod.UI
         protected override Vector2 AnchoredPosition => new Vector2(-(PanelWidth + 16f), 0f);
         protected override Vector2 Size => new Vector2(PanelWidth, PanelHeight);
         protected override Color BgColor => Bg;
+        /// <summary>【布局修复】富豪榜固定 Top10，应完整显示，不出现"最后一行被框裁掉"。</summary>
+        protected override bool AutoFitHeight => true;
+
+        /// <summary>【W2 PoC】本窗口作为新皮肤样板：套用本体窗口底板/关闭按钮。</summary>
+        protected override bool UseVanillaSkin => true;
 
         public static void Create()
         {
@@ -45,6 +50,7 @@ namespace EconomyMod.UI
         {
             ClearContent();
             BuildList();
+            FitPanelToContent();
         }
 
         /// <summary>语言切换：标题走基类；内容为键控文案，可见时立即重建。</summary>

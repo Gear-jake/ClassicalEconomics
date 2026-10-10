@@ -1,4 +1,4 @@
-# -*- encoding: utf-8 -*-
+﻿# -*- encoding: utf-8 -*-
 # Test-EventPool.ps1 —— v1.7.0 每局事件池规则门禁（结构性断言，不重复实现 C# 哈希）。
 # 断言：
 # 1) 整数域基线：事件数 ≥300、选项 ≥2、chainNext 引用存在、id 唯一；
@@ -81,7 +81,7 @@ foreach ($f in $familyTotal.Keys) {
 if ($onlyPlayerTotal -lt 6) { Fail "onlyPlayer total $onlyPlayerTotal below 6 (backfill floor unsatisfiable)" }
 
 # ---- 5) 引擎常量锚点（源码文本；改动须同步本门禁）----
-$src = [System.IO.File]::ReadAllText((Join-Path $Root 'Core\DecisionEvents.cs'))
+$src = (Get-ChildItem (Join-Path $Root 'Core') -Filter 'DecisionEvents*.cs' | Sort-Object Name | ForEach-Object { [System.IO.File]::ReadAllText($_.FullName) }) -join "`n"   # W3.4 拆分后合并扫描
 if ($src -notmatch 'PoolRetainRatio\s*=\s*0\.68f') { Fail 'PoolRetainRatio must stay 0.68f' }
 if ($src -notmatch 'FamilyBiasMin\s*=\s*0\.65f') { Fail 'FamilyBiasMin must stay 0.65f' }
 if ($src -notmatch 'FamilyBiasMax\s*=\s*1\.4f') { Fail 'FamilyBiasMax must stay 1.4f' }

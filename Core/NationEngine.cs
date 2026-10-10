@@ -31,7 +31,8 @@ namespace EconomyMod.Core
         public const float GranaryLossFactor = 0.7f; // 粮仓所在城市灾害财富蒸发 ×0.7
 
         private const int MaxSlots = 5;
-        private const int SwitchCooldownYears = 10;
+        /// <summary>换国冷却（年）。选择器窗口要把它显示给玩家，故为 internal 常量。</summary>
+        internal const int SwitchCooldownYears = 10;
         internal const int RecordCapacity = 50;
 
         // ===== 绑定状态 =====

@@ -40,6 +40,8 @@ namespace EconomyMod.UI
         protected override Vector2 AnchoredPosition => new Vector2(-80f, 60f);
         protected override Vector2 Size => new Vector2(PanelWidth, PanelHeight);
         protected override Color BgColor => Bg;
+        /// <summary>【W2】套用本体窗口皮肤（不注册为 ScrollWindow，游戏不暂停）。</summary>
+        protected override bool UseVanillaSkin => true;
 
         public static void Create()
         {
@@ -243,6 +245,21 @@ namespace EconomyMod.UI
             tRt.pivot = new Vector2(0.5f, 0.5f);
             tRt.anchoredPosition = Vector2.zero;
             tRt.sizeDelta = new Vector2(0, Fs(18f));
+
+            // 【布局修复】行高按文本换行后的真实高度回写，否则长文案的第二行会压到下一条
+            // （实机反馈"这个面板还是错位"）。色带竖条同步拉满整行高度。
+            // 内容区可用宽度 = 面板宽 - 左右内边距（此处必须传，否则测量会虚高）
+            float rowWidth = Mathf.Max(80f, _panelRect.rect.width - Padding * 2f);
+            UIHelpers.FitRowHeightToText(row, txt.GetComponent<Text>(), Fs(18f), rowWidth);
+            var fitted = row.GetComponent<LayoutElement>();
+            if (fitted != null && fitted.preferredHeight > Fs(18f))
+            {
+                sle.preferredHeight = fitted.preferredHeight;
+            }
+            else if (sle != null)
+            {
+                sle.preferredHeight = Fs(18f);
+            }
         }
 
         /// <summary>渲染关键类型统计行（仅发生过才显示，每行最多 3 项）。返回渲染行数。</summary>

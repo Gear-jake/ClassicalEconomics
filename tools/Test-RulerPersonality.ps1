@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 
 function Assert-True($cond, $msg) {
@@ -34,7 +34,7 @@ $nation = [System.IO.File]::ReadAllText((Join-Path $Root 'Core\NationEngine.cs')
 Assert-True ($nation -match 'RulerEngine\.TreasurySkim') 'NationEngine must apply treasury skimming'
 Assert-True ($nation -match '"ruler_skim"') 'treasury skimming must be recorded in the track record'
 
-$de = [System.IO.File]::ReadAllText((Join-Path $Root 'Core\DecisionEvents.cs'))
+$de = (Get-ChildItem (Join-Path $Root 'Core') -Filter 'DecisionEvents*.cs' | Sort-Object Name | ForEach-Object { [System.IO.File]::ReadAllText($_.FullName) }) -join "`n"   # W3.4 拆分后合并扫描
 Assert-True ($de -match 'RulerEngine\.OptionBias') 'AI event choices must apply ruler personality bias'
 
 # ===== 4. 配置键接线 =====

@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 
 function Assert-True($cond, $msg) {
@@ -46,9 +46,12 @@ $pipeline = [System.IO.File]::ReadAllText((Join-Path $Root 'Core\AnnualPipeline.
 Assert-True ($pipeline -match 'Banking,\s*\r?\n\s*Bank,\s*\r?\n\s*Nation,') 'AnnualStage must declare Bank between Banking and Nation'
 Assert-True ($pipeline -match 'case AnnualStage\.Bank:[\s\S]*?BankEngine\.Evaluate') 'RunStage must call BankEngine.Evaluate in the Bank stage'
 
-# ===== 5. 存档对称（NationSave rb_bank_* 三键）=====
+# ===== 5. 存档对称（NationSave 经 SaveSchema 常量读写银行三键）=====
+# 【W3.2 换锚点】键值字面量已收敛到 Core\SaveSchema.cs；此处改为断言"三键常量在 NationSave 被读写"，
+# 键值本身（rb_bank_set / rb_bank_ledger / rb_bank_ai）由 Test-SaveSchema 的冻结清单保证逐字不变。
+# 契约不变：银行状态必须经存档三键往返。
 $save = [System.IO.File]::ReadAllText((Join-Path $Root 'Core\NationSave.cs'))
-foreach ($k in @('rb_bank_set', 'rb_bank_ledger', 'rb_bank_ai')) {
+foreach ($k in @('SaveSchema.BankSettings', 'SaveSchema.BankLedger', 'SaveSchema.BankAi')) {
     Assert-True ($save -match [regex]::Escape($k)) "NationSave must persist $k"
 }
 Assert-True ($save -match 'BankEngine\.Serialize' -and $save -match 'BankEngine\.Restore') 'NationSave must round-trip BankEngine state'
@@ -60,7 +63,7 @@ foreach ($f in @('BankEnabled', 'BankMoneySupplyFactor', 'BankMaxLoansPerCity', 
 }
 
 # ===== 7. 抉择事件：bankRiskMin 条件 + commercePenaltyYears 效果 =====
-$de = [System.IO.File]::ReadAllText((Join-Path $Root 'Core\DecisionEvents.cs'))
+$de = (Get-ChildItem (Join-Path $Root 'Core') -Filter 'DecisionEvents*.cs' | Sort-Object Name | ForEach-Object { [System.IO.File]::ReadAllText($_.FullName) }) -join "`n"   # W3.4 拆分后合并扫描
 Assert-True ($de -match 'bankRiskMin') 'DecisionEvents must support the bankRiskMin condition'
 Assert-True ($de -match 'commercePenaltyYears') 'DecisionEvents must support the commercePenaltyYears effect'
 Assert-True ($de -match 'BankEngine\.RiskTier') 'bankRiskMin must read BankEngine.RiskTier'

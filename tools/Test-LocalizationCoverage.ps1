@@ -35,7 +35,7 @@ foreach ($loc in @('ch.json', 'en.json', 'zh_tw.json', 'ru.json')) {
 
 # ===== 收集产品源文件（排除 tools/evidence）=====
 $sources = @(Get-ChildItem -LiteralPath $Root -Filter '*.cs' -File -Recurse | Where-Object {
-    $_.FullName -notmatch '[\\/](bin|obj|evidence|tools)[\\/]'
+    $_.FullName -notmatch '[\\/](bin|obj|evidence|tools|release)[\\/]'
 })
 if ($sources.Count -eq 0) {
     Write-Host 'LOCALIZATION_COVERAGE_RED: no product C# sources found'
@@ -104,8 +104,10 @@ foreach ($w in @('EconomyHUD', 'EventWindow', 'RichListWindow')) {
 }
 
 # ===== 4) 组合键：工具栏按钮 tooltip（id 与 id_description）必须四语言齐全 =====
-$buttonIds = @('economy_toggle', 'economy_intervene', 'economy_collect', 'economy_clear',
-               'economy_rich', 'economy_events', 'economy_cycle_phase')
+# 【W1.5】economy_intervene（干预王国选择列表）已拆成 economy_incite / economy_suppress 两个权能
+# 【W1.6】economy_nation_pick：Tab 上的「选择扮演国家」选择器按钮
+$buttonIds = @('economy_toggle', 'economy_incite', 'economy_suppress', 'economy_collect', 'economy_clear',
+               'economy_rich', 'economy_events', 'economy_cycle_phase', 'economy_nation_pick')
 foreach ($id in $buttonIds) {
     foreach ($loc in $langKeys.Keys) {
         if (-not $langKeys[$loc].Contains($id)) { $failures.Add("$loc missing toolbar tooltip key '$id'") }

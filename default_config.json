@@ -37,6 +37,36 @@
       "Callback": "EconomyConfigCallbacks:OnPolicyEnabledChanged"
     },
     {
+      "Id": "regime_change_enabled",
+      "Type": "SWITCH",
+      "BoolVal": false,
+      "Callback": "EconomyConfigCallbacks:OnRegimeChangeChanged"
+    },
+    {
+      "Id": "gini_collapse_enabled",
+      "Type": "SWITCH",
+      "BoolVal": false,
+      "Callback": "EconomyConfigCallbacks:OnGiniCollapseChanged"
+    },
+    {
+      "Id": "policy_gini_threshold",
+      "Type": "TEXT",
+      "TextVal": "0.72",
+      "Callback": "EconomyConfigCallbacks:OnPolicyGiniThresholdChanged"
+    },
+    {
+      "Id": "policy_attempt_chance",
+      "Type": "TEXT",
+      "TextVal": "0.15",
+      "Callback": "EconomyConfigCallbacks:OnPolicyAttemptChanged"
+    },
+    {
+      "Id": "policy_cooldown_years",
+      "Type": "TEXT",
+      "TextVal": "15",
+      "Callback": "EconomyConfigCallbacks:OnPolicyCooldownChanged"
+    },
+    {
       "Id": "cycle_enabled",
       "Type": "SWITCH",
       "BoolVal": true,
@@ -461,6 +491,13 @@
       "Type": "TEXT",
       "TextVal": "1.2",
       "Callback": "EconomyConfigCallbacks:OnUiScaleChanged"
+    },
+    {
+      "Id": "pause_on_panel_open",
+      "Type": "SWITCH",
+      "BoolVal": false,
+      "Callback": "EconomyConfigCallbacks:OnPauseOnPanelOpenChanged"
     }
   ]
 }
+

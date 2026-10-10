@@ -622,7 +622,7 @@ namespace EconomyMod.Core
               .Append(FranchiseOn ? '1' : '0').Append(',')
               .Append(FairPriceOn ? '1' : '0').Append(',')
               .Append(_commercePenaltyUntilYear);
-            write("rb_bank_set", sb.ToString());
+            write(SaveSchema.BankSettings, sb.ToString());
 
             sb.Length = 0;
             foreach (var kv in _playerLedgers)
@@ -639,7 +639,7 @@ namespace EconomyMod.Core
                 }
                 sb.Append(';');
             }
-            write("rb_bank_ledger", sb.ToString());
+            write(SaveSchema.BankLedger, sb.ToString());
 
             sb.Length = 0;
             foreach (var kv in _aiBanks)
@@ -649,7 +649,7 @@ namespace EconomyMod.Core
                   .Append(kv.Value.RatePermille).Append(',')
                   .Append(kv.Value.DueYear).Append(';');
             }
-            write("rb_bank_ai", sb.ToString());
+            write(SaveSchema.BankAi, sb.ToString());
         }
 
         public static void Restore(string settings, string ledger, string ai)

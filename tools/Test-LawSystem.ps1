@@ -23,7 +23,10 @@ function Read-Source([string]$p) { [System.IO.File]::ReadAllText($p, $utf8) }
 $engine = Read-Source $enginePath
 $ai = Read-Source $aiPath
 $save = Read-Source $savePath
-$cabinet = Read-Source $cabinetPath
+# 【W2 换锚点】CabinetWindow 已按 partial 拆成多个文件（壳/政务页/外交/图表），
+# 形状检查改为合并扫描整个 CabinetWindow*.cs 分层；各项契约不变。
+$cabinet = (@(Get-ChildItem -LiteralPath (Join-Path $Root 'UI') -Filter 'CabinetWindow*.cs' -File) |
+    ForEach-Object { Read-Source $_.FullName }) -join "`n"
 $main = Read-Source $mainPath
 
 function Assert([bool]$cond, [string]$msg) { if (-not $cond) { $failures.Add($msg) } }
@@ -59,12 +62,20 @@ Assert ($ai -match 'MutexGroupOf') 'AI must resolve mutex groups'
 Assert ($engine -match 'if \(level > cur\).*TrySpend|if \(level > cur\)') 'law upgrade must cost gold'
 
 # 4) 存档注入点
-Assert ($save -match 'rb_law_law_') 'save must write rb_law_law_* keys'
-Assert ($save -match 'rb_law_policy_') 'save must write rb_law_policy_* keys'
-Assert ($save -match 'rb_law_style') 'save must write rb_law_style'
+# 【W3.2 换锚点】键值字面量收敛到 Core\SaveSchema.cs；此处断言"法典用 SaveSchema 的键构造器/常量写入"，
+# 键值本身（rb_law_law_* / rb_law_policy_* / rb_law_style）由 Test-SaveSchema 冻结清单保证逐字不变。
+# 契约不变：法典档位与风格必须落盘。
+Assert ($save -match 'SaveSchema\.LawLevel\(') 'save must write law-level keys via SaveSchema.LawLevel'
+Assert ($save -match 'SaveSchema\.LawPolicy\(') 'save must write policy-level keys via SaveSchema.LawPolicy'
+Assert ($save -match 'SaveSchema\.LawStyle') 'save must write the style key via SaveSchema.LawStyle'
+Assert ($save -match 'SaveSchema\.LawLevel\(' -and $save -match 'get\(SaveSchema\.LawLevel\(') 'law-level keys must be written and read'
 Assert ($save -match 'saveWorldToDirectory') 'save must patch SaveManager.saveWorldToDirectory'
 Assert ($save -match 'loadWorld') 'save must patch SaveManager.loadWorld'
-Assert ($main -match 'LawSave\.TryInstall') 'main must install codex save patch'
+# 【W3 换锚点】补丁安装已统一到 PatchInstaller；契约不变：法典存档补丁必须被安装。
+# 校验：① PatchInstaller 登记了 LawSave ② 主流程调用了 InstallAll。
+$patchInstaller = Read-Source (Join-Path $Root 'Core\PatchInstaller.cs')
+Assert ($patchInstaller -match 'LawSave') 'PatchInstaller.Registry must register the codex save patch'
+Assert ($main -match 'PatchInstaller\.InstallAll\(\)') 'main must install all patches via PatchInstaller.InstallAll'
 
 # 5) 事件分级与 UI
 Assert ($ai -match 'TypeLawReform') 'AI must record codex reform events'

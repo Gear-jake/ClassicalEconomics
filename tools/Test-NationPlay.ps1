@@ -36,7 +36,10 @@ $tsw = Read-Source $tswPath
 $disaster = Read-Source $disasterPath
 $crisis = Read-Source $crisisPath
 $main = Read-Source $mainPath
-$cabinet = Read-Source $cabinetPath
+# 【W2 换锚点】CabinetWindow 已按 partial 拆成多个文件（壳/政务页/外交/图表），
+# 形状检查改为合并扫描整个 CabinetWindow*.cs 分层；各项契约不变。
+$cabinet = (@(Get-ChildItem -LiteralPath (Join-Path $Root 'UI') -Filter 'CabinetWindow*.cs' -File) |
+    ForEach-Object { Read-Source $_.FullName }) -join "`n"
 $ui = Read-Source $uiPath
 $events = Read-Source $eventsPath
 
@@ -107,7 +110,10 @@ if (-not (Test-Path -LiteralPath $integrationPath -PathType Leaf)) {
     Assert ($integration -match 'NationEngine\.Claim') 'integration entry must claim the shown kingdom'
     Assert ($integration -match 'CabinetWindow\.Instance\.Show') 'integration entry must open the cabinet'
     Assert ($integration -match 'catch \(System\.Exception') 'integration must fail closed on reflection/unexpected errors'
-    Assert ($main -match 'KingdomWindowIntegration\.TryInstall\(\)') 'EconomyTickRunner must install the integration on first frame'
+    # 【W3 换锚点】补丁安装已统一到 PatchInstaller；契约不变：国家窗口集成必须被安装。
+$patchInstaller = Read-Source (Join-Path $Root 'Core\PatchInstaller.cs')
+Assert ($patchInstaller -match 'KingdomWindowIntegration') 'PatchInstaller.Registry must register the kingdom window integration'
+Assert ($main -match 'PatchInstaller\.InstallAll\(\)') 'EconomyTickRunner must install all patches on first frame'
     Assert ($integration -match 'GetMetaObject') 'integration must read meta_object via runtime reflection (non-public in raw assembly)'
     Assert ($integration -match 'TryHotkeyOpen') 'integration must support the C hotkey entry (RulerBox-style)'
     Assert ($main -match 'NationClaimHotkey') 'hotkey must read the configurable NationClaimHotkey key'
@@ -154,6 +160,26 @@ if (-not (Test-Path -LiteralPath $diplomacyPath -PathType Leaf)) {
 # ===== 7. UI 接线 =====
 Assert ($cabinet -match 'TitleKey => "cabinet_title"') 'CabinetWindow must use the cabinet_title locale key'
 Assert ($ui -match 'CabinetWindow\.Create\(\)') 'EconomyUI must create the cabinet window'
+
+# ===== 8. 入口②：Tab 上的「选择扮演国家」选择器（W1.6）=====
+# 契约：选择器只是**第三个认领入口**，规则必须与另外两个入口完全一致 ——
+#   不得绕过 NationEngine.Claim（换国冷却/启动资金守恒/法典/事件流都在那里面）、
+#   不得直接写绑定字段、配置关闭时不留死入口、行按钮按 W4-UI 计数回收。
+$pickPath = Join-Path $Root 'UI\NationPickWindow.cs'
+if (-not (Test-Path -LiteralPath $pickPath -PathType Leaf)) {
+    $failures.Add('UI/NationPickWindow.cs not found (tab nation picker)')
+} else {
+    $pick = Read-Source $pickPath
+    Assert ($ui -match 'NationPickWindow') 'EconomyUI must create/toggle the nation picker window'
+    Assert ($ui -match 'economy_nation_pick') 'EconomyUI must expose the economy_nation_pick button id'
+    Assert ($ui -match 'NationPlayEnabled') 'picker button must be gated on nation_play_enabled'
+    Assert ($pick -match 'NationEngine\.Claim') 'picker must claim through NationEngine.Claim (cooldown + startup funds live there)'
+    Assert ($pick -notmatch '_nationKingdomId\s*=') 'picker must not write the binding field directly'
+    Assert ($pick -match 'NationPlayEnabled') 'picker must re-check nation_play_enabled at build time'
+    Assert ($pick -match 'SwitchCooldownYears') 'picker must surface the switch cooldown to the player'
+    Assert ($pick -match 'PerfCounters\.AddUiDestroyed') 'picker rows must be counted on destroy (W4-UI accounting)'
+    Assert ($pick -match 'OnWorldUnavailable') 'picker must clear rows when leaving the world'
+}
 
 if ($failures.Count -gt 0) {
     foreach ($f in $failures) { Write-Host "NATION_PLAY_RED: $f" }

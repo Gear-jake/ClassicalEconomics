@@ -11,7 +11,8 @@ import os
 import sys
 import zipfile
 
-ROOT = r'E:\code\new\ClassicalEconomics'
+# 仓库根 = 本脚本上一级目录（零机器特定路径）
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RELEASE_DIR = os.path.join(ROOT, 'release')
 
 version = sys.argv[1] if len(sys.argv) > 1 else None

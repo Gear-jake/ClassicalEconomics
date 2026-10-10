@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using EconomyMod.Services;
 
@@ -99,6 +99,43 @@ namespace EconomyMod.UI
             var rt = go.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(0, lineHeight);
             return go;
+        }
+
+        /// <summary>
+        /// 【布局修复】把一个「水平排列 + 文本可换行」的行，按其文本**换行后的真实高度**定高。
+        ///
+        /// 为什么需要：这类行通常是 HorizontalLayoutGroup 容器 + 文本子物体，
+        /// 容器上的 LayoutElement 若只给 minHeight，父级 VerticalLayoutGroup 就会按单行高度排布；
+        /// 文本一旦换行（窄窗口/长文案），第二行会**溢出并压到下一条**。
+        /// 实机反馈过两次（内存状态行、事件流行）。
+        ///
+        /// 做法：先按最终宽度强制布局一次，再取文本的 preferredHeight 回写给容器。
+        /// </summary>
+        public static void FitRowHeightToText(GameObject row, Text txt, float baseHeight, float knownWidth = 0f)
+        {
+            if (row == null || txt == null) return;
+            // 宽度未知时**不做测量**：此时测量必然虚高（文本被挤成多行），
+            // 写回去只会把行撑得很大。宁可交回布局器按自然尺寸处理。
+            if (knownWidth <= 1f) return;
+            try
+            {
+                var rt = row.GetComponent<RectTransform>();
+                // ⚠️ 关键：必须先给行一个**确定的宽度**再测量。
+                // 若此时宽度还是 0（父级布局尚未分配），文本会被挤成很多行，
+                // 测出的高度会虚高数倍 —— 实机表现就是"每条之间的空隙巨大"。
+                if (rt != null && knownWidth > 1f)
+                    rt.sizeDelta = new Vector2(knownWidth, baseHeight);
+                if (rt != null) LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+                float wrapped = txt.preferredHeight;
+                if (wrapped <= baseHeight + 1f) return;
+                float need = Mathf.Ceil(wrapped) + 2f;
+                var le = row.GetComponent<LayoutElement>();
+                if (le != null) le.preferredHeight = need;
+                var tle = txt.GetComponent<LayoutElement>();
+                if (tle != null) tle.preferredHeight = need;
+                if (rt != null) rt.sizeDelta = new Vector2(rt.sizeDelta.x, need);
+            }
+            catch (System.Exception) { }
         }
 
         /// <summary>创建带 Image + Button 的按钮 GameObject（含 Label 子物体）。</summary>
@@ -280,16 +317,25 @@ namespace EconomyMod.UI
         /// 创建滚动内容区（ScrollRect + Mask + VerticalLayoutGroup + ContentSizeFitter），
         /// 返回 Content 的 RectTransform（调用方自行 AddLine 挂子物体）。
         /// </summary>
-        public static RectTransform CreateScrollContent(RectTransform panelRect, float padding, float topInset)
+        public static RectTransform CreateScrollContent(RectTransform panelRect, float padding, float topInset, bool transparentBg = false, float bottomInset = 0f)
         {
             var scrollObj = new GameObject("Scroll", typeof(RectTransform), typeof(Image),
                 typeof(ScrollRect), typeof(Mask));
             scrollObj.transform.SetParent(panelRect, false);
             var scrollRt = scrollObj.GetComponent<RectTransform>();
             scrollRt.anchorMin = Vector2.zero; scrollRt.anchorMax = Vector2.one;
-            scrollRt.offsetMin = new Vector2(padding, padding);
+            // bottomInset：本体皮肤下内容需避让窗口**底部边框**，否则最后一行会画到框外
+            scrollRt.offsetMin = new Vector2(padding, padding + bottomInset);
             scrollRt.offsetMax = new Vector2(-padding, -topInset);
-            scrollObj.GetComponent<Image>().color = new Color(0, 0, 0, 0.18f);
+            // 本体皮肤下取消暗色蒙版：本体窗口自带底色，叠加会显脏。
+            //
+            // ⚠️ 但这个 Image 同时是 Mask 的模板 —— Unity 的 Mask 靠它的 **alpha** 写入 stencil。
+            // 直接把 alpha 设成 0 会让 stencil 为空、**子物体全部被裁掉**（实机表现为"窗口一片空白、
+            // 文字全消失"）。所以这里用极小但非零的 alpha（1/255，视觉上不可见），既去掉了暗色蒙版，
+            // 又保证遮罩继续工作。
+            scrollObj.GetComponent<Image>().color = transparentBg
+                ? new Color(0, 0, 0, 1f / 255f)
+                : new Color(0, 0, 0, 0.18f);
 
             var content = new GameObject("Content", typeof(RectTransform),
                 typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));

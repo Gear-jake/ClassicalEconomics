@@ -31,6 +31,13 @@ namespace EconomyMod.Core
         private static int _frameHead;
         private static int _frameCount;
 
+        /// <summary>【本次新增】模组自身每帧主线程耗时（ms）环形缓冲：直接回答"模组是不是卡顿元凶"。</summary>
+        private static readonly float[] _modFrameMs = new float[FrameRingCapacity];
+        private static int _modFrameHead;
+        private static int _modFrameCount;
+        private static double _modFrameTotalMs;
+        private static long _modSlow1, _modSlow5, _modSlow16, _modSlow33;   // 超过 1/5/16/33ms 的帧数
+
         private static long _year;
         private static long _yearStartTicks;
         private static long _yearStartBytes;
@@ -45,6 +52,7 @@ namespace EconomyMod.Core
         private static long _yearTotalMs;
         private static long _yearTotalBytes;
         private static int _overBudgetStages;
+        private static bool _pendingWrite;   // EndYear 已写、待下一年开始时用最终计数覆盖
 
         /// <summary>是否启用（与 PerfDiagnostics 共用开关，默认关闭）。</summary>
         public static bool IsEnabled => PerfDiagnostics.IsEnabled;
@@ -53,11 +61,20 @@ namespace EconomyMod.Core
         public static void BeginYear(int year)
         {
             if (!IsEnabled) return;
+            // 【仪器修复·1】上一年"最终"数据在此刻才写盘：
+            // EndYear 之后仍有 FinishCycle/MarkFinishCycle 等自增，原先在 EndYear 写会永远是 0。
+            if (_pendingWrite)
+            {
+                WriteCapture();
+                WriteParity();
+                _pendingWrite = false;
+            }
             _year = year;
             _yearStartTicks = Stopwatch.GetTimestamp();
             _yearStartBytes = GC.GetTotalMemory(false);
-            _frameHead = 0;
-            _frameCount = 0;
+            // 【仪器修复·2】帧统计**不再清零**：年度管线常在同一帧内跑完，
+            // 清零后紧接着写盘 → FrameCount 恒为 0（实测踩到）。改用环形缓冲，
+            // 报告"最近 1024 帧"，这才是看卡顿该看的东西。
             _findEquipTargetCalls = 0L;
             _findEquipTargetUnits = 0L;
             _fullActorScans = 0L;
@@ -74,8 +91,12 @@ namespace EconomyMod.Core
             if (!IsEnabled) return;
             _yearTotalMs = ElapsedMs(_yearStartTicks);
             _yearTotalBytes = GC.GetTotalMemory(false) - _yearStartBytes;
-            WriteCapture();
-            WriteParity();
+            // 【仪器修复·3】这里**只置标志、不写盘**：
+            // EndYear 之后 BeginYear 才清零计数器，若在此处写会用"上一年的旧值"。
+            // 而若在此处写、又在 BeginYear 写，则 EndYear 这次（读到已清零的 0）会覆盖掉
+            // BeginYear 写下的正确值 —— 实测 FinishCycleCalls 恒为 0 就是这么来的。
+            // 代价：最后一年要等下一次 BeginYear 才落盘（可接受）。
+            _pendingWrite = true;
         }
 
         /// <summary>每帧采样一次帧耗时（毫秒）。关闭时仅一次布尔判断。</summary>
@@ -86,6 +107,27 @@ namespace EconomyMod.Core
             _frameMs[_frameHead] = ms;
             _frameHead = (_frameHead + 1) % FrameRingCapacity;
             if (_frameCount < FrameRingCapacity) _frameCount++;
+        }
+
+        /// <summary>采样模组自身一次 Update 的主线程耗时（ms）。关闭时零开销。</summary>
+        public static void SampleModFrame(float ms)
+        {
+            if (!IsEnabled) return;
+            _modFrameMs[_modFrameHead] = ms;
+            _modFrameHead = (_modFrameHead + 1) % FrameRingCapacity;
+            if (_modFrameCount < FrameRingCapacity) _modFrameCount++;
+            _modFrameTotalMs += ms;
+            if (ms > 1f) _modSlow1++;
+            if (ms > 5f) _modSlow5++;
+            if (ms > 16f) _modSlow16++;
+            if (ms > 33f) _modSlow33++;
+        }
+
+        /// <summary>供外部包装计时用（返回**亚毫秒精度**浮点 ms）。
+        /// 整数毫秒会把 <1ms 全部截断成 0，导致 p50/p95 双双为 0、丢掉全部分辨率（实测踩到）。</summary>
+        public static float ElapsedMsPrecise(long startTicks)
+        {
+            return (float)((Stopwatch.GetTimestamp() - startTicks) * 1000.0 / Stopwatch.Frequency);
         }
 
         /// <summary>记录一次装备目标寻址（W2-B 验收：调用次数与累计扫描单位数）。</summary>
@@ -153,13 +195,25 @@ namespace EconomyMod.Core
                 AppendFloat("FrameP50Ms", p50, ",");
                 AppendFloat("FrameP95Ms", p95, ",");
                 AppendFloat("FrameMaxMs", max, ",");
+                float mp50 = 0f, mp95 = 0f, mmax = 0f;
+                ComputeModFrameStats(out mp50, out mp95, out mmax);
+                AppendFloat("ModFrameP50Ms", mp50, ",");
+                AppendFloat("ModFrameP95Ms", mp95, ",");
+                AppendFloat("ModFrameMaxMs", mmax, ",");
+                AppendFloat("ModFrameAvgMs", _modFrameCount > 0 ? (float)(_modFrameTotalMs / _modFrameCount) : 0f, ",");
+                AppendLong("ModFrameSamples", _modFrameCount, ",");
+                AppendLong("ModSlow1", _modSlow1, ",");
+                AppendLong("ModSlow5", _modSlow5, ",");
+                AppendLong("ModSlow16", _modSlow16, ",");
+                AppendLong("ModSlow33", _modSlow33, ",");
                 AppendLong("FindEquipTargetCalls", _findEquipTargetCalls, ",");
                 AppendLong("FindEquipTargetUnits", _findEquipTargetUnits, ",");
                 AppendLong("FullActorScans", _fullActorScans, ",");
                 AppendLong("FullActorScanUnits", _fullActorScanUnits, ",");
                 AppendLong("UiGoCreated", _uiGoCreated, ",");
                 AppendLong("UiGoDestroyed", _uiGoDestroyed, ",");
-                AppendLong("FinishCycleCalls", _finishCycleCalls, "");
+                AppendLong("FinishCycleCalls", _finishCycleCalls, ",");
+                AppendStages();
                 _sb.Append("\n}\n");
                 Write(OutputPath(CaptureFileName), _sb.ToString());
             }
@@ -244,6 +298,19 @@ namespace EconomyMod.Core
             catch (System.Exception) { return false; }
         }
 
+        /// <summary>模组自身每帧耗时分位数（最近 1024 帧）。</summary>
+        private static void ComputeModFrameStats(out float p50, out float p95, out float max)
+        {
+            p50 = 0f; p95 = 0f; max = 0f;
+            int n = _modFrameCount;
+            if (n <= 0) return;
+            for (int i = 0; i < n; i++) _frameSort[i] = _modFrameMs[i];
+            Array.Sort(_frameSort, 0, n);
+            max = _frameSort[n - 1];
+            p50 = _frameSort[Mathf.Clamp((int)(n * 0.50f), 0, n - 1)];
+            p95 = _frameSort[Mathf.Clamp((int)(n * 0.95f), 0, n - 1)];
+        }
+
         private static void ComputeFrameStats(out float p50, out float p95, out float max)
         {
             p50 = 0f; p95 = 0f; max = 0f;
@@ -254,6 +321,32 @@ namespace EconomyMod.Core
             max = _frameSort[n - 1];
             p50 = _frameSort[Mathf.Clamp((int)(n * 0.50f), 0, n - 1)];
             p95 = _frameSort[Mathf.Clamp((int)(n * 0.95f), 0, n - 1)];
+        }
+
+        /// <summary>
+        /// 写入分阶段明细：哪个阶段最慢、累计多少、单次峰值多少。
+        /// 原先只写"超预算阶段数"，无法定位优化点；现在一次测试就能看出时间花在哪。
+        /// 数据来自 PerfDiagnostics（诊断关闭时为空数组）。
+        /// </summary>
+        private static void AppendStages()
+        {
+            var stats = PerfDiagnostics.StageStats;
+            _sb.Append("  \"Stages\": [\n");
+            bool first = true;
+            foreach (var kv in stats)
+            {
+                if (!first) _sb.Append(",\n");
+                first = false;
+                long[] s = kv.Value;
+                long count = s[2] > 0L ? s[2] : 1L;
+                _sb.Append("    { \"Name\": \"").Append(kv.Key).Append("\", \"Count\": ").Append(s[2])
+                   .Append(", \"TotalMs\": ").Append(s[0])
+                   .Append(", \"AvgMs\": ").Append((s[0] / (double)count).ToString("F3", CultureInfo.InvariantCulture))
+                   .Append(", \"MaxMs\": ").Append(s[3])
+                   .Append(", \"TotalKB\": ").Append(s[1] / 1024L)
+                   .Append(" }");
+            }
+            _sb.Append("\n  ]\n");
         }
 
         private static void AppendLong(string key, long value, string suffix)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using EconomyMod.Models;
@@ -133,12 +133,14 @@ namespace EconomyMod.Core
         /// 提交一轮周期：缓冲交换后交由后台线程计算，主线程轮询 <see cref="TryConsume"/> 消费。
         /// 若已有周期在途则拒绝（返回 false）。
         /// </summary>
-        public static bool PostCycle()
+        /// <param name="advanceCycle">是否推进周期号。【W4.4】实时刷新传 false，
+        /// 避免每秒实时刷新把 HUD 的「周期 #N」推爆。</param>
+        public static bool PostCycle(bool advanceCycle = true)
         {
             if (_posting || _computing || System.Threading.Volatile.Read(ref _activeWorkers) > 0) return false; // 防御：仅允许一轮在途
             SwapBuffers();
             _generation++;
-            int idx = _cycleIndex + 1;
+            int idx = advanceCycle ? _cycleIndex + 1 : _cycleIndex;
             int gen = _generation;
             var actors = _computeActors;
             var kingdoms = _computeKingdoms;
@@ -187,7 +189,7 @@ namespace EconomyMod.Core
                     }
                 });
                 if (!queued) throw new InvalidOperationException("ThreadPool rejected work item");
-                _cycleIndex = idx;
+                if (advanceCycle) _cycleIndex = idx;
                 return true;
             }
             catch (Exception e)

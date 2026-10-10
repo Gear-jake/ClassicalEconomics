@@ -55,10 +55,10 @@ namespace EconomyMod.Core
                     if (k == null || k.data == null) continue;
                     var st = LawEngine.Get(k.data.id);
                     for (int i = 0; i < LawEngine.LawKeys.Length; i++)
-                        try { k.data.set("rb_law_law_" + i, st.LawLevels[i].ToString()); } catch (System.Exception) { }
+                        try { k.data.set(SaveSchema.LawLevel(i), st.LawLevels[i].ToString()); } catch (System.Exception) { }
                     for (int i = 0; i < LawEngine.PolicyKeys.Length; i++)
-                        try { k.data.set("rb_law_policy_" + i, st.PolicyLevels[i].ToString()); } catch (System.Exception) { }
-                    try { k.data.set("rb_law_style", st.Style.ToString()); } catch (System.Exception) { }
+                        try { k.data.set(SaveSchema.LawPolicy(i), st.PolicyLevels[i].ToString()); } catch (System.Exception) { }
+                    try { k.data.set(SaveSchema.LawStyle, st.Style.ToString()); } catch (System.Exception) { }
                 }
             }
             catch (System.Exception) { }
@@ -78,7 +78,7 @@ namespace EconomyMod.Core
                     for (int i = 0; i < LawEngine.LawKeys.Length; i++)
                     {
                         string v = null;
-                        try { k.data.get("rb_law_law_" + i, out v); } catch (System.Exception) { }
+                        try { k.data.get(SaveSchema.LawLevel(i), out v); } catch (System.Exception) { }
                         int level;
                         if (v != null && int.TryParse(v, out level))
                         {
@@ -89,7 +89,7 @@ namespace EconomyMod.Core
                     for (int i = 0; i < LawEngine.PolicyKeys.Length; i++)
                     {
                         string v = null;
-                        try { k.data.get("rb_law_policy_" + i, out v); } catch (System.Exception) { }
+                        try { k.data.get(SaveSchema.LawPolicy(i), out v); } catch (System.Exception) { }
                         int level;
                         if (v != null && int.TryParse(v, out level))
                         {
@@ -98,7 +98,7 @@ namespace EconomyMod.Core
                         }
                     }
                     string s = null;
-                    try { k.data.get("rb_law_style", out s); } catch (System.Exception) { }
+                    try { k.data.get(SaveSchema.LawStyle, out s); } catch (System.Exception) { }
                     int style;
                     if (s != null && int.TryParse(s, out style))
                         st.Style = System.Math.Max(0, System.Math.Min(LawEngine.StyleCount - 1, style));

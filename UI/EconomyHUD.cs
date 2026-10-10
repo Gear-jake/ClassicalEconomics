@@ -8,11 +8,16 @@ using EconomyMod.Services;
 
 namespace EconomyMod.UI
 {
-    public class EconomyHUD : FloatingWindow
+    public partial class EconomyHUD : FloatingWindow
     {
         private static EconomyHUD _instance;
 
         private RectTransform _contentRect;
+
+        // ===== 【W2.6】纯文本行池（本窗口刷新频繁，行对象必须复用）=====
+        private const string HudTextName = "HudText";
+        private const int TextPoolCap = 160;
+        private readonly List<GameObject> _textPool = new List<GameObject>(64);
 
         private Button _btnOverview, _btnChart;
         private Image _btnOverviewImg, _btnChartImg;
@@ -20,7 +25,7 @@ namespace EconomyMod.UI
         // 图表网格内边距（UI 单位，与 ChartMeshGraphic.margin 及刻度 Text 对齐）
         private const float ChartUiMargin = 4f;
 
-        private enum Section { Overview, Chart, PickTarget }
+        private enum Section { Overview, Chart }
         private Section _currentSection = Section.Overview;
 
         private static readonly Color Bg           = UIStyles.PanelBg;
@@ -49,6 +54,8 @@ namespace EconomyMod.UI
         protected override Vector2 AnchoredPosition => new Vector2(12f, 0f);
         protected override Vector2 Size => new Vector2(PanelWidth, PanelHeight);
         protected override Color BgColor => Bg;
+        /// <summary>【W2】套用本体窗口皮肤（不注册为 ScrollWindow，游戏不暂停）。</summary>
+        protected override bool UseVanillaSkin => true;
         protected override float Padding => 16f;
         protected override float TitleFontSize => 14f;
         protected override float TitleLineHeight => 28f;
@@ -59,23 +66,11 @@ namespace EconomyMod.UI
             _instance = CreateWindow<EconomyHUD>("EconomyHUD");
         }
 
-        /// <summary>
-        /// 打开"选择目标国家"列表（由 Tab 内煽动工具按钮调用）：
-        /// 列出所有王国，点击即可对该国触发原版暴动与叛乱。
-        /// </summary>
-        public void ShowKingdomPicker()
-        {
-            _visible = true;
-            if (_panelRoot != null) _panelRoot.SetActive(true);
-            _currentSection = Section.PickTarget;
-            UpdateTabButtons();
-            RefreshCurrentSection();
-        }
-
         public override void OnWorldUnavailable()
         {
             base.OnWorldUnavailable();
             ClearWorldCaches();
+            ReleaseChartHosts();   // 【W2.6】常驻图表宿主跨世界复用：只收起，不销毁
             _currentSection = Section.Overview;
             UpdateTabButtons();
         }
@@ -106,13 +101,24 @@ namespace EconomyMod.UI
             _panelRect = UIHelpers.CreatePanelRoot(transform, WindowName + "Panel",
                 AnchorMin, AnchorMax, Pivot, AnchoredPosition, Size, BgColor);
             _panelRoot = _panelRect.gameObject;
+            // 【W2 关键修复】EconomyHUD 重写了 BuildPanel，原先从不套皮肤 ——
+            // 皮肤只在 Show() 时才应用，而那时布局已按"无边框"偏移算完，
+            // 导致标题/页签/内容全部压在厚边框上。这里必须先套皮肤再布局。
+            if (UseVanillaSkin) ApplyVanillaSkin();
 
             // 标题栏拖拽 + 标题 + 缩放手柄（拖拽结束后重建当前页内容）+ 关闭按钮（公共骨架）
             UIHelpers.CreateDragArea(_panelRect, _panelRect, Padding + 36);
             _titleText = UIHelpers.CreateWindowTitle(_panelRect, UIHelpers.L(TitleKey),
-                _gameFont, HeaderColor, TitleFontSize, Padding, TitleLineHeight);
+                // 标题只用 TitleTopOffset（本体皮肤下=在标题栏带内居中）
+                _gameFont, HeaderColor, TitleFontSize, TitleTopOffset, TitleLineHeight);
             UIHelpers.CreateResizeHandles(_panelRect, OnPanelResized);
-            UIHelpers.CreateCloseButton(_panelRect, _gameFont, Hide);
+            var closeBtn = UIHelpers.CreateCloseButton(_panelRect, _gameFont, Hide);
+            // 本体皮肤：关闭按钮避让厚边框
+            if (UseVanillaSkin && closeBtn != null)
+            {
+                var crt = closeBtn.GetComponent<RectTransform>();
+                if (crt != null) crt.anchoredPosition -= new Vector2(SkinSideInset, SkinTopInset * 0.6f);
+            }
 
             // TabBar（EconomyHUD 独有：概览/趋势切换）
             var tabBar = new GameObject("TabBar", typeof(RectTransform), typeof(HorizontalLayoutGroup));
@@ -120,7 +126,7 @@ namespace EconomyMod.UI
             var tabBarRt = tabBar.GetComponent<RectTransform>();
             tabBarRt.anchorMin = new Vector2(0, 1); tabBarRt.anchorMax = new Vector2(1, 1);
             tabBarRt.pivot = new Vector2(0.5f, 1f);
-            tabBarRt.anchoredPosition = new Vector2(0, -(Padding + TitleLineHeight));
+            tabBarRt.anchoredPosition = new Vector2(0, -BelowTitleOffset);
             tabBarRt.sizeDelta = new Vector2(-Padding * 2, BtnHeight);
             var hlg = tabBar.GetComponent<HorizontalLayoutGroup>();
             hlg.spacing = 4; hlg.childForceExpandWidth = true; hlg.childForceExpandHeight = true;
@@ -135,13 +141,15 @@ namespace EconomyMod.UI
             var divRt = divider.GetComponent<RectTransform>();
             divRt.anchorMin = new Vector2(0, 1); divRt.anchorMax = new Vector2(1, 1);
             divRt.pivot = new Vector2(0.5f, 1);
-            divRt.anchoredPosition = new Vector2(0, -(Padding + TitleLineHeight + BtnHeight + 6));
+            divRt.anchoredPosition = new Vector2(0, -(BelowTitleOffset + BtnHeight + 6));
             divRt.sizeDelta = new Vector2(-Padding * 2, 1);
-            _lines.Add(divider); // 跟随清空逻辑，避免悬浮
+            // 【W2.6 修正】这条分割线是**页签栏下的静态装饰**，BuildPanel 只跑一次。
+            // 原先把它们注册进 _lines 会被每次刷新的 ClearContent 收走 → 第一次刷新后分割线就消失了。
+            // 静态装饰不进 _lines（它不需要随内容清空）。
 
             // 滚动内容区（topInset 留出标题+TabBar+分割线空间）
-            float topInset = Padding + TitleLineHeight + BtnHeight + 12;
-            _contentRect = UIHelpers.CreateScrollContent(_panelRect, Padding, topInset);
+            float topInset = BelowTitleOffset + BtnHeight + 12;
+            _contentRect = UIHelpers.CreateScrollContent(_panelRect, Padding, topInset, false, SkinBottomInset);
             _content = _contentRect.gameObject;
 
             UpdateTabButtons();
@@ -163,21 +171,51 @@ namespace EconomyMod.UI
             RefreshCurrentSection();
         }
 
+        /// <summary>【W2】套用页签外观：本体皮肤下用本体页签素材（选中/未选中），否则回退自绘圆角+底色。</summary>
+        private static void ApplyTabVisual(Image img, bool selected)
+        {
+            if (img == null) return;
+            // 【实机验证后调整】本体 tab_button_sort 是给 27x37 小方块按钮用的，
+            // 拉宽成 ~140px 页签后会变成一条色块。改用本体**标准按钮**素材 + 着色区分选中态；
+            // 九宫格拉伸下按钮素材在任意宽度都能保持正确边角。
+            var btnArt = VanillaSkin.ButtonSprite;
+            if (btnArt != null)
+            {
+                // 【实机验证后修正】本体 button 素材本身是暗色，着色只能变暗不能变亮 ——
+                // 之前给选中态染橙 + 深色文字 → 文字糊在暗底上看不见。
+                // 正解：保持素材原色，选中态改用**金色文字**标记（清晰且符合本体风格）。
+                img.sprite = btnArt;
+                img.type = Image.Type.Sliced;
+                img.color = selected ? new Color(1f, 0.94f, 0.82f) : Color.white;
+                img.pixelsPerUnitMultiplier = VanillaSkin.TabBorderMultiplier;
+            }
+            else
+            {
+                img.sprite = UIHelpers.RoundedSprite();
+                img.type = Image.Type.Sliced;
+                img.color = selected ? BtnActive : BtnNormal;
+            }
+        }
+
         private void UpdateTabButtons()
         {
-            // 国家选择页（PickTarget）不属于任何子 Tab，概览/趋势标签页均不激活
-            bool anyActive = _currentSection != Section.PickTarget;
-            _btnOverviewImg.color = anyActive && _currentSection == Section.Overview ? BtnActive : BtnNormal;
-            _btnChartImg.color    = anyActive && _currentSection == Section.Chart   ? BtnActive : BtnNormal;
+            bool ov = _currentSection == Section.Overview;
+            ApplyTabVisual(_btnOverviewImg, ov);
+            ApplyTabVisual(_btnChartImg, !ov);
             var ot = _btnOverview.GetComponentInChildren<Text>();
             var ct = _btnChart.GetComponentInChildren<Text>();
-            ot.color = anyActive && _currentSection == Section.Overview ? Color.black : TextColor;
-            ct.color = anyActive && _currentSection == Section.Chart   ? Color.black : TextColor;
+            // 本体皮肤：选中态由本体素材区分，文字用金色强调；自绘皮肤沿用「黑字=选中」
+            bool vanilla = VanillaSkin.ButtonSprite != null;
+            // 本体素材下：选中态用金色文字标记（底色保持素材原色，保证可读）
+            ot.color = vanilla ? (ov ? UIStyles.Gold : TextColor) : (ov ? Color.black : TextColor);
+            ct.color = vanilla ? (!ov ? UIStyles.Gold : TextColor) : (!ov ? Color.black : TextColor);
         }
 
         public void RefreshCurrentSection()
         {
             ClearContent();
+            // 非图表页：收起常驻图表宿主（不销毁，切回来直接用）
+            if (_currentSection != Section.Chart) HideChartHosts();
             // 结算期标记：年度收尾在途时面板顶部固定提示行（完成后随刷新消失）
             if (AnnualPipeline.IsSettling)
             {
@@ -188,7 +226,6 @@ namespace EconomyMod.UI
             {
                 case Section.Overview: BuildOverview(); break;
                 case Section.Chart:    BuildChart();    break;
-                case Section.PickTarget: BuildPickTarget(); break;
             }
         }
 
@@ -218,868 +255,78 @@ namespace EconomyMod.UI
 
         protected override void ClearContent()
         {
-            base.ClearContent();
-            // 图表对象已随 _lines 清空；ChartMeshGraphic 组件自身不持有跨刷新资源，无需额外清理
+            // 【W2.6 池化】本窗口的**纯文本行**回收进 _textPool 复用（原实现每次刷新都新建 ~40 个 Text）；
+            // 复杂构件（统计卡/王国行/徽章/区块标题等，由 UIComponents 构建）仍随刷新销毁重建 ——
+            // 它们内部结构各不相同，属 W4-UI 池化的后续范围，这里不假装已池化。
+            for (int i = 0; i < _lines.Count; i++)
+            {
+                var go = _lines[i];
+                if (go == null) continue;
+                if (go.name == HudTextName && _textPool.Count < TextPoolCap)
+                {
+                    go.SetActive(false);
+                    _textPool.Add(go);
+                }
+                else
+                {
+                    PerfCounters.AddUiDestroyed(1);
+                    Destroy(go);
+                }
+            }
+            _lines.Clear();
         }
 
-        /// <summary>内容行（带标题样式）。</summary>
+        /// <summary>从文本行池取一个（没有则返回 null）。</summary>
+        private GameObject RentHudText()
+        {
+            for (int i = _textPool.Count - 1; i >= 0; i--)
+            {
+                var go = _textPool[i];
+                if (go == null) { _textPool.RemoveAt(i); continue; }
+                _textPool.RemoveAt(i);
+                return go;
+            }
+            return null;
+        }
+
+        /// <summary>内容行（带标题样式）。复用池中文本行，避免每次刷新新建 GameObject。</summary>
         private void AddLine(string text, bool isHeader = false, Color? color = null)
         {
-            var go = UIHelpers.CreateText(text, _content.transform,
-                Fs(isHeader ? HeaderSize : TextSize),
-                color ?? (isHeader ? HeaderColor : TextColor),
-                _gameFont, Fs(isHeader ? LineHeight + 4 : LineHeight),
-                "Text_" + _lines.Count);
-            if (isHeader) go.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            float size = Fs(isHeader ? HeaderSize : TextSize);
+            float height = Fs(isHeader ? LineHeight + 4 : LineHeight);
+            Color col = color ?? (isHeader ? HeaderColor : TextColor);
+            var go = RentHudText();
+            if (go != null)
+            {
+                go.SetActive(true);
+                go.transform.SetAsLastSibling();   // VerticalLayoutGroup 按 sibling 排序，复用时必须复位
+                var t = go.GetComponent<Text>();
+                t.font = _gameFont;
+                t.fontSize = Mathf.RoundToInt(size);
+                t.fontStyle = isHeader ? FontStyle.Bold : FontStyle.Normal;
+                t.color = col;
+                t.text = text;
+                go.GetComponent<RectTransform>().sizeDelta = new Vector2(0, height);
+            }
+            else
+            {
+                go = UIHelpers.CreateText(text, _content.transform,
+                    size, col, _gameFont, height, HudTextName);
+                if (isHeader) go.GetComponent<Text>().fontStyle = FontStyle.Bold;
+                PerfCounters.AddUiCreated(1);
+            }
             _lines.Add(go);
         }
 
         /// <summary>
         /// 趋势页：GDP 多国折线图 + 贫富差距趋势图。
         /// </summary>
-        private void BuildChart()
-        {
-            AddGdpChart();
-            AddGiniChart();
-        }
-
-        /// <summary>
-        /// 在内容区追加 GDP 多线折线图（平面直角坐标系）：
-        /// 全球财富 + 动态 TopN 王国财富折线（入榜显示、跌出断裂、再入榜续线），
-        /// 背景为经济阶段色带，左侧数值尺（0~峰值），底部年份坐标尺。
-        /// 一次显示最近 50 条记录（历史缓冲容量 100，足够支撑）。
-        /// 王国折线仅保留最近 15 期内进过 Top5 的国家（图例上限 10 条），防止历史累计膨胀。
-        /// </summary>
-        private void AddGdpChart(int maxPoints = 50, int topN = 5)
-        {
-            var snaps = HistoryService.GetRecent(maxPoints);
-            if (snaps.Count < 2)
-            {
-                AddLine(UIHelpers.L("chart_no_data"), color: new Color(0.7f, 0.7f, 0.7f));
-                return;
-            }
-
-            // 构建系列：全球 GDP + 动态 TopN 王国（按每期快照 GDP 排名，折线随排名出现/断裂）
-            var seriesList = BuildDynamicSeries(snaps, topN);
-
-            int lastYear = snaps[snaps.Count - 1].GameYear;
-            AddLine(UIHelpers.Lf("chart_title_dyn", topN, lastYear, snaps.Count), true);
-            AddChartLegend(_content.transform, seriesList);
-
-            // 宏观指标摘要（最新快照）
-            var lastSnap = snaps[snaps.Count - 1];
-            AddLine(UIHelpers.Lf("chart_macro",
-                    UIHelpers.FormatCompact((long)lastSnap.TotalProduction),
-                    lastSnap.PriceIndex.ToString("F2"),
-                    lastSnap.AliveActorCount),
-                color: new Color(0.7f, 0.85f, 1f));
-            AddLine(UIHelpers.Lf("chart_macro_avg",
-                    lastSnap.AvgWealth.ToString("F1"),
-                    lastSnap.GiniCoefficient.ToString("F3")),
-                color: new Color(0.7f, 0.85f, 1f));
-            AddLine(UIHelpers.L("chart_legend_hint"), color: new Color(0.7f, 0.7f, 0.7f));
-
-            // 尺寸：宽自适应面板，高随宽度等比（窄窗不高耸、宽窗不扁平，任何分辨率观感一致）
-            float chartW = Mathf.Round(Mathf.Max(150f, _panelRect.rect.width - Padding * 2f - 20f));
-            float chartH = Mathf.Clamp(chartW * 0.24f, 110f, 260f);
-            const float yAxisW = 44f;   // 左侧 GDP 数值尺宽度（UI 单位）
-            const float bottomH = 22f;  // 底部年份坐标尺高度
-            float boxH = chartH + bottomH + 4f;
-
-            // Y 轴范围：0 ~ 所有系列最大值（NaN = 不在榜，跳过）
-            float maxVal = 0f;
-            foreach (var s in seriesList)
-                for (int i = 0; i < s.Values.Count; i++)
-                {
-                    float v = s.Values[i];
-                    if (!float.IsNaN(v) && v > maxVal) maxVal = v;
-                }
-            if (maxVal <= 0f) maxVal = 1f;
-
-            // 容器：加 LayoutElement 固定首选尺寸，防止 VerticalLayoutGroup 布局错位导致与下方内容重叠
-            var box = new GameObject("GdpChartBox", typeof(RectTransform), typeof(LayoutElement));
-            box.transform.SetParent(_content.transform, false);
-            var boxRt = box.GetComponent<RectTransform>();
-            boxRt.sizeDelta = new Vector2(0, boxH);
-            var boxEl = box.GetComponent<LayoutElement>();
-            boxEl.preferredWidth = chartW;
-            boxEl.preferredHeight = boxH;
-            _lines.Add(box);
-
-            // 图表主体（顶点渲染组件）：锚定 box 左下角、pivot=(0,0)，本地原点与刻度 Text 坐标系对齐
-            var meshGo = new GameObject("GdpChartMesh", typeof(RectTransform), typeof(ChartMeshGraphic));
-            meshGo.transform.SetParent(box.transform, false);
-            var meshRt = meshGo.GetComponent<RectTransform>();
-            meshRt.anchorMin = Vector2.zero; meshRt.anchorMax = Vector2.zero;
-            meshRt.pivot = Vector2.zero;
-            float chartBottom = boxH - chartH;
-            meshRt.anchoredPosition = new Vector2(0f, chartBottom);
-            meshRt.sizeDelta = new Vector2(chartW, chartH);
-            var graph = meshGo.GetComponent<ChartMeshGraphic>();
-            graph.raycastTarget = false;   // 射线由悬停层接收，图表自身不拦截
-            graph.yAxisWidth = yAxisW;
-            graph.margin = ChartUiMargin;
-
-            // 组装顶点数据：vals[s][i]（NaN=王国不在榜，折线断裂）；phases 驱动阶段色带
-            int sc = seriesList.Count;
-            var vals = new float[sc][];
-            var colors = new Color[sc];
-            var areaColors = new Color[sc];
-            for (int s = 0; s < sc; s++)
-            {
-                var ser = seriesList[s];
-                var arr = new float[snaps.Count];
-                for (int i = 0; i < snaps.Count; i++)
-                    arr[i] = i < ser.Values.Count ? ser.Values[i] : float.NaN;
-                vals[s] = arr;
-                colors[s] = ser.Color;
-                // 仅全球 GDP（首系列）做半透明面积填充；*0.5 后与原纹理版 0.14 一致
-                areaColors[s] = s == 0 ? new Color(ser.Color.r, ser.Color.g, ser.Color.b, 0.28f) : Color.clear;
-            }
-            var phases = new int[snaps.Count];
-            for (int i = 0; i < snaps.Count; i++) phases[i] = snaps[i].Phase;
-            graph.SetChartData(vals, colors, areaColors, phases, sc, 0f, maxVal,
-                drawArea: true, drawRefs: false, refHigh: 0f, refLow: 0f);
-
-            // 悬停交互层（透明接收射线）+ 悬停竖线 + 数值 Tooltip（CE 式数据悬停查看）
-            var hover = AddChartHover(box.transform, chartW, chartH, yAxisW, snaps, seriesList);
-            _lines.Add(hover);
-
-            // 左侧 GDP 数值尺（5 档刻度，与网格线对齐：底部=0 顶部=maxVal）
-            // 网格线在 mesh 内 y = margin + plotH*frac，相对图表底部；刻度文本同为 box 左下角坐标系
-            const float uiMargin = ChartUiMargin;
-            float plotH = chartH - uiMargin * 2f;
-            var scaleCol = new Color(0.92f, 0.92f, 0.92f);
-            for (int gi = 0; gi <= 4; gi++)
-            {
-                float frac = gi / 4f;
-                float val = maxVal * frac;
-                float yPos = chartBottom + uiMargin + plotH * frac;
-                var tGo = UIHelpers.CreateText(val.ToString("F0"), box.transform, Fs(10f), scaleCol, _gameFont, Fs(13f));
-                var tRt = tGo.GetComponent<RectTransform>();
-                tRt.anchorMin = Vector2.zero; tRt.anchorMax = Vector2.zero;
-                tRt.pivot = new Vector2(1f, 0.5f);
-                tRt.anchoredPosition = new Vector2(yAxisW, yPos);
-                tRt.sizeDelta = new Vector2(yAxisW - 4f, 13f);
-                var t = tGo.GetComponent<Text>();
-                t.alignment = TextAnchor.MiddleRight;
-                t.fontStyle = FontStyle.Bold;
-                t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            }
-
-            // 底部年份坐标尺：0/25/50/75/100% 处显示对应采集点的游戏年
-            var xCol = new Color(0.85f, 0.85f, 0.85f);
-            for (int gi = 0; gi <= 4; gi++)
-            {
-                float frac = gi / 4f;
-                int idx = Mathf.RoundToInt((snaps.Count - 1) * frac);
-                // mesh 内折线 x：x0 + plotW*frac（x0=yAxisW+margin, plotW=chartW-yAxisW-margin, margin=4）
-                float xPos = yAxisW + (chartW - yAxisW - uiMargin) * frac;
-                float pivotX = gi == 0 ? 0f : (gi == 4 ? 1f : 0.5f);
-                var xGo = UIHelpers.CreateText(UIHelpers.Lf("chart_year", snaps[idx].GameYear), box.transform, Fs(9f), xCol, _gameFont, Fs(14f));
-                var xRt = xGo.GetComponent<RectTransform>();
-                xRt.anchorMin = Vector2.zero; xRt.anchorMax = Vector2.zero;
-                xRt.pivot = new Vector2(pivotX, 0f);
-                xRt.anchoredPosition = new Vector2(xPos, 3f);
-                xRt.sizeDelta = new Vector2(44f, 14f);
-                xGo.GetComponent<Text>().alignment = TextAnchor.LowerCenter;
-            }
-
-            long last = snaps[snaps.Count - 1].GlobalGDP;
-            AddLine(UIHelpers.Lf("chart_summary", UIHelpers.FormatCompact((long)maxVal), UIHelpers.FormatCompact(last)),
-                color: new Color(0.7f, 0.85f, 1f));
-        }
-
-        /// <summary>
-        /// 贫富差距趋势图：全球基尼系数折线 + 危险线/健康线参考虚线 + 经济阶段背景色带。
-        /// 直观呈现"贫富差距驱动周期阶段"的因果，与财富图并列展示。
-        /// 一次显示最近 50 条记录。
-        /// </summary>
-        private void AddGiniChart(int maxPoints = 50)
-        {
-            var snaps = HistoryService.GetRecent(maxPoints);
-            if (snaps.Count < 2) return;
-
-            int lastYear = snaps[snaps.Count - 1].GameYear;
-            AddLine(UIHelpers.Lf("gini_chart_title", lastYear, snaps.Count), true);
-            AddLine(UIHelpers.L("gini_legend_phase"), color: new Color(0.7f, 0.7f, 0.7f));
-
-            float chartW = Mathf.Round(Mathf.Max(150f, _panelRect.rect.width - Padding * 2f - 20f));
-            float chartH = Mathf.Clamp(chartW * 0.24f, 110f, 260f);
-            const float yAxisW = 40f;
-            const float bottomH = 22f;
-            float boxH = chartH + bottomH + 4f;
-
-            // Y 范围：0 ~ max(0.8, 快照最大基尼)，保证曲线与参考线比例可见
-            float maxVal = 0.8f;
-            foreach (var s in snaps)
-                if (s.GiniCoefficient > maxVal) maxVal = s.GiniCoefficient;
-
-            var cfg = UnrestConfig.Instance;
-            var box = new GameObject("GiniChartBox", typeof(RectTransform), typeof(LayoutElement));
-            box.transform.SetParent(_content.transform, false);
-            var boxRt = box.GetComponent<RectTransform>();
-            boxRt.sizeDelta = new Vector2(0, boxH);
-            var boxEl = box.GetComponent<LayoutElement>();
-            boxEl.preferredWidth = chartW;
-            boxEl.preferredHeight = boxH;
-            _lines.Add(box);
-
-            // 图表主体（顶点渲染组件）：锚定 box 左下角、pivot=(0,0)，本地原点与刻度 Text 坐标系对齐
-            var meshGo = new GameObject("GiniChartMesh", typeof(RectTransform), typeof(ChartMeshGraphic));
-            meshGo.transform.SetParent(box.transform, false);
-            var meshRt = meshGo.GetComponent<RectTransform>();
-            meshRt.anchorMin = Vector2.zero; meshRt.anchorMax = Vector2.zero;
-            meshRt.pivot = Vector2.zero;
-            float chartBottom = boxH - chartH;
-            meshRt.anchoredPosition = new Vector2(0f, chartBottom);
-            meshRt.sizeDelta = new Vector2(chartW, chartH);
-            var graph = meshGo.GetComponent<ChartMeshGraphic>();
-            graph.raycastTarget = false;
-            graph.yAxisWidth = yAxisW;
-            graph.margin = ChartUiMargin;
-
-            // 组装顶点数据：单系列基尼系数折线 + 阶段色带 + 危险/健康参考虚线
-            var vals = new float[1][];
-            var giniArr = new float[snaps.Count];
-            for (int i = 0; i < snaps.Count; i++) giniArr[i] = snaps[i].GiniCoefficient;
-            vals[0] = giniArr;
-            var colors = new Color[] { new Color(1f, 0.62f, 0.18f) };
-            var phases = new int[snaps.Count];
-            for (int i = 0; i < snaps.Count; i++) phases[i] = snaps[i].Phase;
-            graph.SetChartData(vals, colors, null, phases, 1, 0f, maxVal,
-                drawArea: false, drawRefs: true, refHigh: cfg.CycleGiniHigh, refLow: cfg.CycleGiniLow);
-
-            // 悬停交互层 + 悬停竖线 + Tooltip（基尼图无多系列，悬停显示年份/基尼/阶段）
-            var hover = AddChartHover(box.transform, chartW, chartH, yAxisW, snaps, null);
-            _lines.Add(hover);
-
-            // 左侧基尼数值尺（0~maxVal，5 档，与网格线对齐）
-            const float uiMargin = ChartUiMargin;
-            float plotH = chartH - uiMargin * 2f;
-            var scaleCol = new Color(0.92f, 0.92f, 0.92f);
-            for (int gi = 0; gi <= 4; gi++)
-            {
-                float frac = gi / 4f;
-                float val = maxVal * frac;
-                float yPos = chartBottom + uiMargin + plotH * frac;
-                var tGo = UIHelpers.CreateText(val.ToString("F2"), box.transform, Fs(10f), scaleCol, _gameFont, Fs(13f));
-                var tRt = tGo.GetComponent<RectTransform>();
-                tRt.anchorMin = Vector2.zero; tRt.anchorMax = Vector2.zero;
-                tRt.pivot = new Vector2(1f, 0.5f);
-                tRt.anchoredPosition = new Vector2(yAxisW, yPos);
-                tRt.sizeDelta = new Vector2(yAxisW - 4f, 13f);
-                var t = tGo.GetComponent<Text>();
-                t.alignment = TextAnchor.MiddleRight;
-                t.fontStyle = FontStyle.Bold;
-                t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            }
-
-            // 底部年份坐标尺
-            var xCol = new Color(0.85f, 0.85f, 0.85f);
-            for (int gi = 0; gi <= 4; gi++)
-            {
-                float frac = gi / 4f;
-                int idx = Mathf.RoundToInt((snaps.Count - 1) * frac);
-                float xPos = yAxisW + (chartW - yAxisW - uiMargin) * frac;
-                float pivotX = gi == 0 ? 0f : (gi == 4 ? 1f : 0.5f);
-                var xGo = UIHelpers.CreateText(UIHelpers.Lf("chart_year", snaps[idx].GameYear), box.transform, 9f, xCol, _gameFont, 14f);
-                var xRt = xGo.GetComponent<RectTransform>();
-                xRt.anchorMin = Vector2.zero; xRt.anchorMax = Vector2.zero;
-                xRt.pivot = new Vector2(pivotX, 0f);
-                xRt.anchoredPosition = new Vector2(xPos, 3f);
-                xRt.sizeDelta = new Vector2(44f, 14f);
-                xGo.GetComponent<Text>().alignment = TextAnchor.LowerCenter;
-            }
-
-            // 参考线说明
-            AddLine(UIHelpers.L("gini_legend_danger"), color: new Color(1f, 0.5f, 0.45f));
-            AddLine(UIHelpers.L("gini_legend_health"), color: new Color(0.5f, 0.85f, 0.5f));
-        }
-
-        /// <summary>
-        /// 为图表添加 CE 式悬停交互：透明接收层 + 跟随鼠标的数值竖线 + Tooltip 面板。
-        /// 鼠标 x 经 InverseLerp 映射到快照索引，实时显示该期游戏年/全球值/各王国值（或基尼与阶段）。
-        /// 返回交互层 GameObject（由调用方加入 _lines 以便清理）。
-        /// </summary>
-        private GameObject AddChartHover(Transform boxParent,
-            float chartW, float chartH, float yAxisW,
-            List<EconomySnapshot> snaps, List<ChartSeries> seriesList)
-        {
-            int n = snaps.Count;
-            const float uiMargin = ChartUiMargin;
-
-            // 悬停接收层：覆盖折线区域（左起数值尺右缘，右至图右缘），透明但仍接收射线
-            var hoverGo = new GameObject("ChartHover", typeof(RectTransform), typeof(Image));
-            hoverGo.transform.SetParent(boxParent, false);
-            var hoverRt = hoverGo.GetComponent<RectTransform>();
-            hoverRt.anchorMin = new Vector2(0, 1); hoverRt.anchorMax = new Vector2(1, 1);
-            hoverRt.pivot = new Vector2(0.5f, 1f);
-            hoverRt.anchoredPosition = Vector2.zero;
-            hoverRt.offsetMin = new Vector2(yAxisW, -chartH);
-            hoverRt.offsetMax = new Vector2(-uiMargin, 0);
-            var hoverImg = hoverGo.GetComponent<Image>();
-            hoverImg.color = new Color(0, 0, 0, 0.001f);
-            hoverImg.raycastTarget = true;
-
-            // 悬停竖线（跟随鼠标 x，初始隐藏）
-            var lineGo = new GameObject("HoverLine", typeof(RectTransform), typeof(Image));
-            lineGo.transform.SetParent(hoverRt, false);
-            var lineRt = lineGo.GetComponent<RectTransform>();
-            lineRt.anchorMin = new Vector2(0, 1); lineRt.anchorMax = new Vector2(0, 1);
-            lineRt.pivot = new Vector2(0.5f, 1f);
-            lineRt.anchoredPosition = Vector2.zero;
-            lineRt.sizeDelta = new Vector2(2f, chartH);
-            lineGo.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.65f);
-            lineGo.SetActive(false);
-
-            // Tooltip 面板：半透明深底 + 多行富文本（初始隐藏，ContentSizeFitter 自动贴合内容）
-            var tipGo = new GameObject("ChartTooltip", typeof(RectTransform), typeof(Image), typeof(ContentSizeFitter));
-            tipGo.transform.SetParent(hoverRt, false);
-            var tipRt = tipGo.GetComponent<RectTransform>();
-            tipRt.anchorMin = new Vector2(0, 1); tipRt.anchorMax = new Vector2(0, 1);
-            tipRt.pivot = new Vector2(0.5f, 1f);
-            tipRt.anchoredPosition = Vector2.zero;
-            tipGo.GetComponent<Image>().color = new Color(0.04f, 0.05f, 0.07f, 0.94f);
-            var tipFit = tipGo.GetComponent<ContentSizeFitter>();
-            tipFit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-            tipFit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            var tipText = UIHelpers.CreateText("", tipGo.transform, Fs(11f), Color.white, _gameFont, Fs(17f));
-            var tipTextRt = tipText.GetComponent<RectTransform>();
-            tipTextRt.anchorMin = Vector2.zero; tipTextRt.anchorMax = Vector2.one;
-            tipTextRt.offsetMin = new Vector2(8, 5); tipTextRt.offsetMax = new Vector2(-8, -5);
-            var tipT = tipText.GetComponent<Text>();
-            tipT.alignment = TextAnchor.UpperLeft;
-            tipT.horizontalOverflow = HorizontalWrapMode.Overflow;
-            tipGo.SetActive(false);
-
-            var handler = hoverGo.AddComponent<ChartHoverHandler>();
-            handler.Init(hoverRt, lineRt, tipRt, tipT,
-                n,
-                seriesList != null
-                    ? (System.Func<int, string>)(idx => BuildGdpTooltip(snaps, seriesList, idx))
-                    : (System.Func<int, string>)(idx => BuildGiniTooltip(snaps, idx)));
-            return hoverGo;
-        }
-
-        /// <summary>构建 GDP 图悬停 Tooltip 文本：年份 + 全球 + 各在榜王国（富文本色条）。</summary>
-        private static string BuildGdpTooltip(List<EconomySnapshot> snaps, List<ChartSeries> seriesList, int idx)
-        {
-            if (idx < 0 || idx >= snaps.Count) return "";
-            var sb = new System.Text.StringBuilder(96);
-            sb.Append("<b>").Append(UIHelpers.Lf("chart_year", snaps[idx].GameYear)).Append("</b>\n");
-            sb.Append("<color=#FFD95A>").Append(UIHelpers.L("chart_global")).Append(" ")
-              .Append(UIHelpers.FormatCompact(snaps[idx].GlobalGDP)).Append("</color>");
-            foreach (var s in seriesList)
-            {
-                if (s == null) continue;
-                float v = idx < s.Values.Count ? s.Values[idx] : float.NaN;
-                if (float.IsNaN(v)) continue; // 不在榜不显示
-                sb.Append('\n').Append("<color=#").Append(ColorUtility.ToHtmlStringRGB(s.Color))
-                  .Append(">■ ").Append(s.Name).Append(" ").Append(UIHelpers.FormatCompact((long)v)).Append("</color>");
-            }
-            return sb.ToString();
-        }
-
-        /// <summary>构建基尼图悬停 Tooltip 文本：年份 + 基尼 + 周期阶段。</summary>
-        private static string BuildGiniTooltip(List<EconomySnapshot> snaps, int idx)
-        {
-            if (idx < 0 || idx >= snaps.Count) return "";
-            var snap = snaps[idx];
-            return "<b>" + UIHelpers.Lf("chart_year", snap.GameYear) + "</b>\n" +
-                   "<color=#FF9E2E>" + UIHelpers.L("gini_chart_gini") + " " + snap.GiniCoefficient.ToString("F3") + "</color>\n" +
-                   "<color=#8FC7FF>" + UIHelpers.L("gini_chart_phase") + " " + PhaseName((EconomyPhase)snap.Phase) + "</color>";
-        }
-
-        // ===== BuildDynamicSeries 复用缓冲（每次刷新图表时复用，避免 GC）=====
-        private static readonly List<ChartSeries> _seriesPool = new List<ChartSeries>(4);
-        // ChartSeries 对象池（与 _seriesPool 配合，Values 列表也复用）
-        private static readonly List<ChartSeries> _chartSeriesEntryPool = new List<ChartSeries>(4);
-        // 每期排名用临时缓冲 + 系列索引（KingdomId -> 系列）
-        private static readonly List<KingdomStats> _rankBuf = new List<KingdomStats>(8);
-        private static readonly Dictionary<long, ChartSeries> _dynIndex = new Dictionary<long, ChartSeries>(8);
-        // 王国最后上榜期索引（KingdomId -> 快照序号，用于图例膨胀保护排序）
-        private static readonly Dictionary<long, int> _dynLastSeen = new Dictionary<long, int>(8);
-        // 图例膨胀保护排序缓冲 + 保留集合
-        private static readonly List<KeyValuePair<long, ChartSeries>> _dynSeenBuf = new List<KeyValuePair<long, ChartSeries>>(8);
-        private static readonly HashSet<long> _keepIds = new HashSet<long>(8);
-        // 动态王国折线色板（最多展示 topN=5 条，预留充足区分度）
-        private static readonly Color[] _dynColors = new[]
-        {
-            new Color(0.30f, 0.80f, 1.00f), // 青
-            new Color(0.45f, 0.90f, 0.45f), // 绿
-            new Color(0.95f, 0.55f, 0.80f), // 品红
-            new Color(1.00f, 0.70f, 0.30f), // 橙
-            new Color(0.75f, 0.60f, 1.00f)  // 紫
-        };
-
-        /// <summary>
-        /// 构建图表系列：全球 GDP + 动态 TopN 王国 GDP（按每期快照的 GDP 排名）。
-        /// 国家在当期排名 ≤ topN 才绘制该点（否则记 NaN → 折线断裂）；
-        /// 因此：入榜即出现，跌出即断裂消失，再入榜则重新续线。
-        /// 王国集合只统计"最近 collectWindow 期"内进过 TopN 的王国（超出窗口自动滑出图例），
-        /// 且数量有硬上限 maxSeries（按最后上榜期保留最近者），避免历史累计导致图例无限膨胀。
-        /// 算法：对每条 snap 的 Kingdoms 排序取前 topN，O(snaps × kingdomsLogN)；
-        /// 通过 _dynIndex 字典把 KingdomId 映射到系列，复用静态缓冲避免 GC。
-        /// </summary>
-        private static List<ChartSeries> BuildDynamicSeries(List<EconomySnapshot> snaps, int topN)
-        {
-            const int collectWindow = 15; // 只统计最近 15 期内的 TopN，更早的王国自动滑出
-            const int maxSeries = 10;     // 王国折线硬上限（防极端换榜导致图例膨胀）
-
-            var result = _seriesPool;
-            // 归还上一轮的 ChartSeries 对象（Values 列表也复用，避免新建）
-            for (int i = 0; i < result.Count; i++)
-            {
-                result[i].Values.Clear();
-                _chartSeriesEntryPool.Add(result[i]);
-            }
-            result.Clear();
-            _dynIndex.Clear();
-            _dynLastSeen.Clear();
-
-            ChartSeries global;
-            if (_chartSeriesEntryPool.Count > 0)
-            {
-                global = _chartSeriesEntryPool[_chartSeriesEntryPool.Count - 1];
-                _chartSeriesEntryPool.RemoveAt(_chartSeriesEntryPool.Count - 1);
-            }
-            else
-            {
-                global = new ChartSeries();
-            }
-            global.Name = UIHelpers.L("chart_global");
-            global.Color = new Color(1f, 0.85f, 0.3f);
-            for (int i = 0; i < snaps.Count; i++) global.Values.Add(snaps[i].GlobalGDP);
-            result.Add(global);
-
-            // 第一轮：收集出现在"最近 collectWindow 期"内 TopN 的王国，建立 KingdomId -> 系列（颜色按入榜顺序分配）。
-            // 只统计滑动窗口而非全部快照：超出窗口未再上榜的旧王国自动滑出，图例数量有界。
-            int windowStart = snaps.Count > collectWindow ? snaps.Count - collectWindow : 0;
-            for (int j = windowStart; j < snaps.Count; j++)
-            {
-                var kingdoms = snaps[j].Kingdoms;
-                if (kingdoms == null || kingdoms.Count == 0) continue;
-
-                var buf = _rankBuf;
-                buf.Clear();
-                buf.AddRange(kingdoms);
-                buf.Sort((a, b) => b.GDP.CompareTo(a.GDP));
-                int take = buf.Count < topN ? buf.Count : topN;
-                for (int i = 0; i < take; i++)
-                {
-                    var ks = buf[i];
-                    if (_dynIndex.TryGetValue(ks.KingdomId, out var existing))
-                    {
-                        _dynLastSeen[ks.KingdomId] = j; // 更新最后上榜期
-                        continue;
-                    }
-                    ChartSeries series;
-                    if (_chartSeriesEntryPool.Count > 0)
-                    {
-                        series = _chartSeriesEntryPool[_chartSeriesEntryPool.Count - 1];
-                        _chartSeriesEntryPool.RemoveAt(_chartSeriesEntryPool.Count - 1);
-                    }
-                    else
-                    {
-                        series = new ChartSeries();
-                    }
-                    series.Name = ks.KingdomName;
-                    series.Color = _dynColors[result.Count % _dynColors.Length];
-                    for (int k = 0; k < snaps.Count; k++) series.Values.Add(float.NaN); // 默认不在榜
-                    _dynIndex[ks.KingdomId] = series;
-                    _dynLastSeen[ks.KingdomId] = j;
-                    result.Add(series);
-                }
-            }
-
-            // 图例膨胀保护：王国系列超过上限时，按最后上榜期保留最近 maxSeries 条，其余归还对象池
-            if (result.Count - 1 > maxSeries)
-            {
-                var seen = _dynSeenBuf;
-                seen.Clear();
-                foreach (var kv in _dynIndex) seen.Add(kv);
-                seen.Sort((a, b) => _dynLastSeen[b.Key].CompareTo(_dynLastSeen[a.Key])); // 最近上榜在前
-                int keepCount = seen.Count < maxSeries ? seen.Count : maxSeries;
-                var keep = _keepIds;
-                keep.Clear();
-                for (int i = 0; i < keepCount; i++) keep.Add(seen[i].Key);
-                for (int i = result.Count - 1; i >= 1; i--)
-                {
-                    var ser = result[i];
-                    long id = -1;
-                    for (int k = 0; k < seen.Count; k++)
-                        if (seen[k].Value == ser) { id = seen[k].Key; break; }
-                    if (id < 0 || !keep.Contains(id))
-                    {
-                        ser.Values.Clear();
-                        _chartSeriesEntryPool.Add(ser);
-                        if (id >= 0) _dynIndex.Remove(id);
-                        result.RemoveAt(i);
-                    }
-                }
-            }
-
-            // 第二轮：按每期排名填入 TopN 王国的 GDP（不在榜保持 NaN，折线断裂）
-            for (int j = 0; j < snaps.Count; j++)
-            {
-                var kingdoms = snaps[j].Kingdoms;
-                if (kingdoms == null || kingdoms.Count == 0) continue;
-
-                var buf = _rankBuf;
-                buf.Clear();
-                buf.AddRange(kingdoms);
-                buf.Sort((a, b) => b.GDP.CompareTo(a.GDP));
-                int take = buf.Count < topN ? buf.Count : topN;
-                for (int i = 0; i < take; i++)
-                {
-                    var ks = buf[i];
-                    if (_dynIndex.TryGetValue(ks.KingdomId, out var series))
-                        series.Values[j] = ks.GDP;
-                }
-            }
-            return result;
-        }
-
-        /// <summary>
-        /// 图例（竖直行列表）：色条 + 名称 + 最新值（在榜）/ 已跌出（不在榜）。
-        /// 每个系列独立一行，行内色条 + 名称 + 尾部数值，信息比横向图例更丰富。
-        /// </summary>
-        private void AddChartLegend(Transform parent, List<ChartSeries> series)
-        {
-            foreach (var s in series)
-            {
-                var row = new GameObject("LegendRow", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
-                row.transform.SetParent(parent, false);
-                var rowLg = row.GetComponent<HorizontalLayoutGroup>();
-                rowLg.spacing = 6f;
-                rowLg.childAlignment = TextAnchor.MiddleLeft;
-                rowLg.childControlWidth = false;
-                rowLg.childControlHeight = true;
-                rowLg.childForceExpandWidth = false;
-                rowLg.childForceExpandHeight = false;
-                var rowRt = row.GetComponent<RectTransform>();
-                rowRt.sizeDelta = new Vector2(0, 18f);
-                row.GetComponent<LayoutElement>().preferredHeight = 18f;
-                _lines.Add(row);
-
-                // 色条
-                var sw = new GameObject("Swatch", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
-                sw.transform.SetParent(row.transform, false);
-                sw.GetComponent<Image>().color = s.Color;
-                sw.GetComponent<Image>().raycastTarget = false;
-                var swRt = sw.GetComponent<RectTransform>();
-                swRt.sizeDelta = new Vector2(20f, 6f);
-                sw.GetComponent<LayoutElement>().preferredWidth = 20f;
-                sw.GetComponent<LayoutElement>().preferredHeight = 6f;
-
-                // 名称（固定宽，超出省略号）
-                var nm = UIHelpers.CreateText(s.Name, row.transform, Fs(10f), TextColor, _gameFont, Fs(18f));
-                var nmT = nm.GetComponent<Text>();
-                nmT.alignment = TextAnchor.MiddleLeft;
-                nmT.horizontalOverflow = HorizontalWrapMode.Overflow;
-                nm.GetComponent<RectTransform>().sizeDelta = new Vector2(150f, 18f);
-                var nmEl = nm.AddComponent<LayoutElement>();
-                nmEl.preferredWidth = 150f;
-                nmEl.preferredHeight = 18f;
-
-                // 最新值 / 已跌出状态
-                float last = float.NaN;
-                for (int i = s.Values.Count - 1; i >= 0; i--)
-                {
-                    if (!float.IsNaN(s.Values[i])) { last = s.Values[i]; break; }
-                }
-                bool inRank = !float.IsNaN(last);
-                string valueStr = inRank ? UIHelpers.FormatCompact((long)last)
-                    : (s.Values.Count > 0 ? UIHelpers.L("chart_dropped") : "");
-                var vGo = UIHelpers.CreateText(valueStr, row.transform, Fs(10f),
-                    inRank ? new Color(0.95f, 0.85f, 0.5f) : new Color(0.55f, 0.55f, 0.6f),
-                    _gameFont, 18f);
-                var vT = vGo.GetComponent<Text>();
-                vT.alignment = TextAnchor.MiddleRight;
-                vT.horizontalOverflow = HorizontalWrapMode.Overflow;
-                var vRt = vGo.GetComponent<RectTransform>();
-                vRt.anchorMin = new Vector2(1, 0); vRt.anchorMax = new Vector2(1, 0);
-                vRt.pivot = new Vector2(1, 0.5f);
-                vRt.anchoredPosition = new Vector2(0, 9f);
-                vRt.sizeDelta = new Vector2(70f, 18f);
-                var vEl = vGo.AddComponent<LayoutElement>();
-                vEl.preferredWidth = 70f;
-                vEl.preferredHeight = 18f;
-
-                row.GetComponent<LayoutElement>().preferredWidth = 250f;
-            }
-        }
-
-        /// <summary>
-        /// 图表系列：名称 + 颜色 + 与快照等长的取值序列。
-        /// </summary>
-        private class ChartSeries
-        {
-            public string Name;
-            public Color Color;
-            public List<float> Values = new List<float>();
-        }
-
-        private void BuildOverview()
-        {
-            float contentW = Mathf.Max(150f, _panelRect.rect.width - Padding * 2f - 16f);
-            var phase = EconomyCycleModulator.CurrentPhase;
-
-            // 周期 + 阶段徽章
-            AddLine(UIHelpers.Lf("overview_cycle", EconomyEngine.CycleIndex), true);
-            _lines.Add(UIComponents.CreatePhaseBadge(_content.transform, phase,
-                PhaseName(phase), _gameFont, contentW * 0.5f, Fs(1f)));
-            AddLine(UIHelpers.Lf("cycle_detail",
-                EconomyCycleModulator.PhaseDuration,
-                EconomyCycleModulator.GrowthRate.ToString("+0.0%;-0.0%"),
-                UIHelpers.FormatCompact((long)EconomyCycleModulator.BubbleValue)),
-                color: new Color(0.8f, 0.9f, 0.7f));
-            AddLine("");
-
-            // 核心指标卡（单行，窗口缩放保证不溢出；v0.9.1 恢复单行布局）
-            // 不显示人口：配合人口倍数类模组时单位数会被放大，数字失真且出戏（v0.94 移除）
-            var stats = new (string, string, Color)[]
-            {
-                ("GDP", UIHelpers.FormatCompact((long)EconomyEngine.GlobalGDP), UIStyles.Gold),
-                (UIHelpers.L("col_avg"), EconomyEngine.AvgWealth.ToString("F1"), UIStyles.Info),
-                (UIHelpers.L("col_gini"), EconomyEngine.GiniCoefficient.ToString("F3"), GiniColor(EconomyEngine.GiniCoefficient)),
-                (UIHelpers.L("stat_bubble"), UIHelpers.FormatCompact((long)EconomyCycleModulator.BubbleValue), UIStyles.Warning)
-            };
-            _lines.Add(UIComponents.CreateStatGrid(_content.transform, stats, _gameFont, contentW, Fs(1f)));
-
-            // 内存状态行（清理开启时显示）：把"模组+游戏共享的托管堆"与"游戏本体 Unity 原生内存"
-            // 分项展示，用于判断内存增长来源；上次清理信息来自 MemoryCleanupEngine
-            var mcCfg = UnrestConfig.Instance;
-            if (mcCfg != null && mcCfg.MemoryCleanupEnabled)
-            {
-                string cleanupLine = MemoryCleanupEngine.LastCleanupRealtime < 0f
-                    ? UIHelpers.L("hud_mem_cleanup_pending")
-                    : UIHelpers.Lf("hud_mem_cleanup", FormatSessionTime(MemoryCleanupEngine.LastCleanupRealtime),
-                        MemoryCleanupEngine.FormatMb(System.Math.Max(0L, MemoryCleanupEngine.LastFreedBytes)),
-                        MemoryCleanupEngine.LastShrunkCount.ToString());
-                _lines.Add(UIComponents.CreateStatusRow(_content.transform, cleanupLine,
-                    UIStyles.TextMuted, _gameFont, contentW, Fs(1f)));
-
-                long unityUsed = MemoryCleanupEngine.UnityUsedBytes;
-                long unityReserved = MemoryCleanupEngine.UnityReservedBytes;
-                _lines.Add(UIComponents.CreateStatusRow(_content.transform,
-                    UIHelpers.Lf("hud_mem_usage",
-                        MemoryCleanupEngine.FormatMb(MemoryCleanupEngine.ManagedHeapBytes),
-                        unityUsed < 0 ? UIHelpers.L("hud_mem_na") : MemoryCleanupEngine.FormatMb(unityUsed),
-                        unityReserved < 0 ? UIHelpers.L("hud_mem_na") : MemoryCleanupEngine.FormatMb(unityReserved)),
-                    UIStyles.TextMuted, _gameFont, contentW, Fs(1f)));
-                AddLine("");
-            }
-
-            // 王国排行
-            _lines.Add(UIComponents.CreateSectionHeader(_content.transform,
-                UIHelpers.L("overview_kingdoms"), _gameFont, contentW, Fs(1f)));
-            _lines.Add(UIComponents.CreateKingdomHeader(_content.transform, _gameFont, contentW, Fs(1f)));
-            var top = EconomyEngine.TopKingdoms(8);
-            if (top.Count == 0)
-            {
-                AddLine(UIHelpers.L("overview_no_kingdom"), color: UIStyles.TextMuted);
-            }
-            int rank = 1;
-            foreach (var k in top)
-            {
-                _lines.Add(UIComponents.CreateKingdomRow(_content.transform, rank, k.KingdomName,
-                    UIHelpers.FormatCompact(k.GDP), k.AvgWealth.ToString("F1"), k.GiniCoefficient.ToString("F2"),
-                    _gameFont, contentW, rank == 1, Fs(1f)));
-                rank++;
-            }
-
-            // 社会动荡状态
-            _lines.Add(UIComponents.CreateSectionHeader(_content.transform,
-                UIHelpers.L("unrest_state_title"), _gameFont, contentW, Fs(1f)));
-            int stateCount = 0;
-            foreach (var k in top)
-            {
-                int st = UnrestEngine.GetState(k.KingdomId, out int elapsed);
-                if (st == 1)
-                {
-                    _lines.Add(UIComponents.CreateStatusRow(_content.transform,
-                        UIHelpers.Lf("unrest_state_accum", k.KingdomName, elapsed),
-                        UIStyles.Warning, _gameFont, contentW, Fs(1f)));
-                    stateCount++;
-                }
-                else if (st == 2)
-                {
-                    _lines.Add(UIComponents.CreateStatusRow(_content.transform,
-                        UIHelpers.Lf("unrest_state_active", k.KingdomName),
-                        UIStyles.Danger, _gameFont, contentW, Fs(1f)));
-                    stateCount++;
-                }
-                else if (st == 3)
-                {
-                    _lines.Add(UIComponents.CreateStatusRow(_content.transform,
-                        UIHelpers.Lf("unrest_state_uprising", k.KingdomName),
-                        UIStyles.Negative, _gameFont, contentW, Fs(1f)));
-                    stateCount++;
-                }
-            }
-            if (stateCount == 0)
-            {
-                AddLine(UIHelpers.L("unrest_state_none"), color: UIStyles.TextMuted);
-            }
-            AddLine(UIHelpers.Lf("unrest_state_threshold", UnrestConfig.Instance.GiniThreshold.ToString("F3")),
-                color: new Color(0.7f, 0.85f, 0.7f));
-        }
-
-        /// <summary>基尼语义色（≥0.7 红 / ≥0.55 琥珀 / 其他弱色）。</summary>
-        private static Color GiniColor(float gini)
-        {
-            return gini >= 0.7f ? UIStyles.Danger : gini >= 0.55f ? UIStyles.Warning : UIStyles.TextSecondary;
-        }
-
-        /// <summary>会话运行时长（Time.realtimeSinceStartup 秒）格式化为 HH:mm:ss 或 mm:ss。</summary>
-        private static string FormatSessionTime(float realtimeSeconds)
-        {
-            int t = Mathf.Max(0, (int)realtimeSeconds);
-            int h = t / 3600, m = (t % 3600) / 60, s = t % 60;
-            return h > 0 ? $"{h:D2}:{m:D2}:{s:D2}" : $"{m:D2}:{s:D2}";
-        }
-
-        /// <summary>
-        /// 国家选择页：列出所有王国，每个王国提供"煽动"与"镇压"两个按钮，
-        /// 可针对特定国家单独生效。由 Tab 内煽动（火焰）/镇压（盾牌）工具按钮调用 ShowKingdomPicker() 打开。
-        /// </summary>
-        private void BuildPickTarget()
-        {
-            AddLine(UIHelpers.L("picker_title"), true);
-            AddLine("");
-
-            // 返回概览页
-            var btnBack = UIHelpers.CreateButton(UIHelpers.L("picker_back"), _content.transform, -1, 30,
-                _gameFont, new Color(0.35f, 0.35f, 0.4f, 0.85f));
-            btnBack.onClick.AddListener(() => SwitchSection(Section.Overview));
-            _lines.Add(btnBack.gameObject);
-
-            AddLine("");
-            AddLine(UIHelpers.L("picker_hint"), color: new Color(0.7f, 0.7f, 0.7f));
-            AddDivider(DividerColor);
-
-            if (World.world == null || World.world.kingdoms == null)
-            {
-                AddLine(UIHelpers.L("picker_empty"), color: new Color(0.7f, 0.7f, 0.7f));
-                return;
-            }
-            // 快照 + 按 GDP 降序（无统计的王国排最后）
-            var kingdomList = new List<Kingdom>(World.world.kingdoms);
-            if (kingdomList.Count == 0)
-            {
-                AddLine(UIHelpers.L("picker_empty"), color: new Color(0.7f, 0.7f, 0.7f));
-                return;
-            }
-            kingdomList.Sort((a, b) =>
-            {
-                long ga = 0, gb = 0;
-                if (EconomyEngine.KingdomStats.TryGetValue(a.data.id, out var ka)) ga = (long)ka.GDP;
-                if (EconomyEngine.KingdomStats.TryGetValue(b.data.id, out var kb)) gb = (long)kb.GDP;
-                return gb.CompareTo(ga);
-            });
-
-            int rank = 1;
-            foreach (var kingdom in kingdomList)
-            {
-                if (kingdom == null || kingdom.data == null) continue;
-                string name = kingdom.data.name ?? "?";
-                long gdp = 0;
-                if (EconomyEngine.KingdomStats.TryGetValue(kingdom.data.id, out var ks)) gdp = (long)ks.GDP;
-
-                // 每国一行：名称左 + 煽动/镇压两个小按钮右（不再每个按钮独占整行）
-                var row = new GameObject("PickerRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
-                row.transform.SetParent(_content.transform, false);
-                var rowRt = row.GetComponent<RectTransform>();
-                rowRt.anchorMin = new Vector2(0, 1); rowRt.anchorMax = new Vector2(1, 1);
-                rowRt.pivot = new Vector2(0.5f, 1f);
-                rowRt.sizeDelta = new Vector2(0, 26f);
-                var rowHlg = row.GetComponent<HorizontalLayoutGroup>();
-                rowHlg.spacing = 4; rowHlg.childForceExpandWidth = false;
-                rowHlg.childForceExpandHeight = true; rowHlg.childControlWidth = true;
-                rowHlg.childControlHeight = true;
-                _lines.Add(row);
-
-                var rowName = UIHelpers.CreateText(
-                    UIHelpers.Lf("picker_kingdom", rank, name, UIHelpers.FormatCompact(gdp)),
-                    row.transform, 12f, UIStyles.TextPrimary, _gameFont, 22f);
-                rowName.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0.5f);
-                rowName.GetComponent<RectTransform>().anchorMax = new Vector2(0, 0.5f);
-                rowName.GetComponent<RectTransform>().sizeDelta = new Vector2(170f, 22f);
-                rowName.GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-                rowName.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
-
-                // 煽动按钮（红，小）
-                var btnIncite = UIHelpers.CreateButton(UIHelpers.L("picker_incite"), row.transform, 100, 24,
-                    _gameFont, UIStyles.Danger, 11f);
-                var leI = btnIncite.gameObject.AddComponent<LayoutElement>();
-                leI.preferredWidth = 100f; leI.flexibleWidth = 0f; leI.preferredHeight = 24f;
-                long inciteTargetId = kingdom.data.id;
-                btnIncite.onClick.AddListener(() =>
-                {
-                    var inciteTarget = GameHelpers.FindKingdom(inciteTargetId);
-                    if (inciteTarget == null) return;
-                    int n = UnrestEngine.Incite(inciteTarget);
-                    // 同步刷新统计：仅当无在途周期时执行。直接调 Collect() 会投递后台周期但无人消费
-                    // （_cyclePending 未置位），导致 _posting 永久滞留、年度周期停摆（S2 根因）。
-                    if (!TradeSimulationWorker.IsBusy())
-                    {
-                        DataCollector.Collect(applySideEffects: false, postCycle: false);
-                        TradeSimulationWorker.ComputeAndConsumeSync(advanceCycle: false);
-                    }
-                    string nName = (inciteTarget.data != null && inciteTarget.data.name != null) ? inciteTarget.data.name : "?";
-                    AddLine(n > 0
-                            ? UIHelpers.Lf("picker_done", nName)
-                            : UIHelpers.Lf("picker_failed", nName),
-                        color: n > 0 ? new Color(1f, 0.7f, 0.3f) : new Color(0.9f, 0.5f, 0.5f));
-                });
-                // 镇压按钮（蓝，小）
-                var btnSuppress = UIHelpers.CreateButton(UIHelpers.L("picker_suppress"), row.transform, 100, 24,
-                    _gameFont, UIStyles.Info, 11f);
-                var leS = btnSuppress.gameObject.AddComponent<LayoutElement>();
-                leS.preferredWidth = 100f; leS.flexibleWidth = 0f; leS.preferredHeight = 24f;
-                long suppressTargetId = kingdom.data.id;
-                btnSuppress.onClick.AddListener(() =>
-                {
-                    var suppressTarget = GameHelpers.FindKingdom(suppressTargetId);
-                    if (suppressTarget == null) return;
-                    int n = UnrestEngine.Suppress(suppressTarget);
-                    // 同步刷新统计：仅当无在途周期时执行（同煽动按钮，S2 修复）
-                    if (!TradeSimulationWorker.IsBusy())
-                    {
-                        DataCollector.Collect(applySideEffects: false, postCycle: false);
-                        TradeSimulationWorker.ComputeAndConsumeSync(advanceCycle: false);
-                    }
-                    string nName = (suppressTarget.data != null && suppressTarget.data.name != null) ? suppressTarget.data.name : "?";
-                    AddLine(n > 0
-                            ? UIHelpers.Lf("picker_done_suppress", nName)
-                            : UIHelpers.Lf("picker_failed_suppress", nName),
-                        color: n > 0 ? new Color(0.6f, 0.85f, 1f) : new Color(0.5f, 0.7f, 0.9f));
-                });
-                rank++;
-            }
-        }
-
-        /// <summary>经济周期阶段名（本地化）。</summary>
-        private static string PhaseName(EconomyPhase p)
-        {
-            switch (p)
-            {
-                case EconomyPhase.Boom:       return UIHelpers.L("cycle_phase_boom");
-                case EconomyPhase.Recession:  return UIHelpers.L("cycle_phase_recession");
-                case EconomyPhase.Depression: return UIHelpers.L("cycle_phase_depression");
-                default:                      return UIHelpers.L("cycle_phase_recovery");
-            }
-        }
 
         private Button CreateTabButton(string label, Transform parent, out Image img)
         {
             var btn = UIHelpers.CreateButton(label, parent, -1, BtnHeight, _gameFont, BtnNormal, HeaderSize);
             img = btn.GetComponent<Image>();
-            img.color = BtnNormal;
-            img.sprite = UIHelpers.RoundedSprite();
-            img.type = Image.Type.Sliced;
+            ApplyTabVisual(img, false);
             var txt = btn.GetComponentInChildren<Text>();
             txt.font = _gameFont;
             txt.fontSize = Mathf.RoundToInt(HeaderSize);
@@ -1123,6 +370,13 @@ namespace EconomyMod.UI
             _lineRt = null;
             _tipRt = null;
             _tipText = null;
+        }
+
+        /// <summary>【W2.6】刷新时只更新点数：数据源是复用缓冲（对象身份稳定），闭包无需重建。</summary>
+        public void SetPointCount(int count)
+        {
+            _pointCount = count;
+            _lastIndex = -1;
         }
 
         public void OnPointerEnter(PointerEventData eventData) { SetVisible(true); OnPointerMove(eventData); }

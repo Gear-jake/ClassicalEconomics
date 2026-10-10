@@ -63,6 +63,8 @@ namespace EconomyMod.Services
         {
             "unrest_enabled", "log_worldlog", "gini_threshold",
             "unrest_grace_years", "unrest_max_cities", "policy_enabled", "cycle_enabled",
+            "regime_change_enabled", "gini_collapse_enabled",
+            "policy_gini_threshold", "policy_attempt_chance", "policy_cooldown_years",
             "cycle_gini_high", "cycle_gini_low", "cycle_gini_periods", "boom_stimulus_ratio",
             "boom_bubble_factor", "bubble_threshold", "boom_max_duration", "recession_max_duration",
             "depression_max_duration", "recovery_max_duration", "survival_line", "war_plunder_ratio",
@@ -82,7 +84,7 @@ namespace EconomyMod.Services
             "memory_cleanup_enabled", "memory_cleanup_force_gc", "memory_cleanup_interval_seconds",
             "memory_cleanup_notify_enabled",
             "nation_play_enabled", "treasury_income_ratio", "policy_slots",
-            "nation_claim_hotkey", "ui_scale",
+            "nation_claim_hotkey", "ui_scale", "pause_on_panel_open",
             "event_chance_player", "event_chance_ai", "event_cooldown_years",
             "bank_enabled", "bank_money_supply_factor", "bank_max_loans_per_city", "bank_deposit_ratio_default",
             "ruler_personality_enabled",
@@ -138,6 +140,11 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("unrest_max_cities", out var mc))  u.MaxAffectedPerKingdom = ParseInt(mc.TextVal, u.MaxAffectedPerKingdom, 1, 5);
                 // 国家政策（降基尼）
                 if (group.TryGetValue("policy_enabled", out var pe2))     u.PolicyEnabled = pe2.BoolVal;
+                if (group.TryGetValue("regime_change_enabled", out var rc)) u.RegimeChangeEnabled = rc.BoolVal;
+                if (group.TryGetValue("gini_collapse_enabled", out var gc)) u.GiniCollapseEnabled = gc.BoolVal;
+                if (group.TryGetValue("policy_gini_threshold", out var pgt)) u.PolicyGiniThreshold = ParseFloat(pgt.TextVal, u.PolicyGiniThreshold, 0.5f, 0.95f);
+                if (group.TryGetValue("policy_attempt_chance", out var pac)) u.PolicyAttemptChance = ParseFloat(pac.TextVal, u.PolicyAttemptChance, 0f, 1f);
+                if (group.TryGetValue("policy_cooldown_years", out var pcy)) u.PolicyCooldownYears = ParseInt(pcy.TextVal, u.PolicyCooldownYears, 0, 50);
                 if (group.TryGetValue("cycle_enabled", out var cy))      u.CycleEnabled = cy.BoolVal;
                 if (group.TryGetValue("cycle_gini_high", out var gh))    u.CycleGiniHigh = ParseFloat(gh.TextVal, u.CycleGiniHigh, 0.3f, 0.9f);
                 if (group.TryGetValue("cycle_gini_low", out var gl))     u.CycleGiniLow = ParseFloat(gl.TextVal, u.CycleGiniLow, 0.2f, 0.7f);
@@ -225,6 +232,8 @@ namespace EconomyMod.Services
                 if (group.TryGetValue("nation_claim_hotkey", out var nch) && !string.IsNullOrWhiteSpace(nch.TextVal)) u.NationClaimHotkey = nch.TextVal.Trim().ToUpperInvariant();
                 // UI 缩放（内阁字体/按钮）
                 if (group.TryGetValue("ui_scale", out var us)) u.UiScale = ParseFloat(us.TextVal, u.UiScale, 0.8f, 1.6f);
+                // 【W2.8】打开面板暂停游戏
+                if (group.TryGetValue("pause_on_panel_open", out var ppo)) u.PauseOnPanelOpen = ppo.BoolVal;
                 // 王国抉择事件（频率）
                 if (group.TryGetValue("event_chance_player", out var ecp)) u.EventChancePlayer = ParseFloat(ecp.TextVal, u.EventChancePlayer, 0f, 1f);
                 if (group.TryGetValue("event_chance_ai", out var eca)) u.EventChanceAi = ParseFloat(eca.TextVal, u.EventChanceAi, 0f, 1f);
@@ -307,6 +316,33 @@ namespace EconomyMod.Services
         public static void OnPolicyEnabledChanged(bool pValue)
         {
             UnrestConfig.Instance.PolicyEnabled = pValue;
+        }
+
+        // ===== 【W1】政权更替 / 基尼崩溃 开关回调 =====
+
+        public static void OnRegimeChangeChanged(bool pValue)
+        {
+            UnrestConfig.Instance.RegimeChangeEnabled = pValue;
+        }
+
+        public static void OnGiniCollapseChanged(bool pValue)
+        {
+            UnrestConfig.Instance.GiniCollapseEnabled = pValue;
+        }
+
+        public static void OnPolicyGiniThresholdChanged(string pValue)
+        {
+            UnrestConfig.Instance.PolicyGiniThreshold = ParseFloat(pValue, UnrestConfig.Instance.PolicyGiniThreshold, 0.5f, 0.95f);
+        }
+
+        public static void OnPolicyAttemptChanged(string pValue)
+        {
+            UnrestConfig.Instance.PolicyAttemptChance = ParseFloat(pValue, UnrestConfig.Instance.PolicyAttemptChance, 0f, 1f);
+        }
+
+        public static void OnPolicyCooldownChanged(string pValue)
+        {
+            UnrestConfig.Instance.PolicyCooldownYears = ParseInt(pValue, UnrestConfig.Instance.PolicyCooldownYears, 0, 50);
         }
 
         // ===== 经济周期调制器（Phase 4）回调 =====
@@ -726,6 +762,14 @@ namespace EconomyMod.Services
             catch (System.Exception) { }
             try { EconomyMod.Core.KingdomWindowIntegration.RefreshSummaryScale(); }
             catch (System.Exception) { }
+        }
+
+        /// <summary>【W2.8】打开面板暂停游戏：改设置即时生效 ——
+        /// 打开开关时若已有面板可见，立即接管暂停；关闭开关时若暂停由我们持有，立即恢复。</summary>
+        public static void OnPauseOnPanelOpenChanged(bool pValue)
+        {
+            UnrestConfig.Instance.PauseOnPanelOpen = pValue;
+            UI.UIPauseCoordinator.OnSwitchChanged(pValue);
         }
     }
 }

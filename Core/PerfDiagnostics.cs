@@ -29,6 +29,15 @@ namespace EconomyMod.Core
         private static long _stageStartBytes;
         private static readonly StringBuilder _overStages = new StringBuilder(128);
 
+        /// <summary>分阶段累计统计：阶段名 -> [累计ms, 累计字节, 次数, 单次最大ms]。
+        /// 用于把"哪个阶段最慢"写进 perf-capture.json —— 只有超预算**计数**不足以定位优化点。
+        /// 仅诊断开启时有内容（关闭时 EndStage 立即返回，不会触碰此字典）。</summary>
+        private static readonly System.Collections.Generic.Dictionary<string, long[]> _stageStats
+            = new System.Collections.Generic.Dictionary<string, long[]>(32);
+
+        /// <summary>分阶段累计统计（供 PerfCounters 落盘）。</summary>
+        public static System.Collections.Generic.Dictionary<string, long[]> StageStats => _stageStats;
+
         /// <summary>是否启用性能诊断（读配置门控）。</summary>
         public static bool IsEnabled => UnrestConfig.Instance.PerfDiagnosticsEnabled;
 
@@ -64,6 +73,7 @@ namespace EconomyMod.Core
             long bytes = GC.GetTotalMemory(false) - _stageStartBytes;
             _yearTotalMs += ms;
             _yearTotalBytes += bytes;
+            AccumulateStage(stageName, ms, bytes);
             int frameBudgetMs = UnrestConfig.Instance.FrameBudgetMs > 0
                 ? UnrestConfig.Instance.FrameBudgetMs : 1;
             if (ms > frameBudgetMs || bytes > StageAllocThresholdBytes)
@@ -91,6 +101,22 @@ namespace EconomyMod.Core
                 (overTime ? ", over cycle time window" : "") +
                 ", over-budget stages: " + _overStageCount +
                 (_overStageCount > 0 ? " (" + _overStages + ")" : ""));
+        }
+
+        /// <summary>累计单个阶段的耗时/分配（字典查找 + 就地累加，无每帧分配）。</summary>
+        private static void AccumulateStage(string name, long ms, long bytes)
+        {
+            if (string.IsNullOrEmpty(name)) return;
+            long[] s;
+            if (!_stageStats.TryGetValue(name, out s))
+            {
+                s = new long[4];
+                _stageStats[name] = s;
+            }
+            s[0] += ms;
+            s[1] += bytes;
+            s[2] += 1;
+            if (ms > s[3]) s[3] = ms;
         }
 
         private static long ElapsedMs(long startTicks)

@@ -1,4 +1,4 @@
-﻿using NeoModLoader.General;
+using NeoModLoader.General;
 using NeoModLoader.General.UI.Tab;
 using UnityEngine;
 using UnityEngine.UI;
@@ -122,12 +122,16 @@ private static PowersTab _tab;
             EconomyHUD.Create();
             // 创建富豪榜"工具框"（点击皇冠按钮弹出的轻量弹窗）
             RichListWindow.Create();
+
             // 创建事件流悬浮窗（独立于经济窗口，点击铃铛按钮切换显隐）
             EventWindow.Create();
             // 创建内阁面板（中央银行家：国家认领/金库/政策/法令/记录）
             CabinetWindow.Create();
+            // 创建「选择扮演国家」选择器（Tab 国家按钮打开：列表点选即认领，见 NationPickWindow）
+            NationPickWindow.Create();
             // 创建抉择事件小窗（非模态，快照尾按需弹出；S4-1：不在 RefreshOverview 里刷新）
             EventChoiceWindow.Create();
+
 
             // 创建底部工具栏 Tab（带金币图标）；
             // 先注入 Tab 名称/描述本地化键（vanilla LTM 按 key 查找，缺失会打印 missing text 日志）
@@ -144,15 +148,20 @@ private static PowersTab _tab;
             RegisterTooltip(btn, "economy_toggle");
             PowerButtonCreator.AddButtonToTab(btn, _tab, null);
 
-            // 创建"干预王国"工具按钮（合并原煽动+镇压）：打开国家选择列表，
-            // 每个王国内部已有煽动(红)+镇压(蓝)两个操作按钮，无需工具栏重复
-            var btnIntervene = PowerButtonCreator.CreateSimpleButton(
-                "economy_intervene",
-                () => EconomyHUD.Instance?.ShowKingdomPicker(),
-                IconLoader.Get("flame"),
-                _tab.transform, Vector2.zero);
-            RegisterTooltip(btnIntervene, "economy_intervene");
-            PowerButtonCreator.AddButtonToTab(btnIntervene, _tab, null);
+            // 【W1.5】原「干预王国」按钮（打开国家选择列表，再点国家内的小按钮）
+            // 拆成两个**真正的权能**：选中后直接点击地图上的王国即可生效。
+            // GodPower 资产在 Core/KingdomPowers.Register() 里注册，这里只创建标签按钮。
+            KingdomPowers.Register();
+
+            var btnIncite = PowerButtonCreator.CreateGodPowerButton(
+                KingdomPowers.InciteId, IconLoader.Get("flame"));
+            RegisterTooltip(btnIncite, KingdomPowers.InciteId);
+            PowerButtonCreator.AddButtonToTab(btnIncite, _tab, null);
+
+            var btnSuppress = PowerButtonCreator.CreateGodPowerButton(
+                KingdomPowers.SuppressId, IconLoader.Get("shield"));
+            RegisterTooltip(btnSuppress, KingdomPowers.SuppressId);
+            PowerButtonCreator.AddButtonToTab(btnSuppress, _tab, null);
 
             // 创建"立即采集"工具按钮（带刷新图标）：手动执行一次数据采集与重算
             var btnCollect = PowerButtonCreator.CreateSimpleButton(
@@ -190,6 +199,19 @@ private static PowersTab _tab;
             RegisterTooltip(btnRich, "economy_rich");
             PowerButtonCreator.AddButtonToTab(btnRich, _tab, null);
 
+            // 创建"选择扮演国家"按钮（带旗帜图标）：打开国家列表选择器，点一行即认领该国。
+            // 关掉 nation_play_enabled 时不挂这个按钮（玩法关闭时不留死入口）。
+            if (UnrestConfig.Instance == null || UnrestConfig.Instance.NationPlayEnabled)
+            {
+                var btnPick = PowerButtonCreator.CreateSimpleButton(
+                    "economy_nation_pick",
+                    () => NationPickWindow.Instance?.Toggle(),
+                    IconLoader.Get("nation"),
+                    _tab.transform, Vector2.zero);
+                RegisterTooltip(btnPick, "economy_nation_pick");
+                PowerButtonCreator.AddButtonToTab(btnPick, _tab, null);
+            }
+
             // 创建"经济事件"工具按钮（带铃铛图标）：切换事件流悬浮窗显隐
             var btnEvents = PowerButtonCreator.CreateSimpleButton(
                 "economy_events",
@@ -222,8 +244,7 @@ private static PowersTab _tab;
             PowerButtonCreator.AddButtonToTab(btnCyclePhase, _tab, null);
             _btnCyclePhase = btnCyclePhase;
 
-
-            Debug.Log("[ClassicalEconomics] EconomyUI 初始化完成（悬浮HUD + 煽动工具 + 富豪榜工具 + 事件流窗口 + 阶段切换）");
+            Debug.Log("[ClassicalEconomics] EconomyUI 初始化完成（悬浮HUD + 煽动/镇压权能 + 富豪榜工具 + 事件流窗口 + 阶段切换）");
         }
 
         /// <summary>
@@ -267,6 +288,11 @@ private static PowersTab _tab;
             {
                 RichListWindow.Instance.RefreshNow();
             }
+            // 国家选择器：只在可见时重建（隐藏零调用），列表随王国兴亡变化
+            if (NationPickWindow.Instance != null && NationPickWindow.Instance.IsVisible)
+            {
+                NationPickWindow.Instance.RefreshNow();
+            }
             // 事件窗不在此刷新（S4-1）：隐藏零调用；打开时由打开动作渲染一次，
             // 之后仅每个游戏年（WriteCycleSnapshot→OnYearBoundary）或用户操作重建。
             if (refreshCabinet && CabinetWindow.Instance != null && CabinetWindow.Instance.IsVisible)
@@ -283,6 +309,7 @@ private static PowersTab _tab;
             EventWindow.Instance?.OnWorldUnavailable();
             EventChoiceWindow.Instance?.OnWorldUnavailable();
             CabinetWindow.Instance?.OnWorldUnavailable();
+            NationPickWindow.Instance?.OnWorldUnavailable();
         }
     }
 }

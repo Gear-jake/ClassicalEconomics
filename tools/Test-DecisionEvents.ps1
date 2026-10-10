@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 
 function Fail($msg) { Write-Host "DECISION_EVENTS_RED: $msg"; exit 1 }
@@ -97,7 +97,7 @@ foreach ($e in $json.events) {
 }
 
 # ===== 2. 产品代码接线 =====
-$src = [System.IO.File]::ReadAllText((Join-Path $Root 'Core\DecisionEvents.cs'))
+$src = (Get-ChildItem (Join-Path $Root 'Core') -Filter 'DecisionEvents*.cs' | Sort-Object Name | ForEach-Object { [System.IO.File]::ReadAllText($_.FullName) }) -join "`n"   # W3.4 拆分后合并扫描
 if ($src -notmatch 'JsonConvert\.DeserializeObject<EventsFile>') { Fail 'DecisionEvents must deserialize events.json via JsonConvert' }
 if ($src -notmatch 'WarnOnce\(') { Fail 'DecisionEvents must fail-open with WarnOnce on load errors' }
 if ($src -notmatch 'MaxPending\s*=\s*8') { Fail 'DecisionEvents pending pool must be bounded (MaxPending=8)' }
@@ -116,9 +116,11 @@ if ($main -notmatch 'DecisionEvents\.Load\(\)') { Fail 'OnModLoad must call Deci
 if ($main -notmatch 'DecisionEvents\.Reset\(\)') { Fail 'ResetAllEngines must call DecisionEvents.Reset' }
 if ($main -notmatch 'DecisionEvents\.PopupQueued') { Fail 'snapshot tail must consume the popup queue (no mid-pipeline UI)' }
 
-# ===== 3. 存档读写对称（NationSave 三键） =====
+# ===== 3. 存档读写对称（NationSave 经 SaveSchema 常量读写事件三键） =====
+# 【W3.2 换锚点】键值字面量收敛到 Core\SaveSchema.cs；键值逐字不变由 Test-SaveSchema 冻结清单保证。
+# 契约不变：抉择事件状态必须经存档三键往返。
 $save = [System.IO.File]::ReadAllText((Join-Path $Root 'Core\NationSave.cs'))
-foreach ($k in @('rb_ev_pending', 'rb_ev_cooldown', 'rb_ev_lastGlobal')) {
+foreach ($k in @('SaveSchema.EventPending', 'SaveSchema.EventCooldown', 'SaveSchema.EventLastGlobal')) {
     if ($save -notmatch [regex]::Escape($k)) { Fail "NationSave must persist $k" }
 }
 if ($save -notmatch 'DecisionEvents\.Serialize' -or $save -notmatch 'DecisionEvents\.Restore') { Fail 'NationSave must round-trip DecisionEvents state' }

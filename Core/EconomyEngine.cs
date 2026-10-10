@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using EconomyMod.Models;
 
@@ -78,8 +78,8 @@ namespace EconomyMod.Core
                     KingdomStats[ks.KingdomId].GiniCoefficient = UnityEngine.Mathf.Clamp(
                         KingdomStats[ks.KingdomId].GiniCoefficient + gshift, 0f, 1f);
             }
-        }
 
+        }
         // 复用 TopKingdoms 的排序缓冲（调用方均为立即遍历消费，不跨周期持有）
         private static readonly List<KingdomStats> _topKingdomPool = new List<KingdomStats>();
 
